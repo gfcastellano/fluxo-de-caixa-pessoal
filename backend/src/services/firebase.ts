@@ -69,17 +69,31 @@ export class FirebaseService {
   ): Promise<void> {
     const url = `${this.getBaseUrl()}/${collection}/${documentId}?key=${this.apiKey}`;
 
+    console.log('Firebase updateDocument - URL:', url);
+    console.log('Firebase updateDocument - Raw data:', JSON.stringify(data, null, 2));
+
     const firestoreData = this.convertToFirestore(data);
+    console.log('Firebase updateDocument - Firestore formatted data:', JSON.stringify(firestoreData, null, 2));
+
+    const requestBody = JSON.stringify({ fields: firestoreData });
+    console.log('Firebase updateDocument - Request body:', requestBody);
 
     const response = await fetch(url, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fields: firestoreData }),
+      body: requestBody,
     });
 
+    console.log('Firebase updateDocument - Response status:', response.status);
+    
     if (!response.ok) {
-      throw new Error(`Failed to update document: ${response.statusText}`);
+      const errorText = await response.text();
+      console.error('Firebase updateDocument - Error response:', errorText);
+      throw new Error(`Failed to update document: ${response.statusText} - ${errorText}`);
     }
+    
+    const responseData = await response.json();
+    console.log('Firebase updateDocument - Success response:', JSON.stringify(responseData, null, 2));
   }
 
   async deleteDocument(collection: string, documentId: string): Promise<void> {
@@ -163,5 +177,27 @@ export class FirebaseService {
     }
 
     return value;
+  }
+
+  // Debug helper to check document state
+  async getDocument(collection: string, documentId: string): Promise<Record<string, unknown> | null> {
+    const url = `${this.getBaseUrl()}/${collection}/${documentId}?key=${this.apiKey}`;
+    
+    console.log('Firebase getDocument - URL:', url);
+    
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      if (response.status === 404) return null;
+      throw new Error(`Failed to get document: ${response.statusText}`);
+    }
+    
+    const data = await response.json() as { name: string; fields?: Record<string, unknown> };
+    console.log('Firebase getDocument - Raw response:', JSON.stringify(data, null, 2));
+    
+    const converted = this.convertFromFirestore(data);
+    console.log('Firebase getDocument - Converted:', JSON.stringify(converted, null, 2));
+    
+    return converted;
   }
 }

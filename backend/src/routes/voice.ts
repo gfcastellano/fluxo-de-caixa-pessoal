@@ -120,6 +120,11 @@ app.post('/transactions/update', async (c) => {
     
     console.log('Voice update - Successfully updated in Firestore');
     
+    // Verify the update by reading the document back
+    console.log('Voice update - Verifying document state...');
+    const verifyDoc = await firebase.getDocument('transactions', transactionId);
+    console.log('Voice update - Verified document:', JSON.stringify(verifyDoc, null, 2));
+    
     return c.json({
       success: true,
       data: updates,
