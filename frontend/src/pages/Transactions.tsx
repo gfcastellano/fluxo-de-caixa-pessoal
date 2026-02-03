@@ -67,11 +67,25 @@ export function Transactions() {
       if (editingTransaction) {
         await updateTransaction(editingTransaction.id, data);
         // Update the local state immediately for better UX
-        setTransactions(prev => prev.map(t => 
-          t.id === editingTransaction.id 
-            ? { ...t, ...data, category: categories.find(c => c.id === data.categoryId) || t.category }
-            : t
-        ));
+        setTransactions(prev => prev.map(t => {
+          if (t.id === editingTransaction.id) {
+            const updatedCategory = data.categoryId 
+              ? categories.find(c => c.id === data.categoryId) 
+              : t.category;
+            return { 
+              ...t, 
+              ...data, 
+              category: updatedCategory,
+              // Ensure these fields are properly typed
+              amount: data.amount ?? t.amount,
+              description: data.description ?? t.description,
+              type: data.type ?? t.type,
+              date: data.date ?? t.date,
+              categoryId: data.categoryId ?? t.categoryId,
+            };
+          }
+          return t;
+        }));
       } else {
         // Cast to the expected type for new transactions
         await createTransaction(user.uid, data as Omit<Transaction, 'id' | 'userId' | 'createdAt' | 'updatedAt'>);
