@@ -53,6 +53,8 @@ fluxo-de-caixa-pessoal/
 - ✅ Budget Management (Set and track budgets)
 - ✅ Monthly Reports & Analytics
 - ✅ Data Visualization (Charts)
+- ✅ Voice Transaction Input (OpenAI Whisper + GPT)
+- ✅ Multi-language Support (EN, ES, PT)
 - ✅ Responsive Design
 
 ### Frontend Features
@@ -116,30 +118,54 @@ VITE_FIREBASE_MESSAGING_SENDER_ID=
 VITE_FIREBASE_APP_ID=
 ```
 
-### Backend (wrangler.toml)
+### Backend
+
+**Environment Variables (wrangler.toml):**
 ```toml
 [vars]
-FIREBASE_PROJECT_ID = ""
-FIREBASE_API_KEY = ""
+FIREBASE_PROJECT_ID = "your-project-id"
+```
+
+**Secrets (set via Wrangler CLI):**
+```bash
+wrangler secret put FIREBASE_API_KEY
+wrangler secret put OPENAI_API_KEY
 ```
 
 ## Deployment
 
-### Frontend (Cloudflare Pages)
-1. Build: `npm run build`
-2. Deploy `dist` folder to Cloudflare Pages
+See [DEPLOYMENT.md](DEPLOYMENT.md) for complete deployment instructions.
 
-### Backend (Cloudflare Workers)
+### Quick Deploy
+
+**Backend (Cloudflare Workers):**
 ```bash
 cd backend
+npm install
+wrangler secret put FIREBASE_API_KEY
+wrangler secret put OPENAI_API_KEY
 npm run deploy
 ```
 
+**Frontend (Cloudflare Pages):**
+```bash
+cd frontend
+npm install
+npm run deploy
+```
+
+### Live URLs
+- **Frontend:** https://281f2731.fluxo-de-caixa-frontend.pages.dev
+- **Backend:** https://fluxo-de-caixa-backend.gabrielcastellano25.workers.dev
+
 ## Documentation
 
+- [Deployment Guide](DEPLOYMENT.md) - Complete deployment instructions
 - [Architecture Document](plans/architecture.md) - Detailed technical architecture
+- [Voice Transaction Feature](plans/voice-transaction-feature.md) - Voice input implementation
 - [Frontend README](frontend/README.md) - Frontend-specific documentation
 - [Backend README](backend/README.md) - Backend-specific documentation
+- [Firebase Setup Guide](FIREBASE_SETUP_GUIDE.md) - Firebase configuration
 
 ## Tech Stack
 
@@ -152,6 +178,8 @@ npm run deploy
 | Charts | Recharts |
 | Icons | Lucide React |
 | Validation | Zod |
+| Voice AI | OpenAI Whisper + GPT-4 |
+| i18n | react-i18next |
 
 ## License
 

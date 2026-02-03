@@ -145,11 +145,11 @@
 - [ ] Create user guide
 
 ### 5.4 Deployment
-- [ ] Set up production Firebase project
+- [x] Set up production Firebase project
 - [x] Configure production environment variables
 - [x] Configure wrangler.toml for Cloudflare Workers deployment
-- [ ] Deploy backend to Cloudflare Workers
-- [ ] Deploy frontend to Cloudflare Pages
+- [x] Deploy backend to Cloudflare Workers
+- [x] Deploy frontend to Cloudflare Pages
 - [ ] Set up custom domain (optional)
 - [ ] Configure CI/CD pipeline with Cloudflare (optional)
 
@@ -224,12 +224,11 @@
 - Phase 2.5: Voice Transaction Feature (100%)
 - Phase 3: Budget & Reports (85%)
 - Phase 4: MCP Integration (25%)
-- Phase 5: Polish & Deployment (60%)
+- Phase 5: Polish & Deployment (80%)
 
 **In Progress:**
 - MCP Server implementation
 - Testing suite
-- Production deployment
 
 **Pending:**
 - User profile page
@@ -238,4 +237,13 @@
 - Printable reports
 - Dark mode support
 - Full test coverage
-- Production deployment
+- Custom domain setup (optional)
+- CI/CD pipeline (optional)
+
+## Deployment Information
+
+**Live URLs:**
+- Frontend: https://281f2731.fluxo-de-caixa-frontend.pages.dev
+- Backend: https://fluxo-de-caixa-backend.gabrielcastellano25.workers.dev
+
+**Deployment Date:** February 3, 2026
