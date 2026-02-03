@@ -48,7 +48,17 @@ export function Transactions() {
         getTransactions(user!.uid, {}),
         getCategories(user!.uid),
       ]);
-      setTransactions(transactionsData);
+
+      // Join transactions with their categories
+      const transactionsWithCategories = transactionsData.map((transaction) => {
+        const category = categoriesData.find((c) => c.id === transaction.categoryId);
+        return {
+          ...transaction,
+          category,
+        };
+      });
+
+      setTransactions(transactionsWithCategories);
       setCategories(categoriesData);
     } catch (error) {
       console.error('Error loading data:', error);

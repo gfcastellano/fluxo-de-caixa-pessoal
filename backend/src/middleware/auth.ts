@@ -14,7 +14,7 @@ export const authMiddleware: MiddlewareHandler<Context> = async (c, next) => {
   const token = authHeader.substring(7);
 
   try {
-    // Verify Firebase JWT token
+    // Verify Firebase JWT token using Firebase Auth REST API
     const response = await fetch(
       `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${c.env.FIREBASE_API_KEY}`,
       {
@@ -25,7 +25,9 @@ export const authMiddleware: MiddlewareHandler<Context> = async (c, next) => {
     );
 
     if (!response.ok) {
-      return c.json({ success: false, error: 'Invalid token' }, 401);
+      const errorData = await response.json();
+      console.error('Firebase auth error:', errorData);
+      return c.json({ success: false, error: 'Invalid token', details: errorData }, 401);
     }
 
     const data = await response.json();
@@ -40,6 +42,7 @@ export const authMiddleware: MiddlewareHandler<Context> = async (c, next) => {
 
     await next();
   } catch (error) {
+    console.error('Auth middleware error:', error);
     return c.json({ success: false, error: 'Token verification failed' }, 401);
   }
 };
