@@ -10,6 +10,7 @@ import {
 } from '../services/reportService';
 import type { MonthlySummary, CategoryBreakdown } from '../types';
 import { formatCurrency, formatMonthYear, getCurrentMonth } from '../utils/format';
+import { getCategoryTranslationKey } from '../utils/categoryTranslations';
 import {
   PieChart,
   Pie,
@@ -43,6 +44,12 @@ export function Reports() {
   const [loading, setLoading] = useState(true);
   const [year, setYear] = useState(getCurrentMonth().year);
   const [month, setMonth] = useState(getCurrentMonth().month);
+
+  // Helper function to get translated category name
+  const getTranslatedCategoryName = (categoryName: string): string => {
+    const translationKey = getCategoryTranslationKey(categoryName);
+    return translationKey ? t(translationKey) : categoryName;
+  };
 
   useEffect(() => {
     if (user) {
@@ -208,7 +215,7 @@ export function Reports() {
                     cy="50%"
                     labelLine={false}
                     label={(entry) =>
-                      `${(entry as unknown as CategoryBreakdown).categoryName}: ${(entry as unknown as CategoryBreakdown).percentage.toFixed(0)}%`
+                      `${getTranslatedCategoryName((entry as unknown as CategoryBreakdown).categoryName)}: ${(entry as unknown as CategoryBreakdown).percentage.toFixed(0)}%`
                     }
                     outerRadius={80}
                     fill="#8884d8"
@@ -219,7 +226,11 @@ export function Reports() {
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={(value) => formatCurrency(Number(value))}
+                    formatter={(value, name, props) => {
+                      const categoryName = props?.payload?.categoryName || name;
+                      const translatedName = getTranslatedCategoryName(categoryName);
+                      return [formatCurrency(Number(value)), translatedName];
+                    }}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -244,7 +255,7 @@ export function Reports() {
                     cy="50%"
                     labelLine={false}
                     label={(entry) =>
-                      `${(entry as unknown as CategoryBreakdown).categoryName}: ${(entry as unknown as CategoryBreakdown).percentage.toFixed(0)}%`
+                      `${getTranslatedCategoryName((entry as unknown as CategoryBreakdown).categoryName)}: ${(entry as unknown as CategoryBreakdown).percentage.toFixed(0)}%`
                     }
                     outerRadius={80}
                     fill="#8884d8"
@@ -255,7 +266,11 @@ export function Reports() {
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={(value) => formatCurrency(Number(value))}
+                    formatter={(value, name, props) => {
+                      const categoryName = props?.payload?.categoryName || name;
+                      const translatedName = getTranslatedCategoryName(categoryName);
+                      return [formatCurrency(Number(value)), translatedName];
+                    }}
                   />
                 </PieChart>
               </ResponsiveContainer>
