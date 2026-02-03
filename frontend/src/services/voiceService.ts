@@ -27,8 +27,8 @@ export async function sendVoiceTransaction(
   }
 
   try {
-    // Get Firebase auth token
-    const token = await user.getIdToken();
+    // Get Firebase auth token (force refresh to ensure token is valid)
+    const token = await user.getIdToken(true);
 
     // Create form data
     const formData = new FormData();

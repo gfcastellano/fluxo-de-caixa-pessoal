@@ -1,20 +1,13 @@
 name = "fluxo-de-caixa-backend"
 main = "src/index.ts"
-compatibility_date = "2024-01-01"
+compatibility_date = "2025-01-01"
 
 # Environment variables for Firebase
 [vars]
-FIREBASE_PROJECT_ID = ""
+FIREBASE_PROJECT_ID = "fluxo-de-caixa-pessoal-d6d3f"
 
 # Secrets (set via wrangler secret put)
-# FIREBASE_PRIVATE_KEY
-# FIREBASE_CLIENT_EMAIL
-# OPENAI_API_KEY
+# FIREBASE_API_KEY - set via: wrangler secret put FIREBASE_API_KEY
+# OPENAI_API_KEY - set via: wrangler secret put OPENAI_API_KEY
 
-# CORS configuration
-[[headers]]
-  for = "/*"
-  [headers.values]
-    Access-Control-Allow-Origin = "*"
-    Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
-    Access-Control-Allow-Headers = "Content-Type, Authorization"
+# CORS configuration - handled in code (src/index.ts)

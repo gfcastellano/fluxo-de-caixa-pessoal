@@ -5,33 +5,7 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// .wrangler/tmp/bundle-aImhUz/checked-fetch.js
-var urls = /* @__PURE__ */ new Set();
-function checkURL(request, init) {
-  const url = request instanceof URL ? request : new URL(
-    (typeof request === "string" ? new Request(request, init) : request).url
-  );
-  if (url.port && url.port !== "443" && url.protocol === "https:") {
-    if (!urls.has(url.toString())) {
-      urls.add(url.toString());
-      console.warn(
-        `WARNING: known issue with \`fetch()\` requests to custom HTTPS ports in published Workers:
- - ${url.toString()} - the custom port will be ignored when the Worker is published using the \`wrangler deploy\` command.
-`
-      );
-    }
-  }
-}
-__name(checkURL, "checkURL");
-globalThis.fetch = new Proxy(globalThis.fetch, {
-  apply(target, thisArg, argArray) {
-    const [request, init] = argArray;
-    checkURL(request, init);
-    return Reflect.apply(target, thisArg, argArray);
-  }
-});
-
-// .wrangler/tmp/bundle-aImhUz/strip-cf-connecting-ip-header.js
+// .wrangler/tmp/bundle-I0rF8h/strip-cf-connecting-ip-header.js
 function stripCfConnectingIPHeader(input, init) {
   const request = new Request(input, init);
   request.headers.delete("CF-Connecting-IP");
@@ -1797,75 +1771,6 @@ var Hono2 = /* @__PURE__ */ __name(class extends Hono {
   }
 }, "Hono");
 
-// node_modules/hono/dist/middleware/cors/index.js
-var cors = /* @__PURE__ */ __name((options) => {
-  const defaults = {
-    origin: "*",
-    allowMethods: ["GET", "HEAD", "PUT", "POST", "DELETE", "PATCH"],
-    allowHeaders: [],
-    exposeHeaders: []
-  };
-  const opts = {
-    ...defaults,
-    ...options
-  };
-  const findAllowOrigin = ((optsOrigin) => {
-    if (typeof optsOrigin === "string") {
-      return () => optsOrigin;
-    } else if (typeof optsOrigin === "function") {
-      return optsOrigin;
-    } else {
-      return (origin) => optsOrigin.includes(origin) ? origin : optsOrigin[0];
-    }
-  })(opts.origin);
-  return /* @__PURE__ */ __name(async function cors2(c, next) {
-    function set(key, value) {
-      c.res.headers.set(key, value);
-    }
-    __name(set, "set");
-    const allowOrigin = findAllowOrigin(c.req.header("origin") || "");
-    if (allowOrigin) {
-      set("Access-Control-Allow-Origin", allowOrigin);
-    }
-    if (opts.origin !== "*") {
-      set("Vary", "Origin");
-    }
-    if (opts.credentials) {
-      set("Access-Control-Allow-Credentials", "true");
-    }
-    if (opts.exposeHeaders?.length) {
-      set("Access-Control-Expose-Headers", opts.exposeHeaders.join(","));
-    }
-    if (c.req.method === "OPTIONS") {
-      if (opts.maxAge != null) {
-        set("Access-Control-Max-Age", opts.maxAge.toString());
-      }
-      if (opts.allowMethods?.length) {
-        set("Access-Control-Allow-Methods", opts.allowMethods.join(","));
-      }
-      let headers = opts.allowHeaders;
-      if (!headers?.length) {
-        const requestHeaders = c.req.header("Access-Control-Request-Headers");
-        if (requestHeaders) {
-          headers = requestHeaders.split(/\s*,\s*/);
-        }
-      }
-      if (headers?.length) {
-        set("Access-Control-Allow-Headers", headers.join(","));
-        c.res.headers.append("Vary", "Access-Control-Request-Headers");
-      }
-      c.res.headers.delete("Content-Length");
-      c.res.headers.delete("Content-Type");
-      return new Response(null, {
-        headers: c.res.headers,
-        status: 204,
-        statusText: c.res.statusText
-      });
-    }
-    await next();
-  }, "cors2");
-}, "cors");
-
 // src/services/firebase.ts
 var FIREBASE_REST_API = "https://firestore.googleapis.com/v1";
 var FirebaseService = class {
@@ -1991,27 +1896,48 @@ __name(FirebaseService, "FirebaseService");
 
 // src/middleware/auth.ts
 var authMiddleware = /* @__PURE__ */ __name(async (c, next) => {
+  if (c.req.method === "OPTIONS") {
+    await next();
+    return;
+  }
   const authHeader = c.req.header("Authorization");
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    console.error("Auth failed: No Bearer token in header:", authHeader);
     return c.json(
       { success: false, error: "Unauthorized - No token provided" },
       401
     );
   }
   const token = authHeader.substring(7);
+  if (!token || token.length < 10) {
+    console.error("Auth failed: Token too short or empty");
+    return c.json({ success: false, error: "Invalid token format" }, 401);
+  }
   try {
-    const response = await fetch(
-      `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${c.env.FIREBASE_API_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken: token })
-      }
-    );
+    console.log("Verifying token with Firebase...");
+    console.log("API Key available:", !!c.env.FIREBASE_API_KEY);
+    console.log("API Key length:", c.env.FIREBASE_API_KEY?.length);
+    console.log("Token:", token.substring(0, 20) + "...");
+    const apiKey = (c.env.FIREBASE_API_KEY || "").replace(/^["']|["']$/g, "");
+    const url = `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`;
+    console.log("Request URL:", url.substring(0, 80) + "...");
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idToken: token })
+    });
+    console.log("Response status:", response.status);
+    console.log("Response headers:", Object.fromEntries(response.headers.entries()));
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error("Firebase auth error:", errorData);
-      return c.json({ success: false, error: "Invalid token", details: errorData }, 401);
+      const errorText = await response.text();
+      console.error("Firebase auth error (raw):", errorText);
+      try {
+        const errorData = JSON.parse(errorText);
+        console.error("Firebase auth error (parsed):", errorData);
+        return c.json({ success: false, error: "Invalid token", details: errorData }, 401);
+      } catch {
+        return c.json({ success: false, error: "Firebase auth failed", details: errorText }, 401);
+      }
     }
     const data = await response.json();
     if (!data.users || data.users.length === 0) {
@@ -2020,6 +1946,7 @@ var authMiddleware = /* @__PURE__ */ __name(async (c, next) => {
     const user = data.users[0];
     c.set("userId", user.localId);
     c.set("userEmail", user.email);
+    console.log("Auth successful for user:", user.localId);
     await next();
   } catch (error) {
     console.error("Auth middleware error:", error);
@@ -6496,12 +6423,13 @@ var OpenAIService = class {
   apiKey;
   baseUrl = "https://api.openai.com/v1";
   constructor(env) {
-    this.apiKey = env.OPENAI_API_KEY;
+    this.apiKey = (env.OPENAI_API_KEY || "").replace(/^["']|["']$/g, "");
   }
   /**
    * Transcribe audio using Whisper-1
    */
   async transcribeAudio(audioBuffer, language) {
+    console.log("Starting transcription, buffer size:", audioBuffer.byteLength);
     const uint8Array = new Uint8Array(audioBuffer);
     const file = new File([uint8Array], "audio.webm", { type: "audio/webm" });
     const formData = new FormData();
@@ -6509,6 +6437,7 @@ var OpenAIService = class {
     formData.append("model", "whisper-1");
     formData.append("language", language);
     formData.append("response_format", "text");
+    console.log("Sending to OpenAI Whisper API...");
     const response = await fetch(`${this.baseUrl}/audio/transcriptions`, {
       method: "POST",
       headers: {
@@ -6518,9 +6447,12 @@ var OpenAIService = class {
     });
     if (!response.ok) {
       const error = await response.text();
+      console.error("Transcription API error:", response.status, error);
       throw new Error(`Transcription failed: ${error}`);
     }
-    return response.text();
+    const text = await response.text();
+    console.log("Transcription successful:", text);
+    return text;
   }
   /**
    * Parse transcription into transaction data using GPT-4
@@ -6572,14 +6504,18 @@ Response must be valid JSON only, no markdown, no explanation.`;
     });
     if (!response.ok) {
       const error = await response.text();
+      console.error("GPT parsing API error:", response.status, error);
       throw new Error(`Parsing failed: ${error}`);
     }
     const data = await response.json();
     const content = data.choices[0]?.message?.content || "";
+    console.log("GPT response:", content);
     const jsonMatch = content.match(/```json\s*([\s\S]*?)```/) || content.match(/```\s*([\s\S]*?)```/) || [null, content];
     const jsonString = jsonMatch[1]?.trim() || content.trim();
+    console.log("Extracted JSON:", jsonString);
     try {
       const parsed = JSON.parse(jsonString);
+      console.log("Parsed transaction:", parsed);
       if (typeof parsed.amount !== "number" || parsed.amount <= 0) {
         throw new Error("Invalid or missing amount");
       }
@@ -6609,9 +6545,11 @@ app5.use("*", authMiddleware);
 app5.post("/transactions", async (c) => {
   try {
     const userId = c.get("userId");
+    console.log("Voice transaction request received for user:", userId);
     const formData = await c.req.formData();
     const audioFile = formData.get("audio");
     const language = formData.get("language") || "en";
+    console.log("Audio file:", audioFile?.name, "Size:", audioFile?.size, "Language:", language);
     if (!audioFile) {
       return c.json(
         { success: false, error: "No audio file provided" },
@@ -6689,14 +6627,24 @@ var voice_default = app5;
 
 // src/index.ts
 var app6 = new Hono2();
-app6.use(
-  "*",
-  cors({
-    origin: "*",
-    allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization"]
-  })
-);
+app6.use("*", async (c, next) => {
+  const origin = c.req.header("Origin");
+  const allowedOrigins = [
+    "http://localhost:5173",
+    "https://fluxo-de-caixa-frontend.pages.dev",
+    "https://281f2731.fluxo-de-caixa-frontend.pages.dev"
+  ];
+  if (origin && allowedOrigins.includes(origin)) {
+    c.header("Access-Control-Allow-Origin", origin);
+  }
+  c.header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+  c.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  c.header("Access-Control-Allow-Credentials", "true");
+  if (c.req.method === "OPTIONS") {
+    return c.body(null, 204);
+  }
+  await next();
+});
 app6.get("/", (c) => {
   return c.json({
     success: true,
@@ -6762,7 +6710,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// .wrangler/tmp/bundle-aImhUz/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-I0rF8h/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -6794,7 +6742,7 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// .wrangler/tmp/bundle-aImhUz/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-I0rF8h/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;

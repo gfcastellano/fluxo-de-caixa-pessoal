@@ -1,5 +1,4 @@
 import { Hono } from 'hono';
-import { cors } from 'hono/cors';
 import type { Env, Variables } from './types/context';
 
 // Import routes
@@ -11,15 +10,32 @@ import voice from './routes/voice';
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
-// Enable CORS
-app.use(
-  '*',
-  cors({
-    origin: '*',
-    allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowHeaders: ['Content-Type', 'Authorization'],
-  })
-);
+// Custom CORS middleware to handle preflight and actual requests
+app.use('*', async (c, next) => {
+  const origin = c.req.header('Origin');
+  
+  // Allow specific origins
+  const allowedOrigins = [
+    'http://localhost:5173',
+    'https://fluxo-de-caixa-frontend.pages.dev',
+    'https://281f2731.fluxo-de-caixa-frontend.pages.dev',
+  ];
+  
+  if (origin && allowedOrigins.includes(origin)) {
+    c.header('Access-Control-Allow-Origin', origin);
+  }
+  
+  c.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  c.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  c.header('Access-Control-Allow-Credentials', 'true');
+  
+  // Handle preflight requests
+  if (c.req.method === 'OPTIONS') {
+    return c.body(null, 204);
+  }
+  
+  await next();
+});
 
 // Health check
 app.get('/', (c) => {

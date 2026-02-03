@@ -19,11 +19,14 @@ app.use('*', authMiddleware);
 app.post('/transactions', async (c) => {
   try {
     const userId = c.get('userId');
+    console.log('Voice transaction request received for user:', userId);
     
     // Parse multipart form data
     const formData = await c.req.formData();
     const audioFile = formData.get('audio') as File | null;
     const language = (formData.get('language') as string) || 'en';
+    
+    console.log('Audio file:', audioFile?.name, 'Size:', audioFile?.size, 'Language:', language);
 
     if (!audioFile) {
       return c.json(

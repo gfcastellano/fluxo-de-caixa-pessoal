@@ -14,13 +14,16 @@ export class OpenAIService {
   private baseUrl = 'https://api.openai.com/v1';
 
   constructor(env: Env) {
-    this.apiKey = env.OPENAI_API_KEY;
+    // Strip quotes from API key if present
+    this.apiKey = (env.OPENAI_API_KEY || '').replace(/^["']|["']$/g, '');
   }
 
   /**
    * Transcribe audio using Whisper-1
    */
   async transcribeAudio(audioBuffer: ArrayBuffer, language: string): Promise<string> {
+    console.log('Starting transcription, buffer size:', audioBuffer.byteLength);
+    
     // Convert ArrayBuffer to Uint8Array for Cloudflare Workers compatibility
     const uint8Array = new Uint8Array(audioBuffer);
     
@@ -33,6 +36,7 @@ export class OpenAIService {
     formData.append('language', language);
     formData.append('response_format', 'text');
 
+    console.log('Sending to OpenAI Whisper API...');
     const response = await fetch(`${this.baseUrl}/audio/transcriptions`, {
       method: 'POST',
       headers: {
@@ -43,10 +47,13 @@ export class OpenAIService {
 
     if (!response.ok) {
       const error = await response.text();
+      console.error('Transcription API error:', response.status, error);
       throw new Error(`Transcription failed: ${error}`);
     }
 
-    return response.text();
+    const text = await response.text();
+    console.log('Transcription successful:', text);
+    return text;
   }
 
   /**
@@ -109,6 +116,7 @@ Response must be valid JSON only, no markdown, no explanation.`;
 
     if (!response.ok) {
       const error = await response.text();
+      console.error('GPT parsing API error:', response.status, error);
       throw new Error(`Parsing failed: ${error}`);
     }
 
@@ -121,6 +129,7 @@ Response must be valid JSON only, no markdown, no explanation.`;
     };
 
     const content = data.choices[0]?.message?.content || '';
+    console.log('GPT response:', content);
     
     // Extract JSON from the response (handle markdown code blocks)
     const jsonMatch = content.match(/```json\s*([\s\S]*?)```/) || 
@@ -128,9 +137,11 @@ Response must be valid JSON only, no markdown, no explanation.`;
                       [null, content];
     
     const jsonString = jsonMatch[1]?.trim() || content.trim();
+    console.log('Extracted JSON:', jsonString);
     
     try {
       const parsed = JSON.parse(jsonString) as Partial<ParsedTransaction>;
+      console.log('Parsed transaction:', parsed);
       
       // Validate required fields
       if (typeof parsed.amount !== 'number' || parsed.amount <= 0) {
