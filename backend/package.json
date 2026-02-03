@@ -1,0 +1,24 @@
+{
+  "name": "fluxo-de-caixa-backend",
+  "version": "1.0.0",
+  "description": "Cloudflare Workers backend for Fluxo de Caixa Pessoal",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "lint": "eslint src/**/*.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": ["cloudflare", "workers", "api"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20231218.0",
+    "typescript": "^5.3.3",
+    "wrangler": "^3.22.1"
+  },
+  "dependencies": {
+    "hono": "^3.12.0",
+    "zod": "^3.22.4"
+  }
+}

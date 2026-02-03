@@ -1,0 +1,20 @@
+name = "fluxo-de-caixa-backend"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+# Environment variables for Firebase
+[vars]
+FIREBASE_PROJECT_ID = ""
+
+# Secrets (set via wrangler secret put)
+# FIREBASE_PRIVATE_KEY
+# FIREBASE_CLIENT_EMAIL
+# OPENAI_API_KEY
+
+# CORS configuration
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type, Authorization"
