@@ -16,6 +16,7 @@ interface TransactionModalProps {
   transaction?: Transaction | null;
   categories: Category[];
   onSave: (transaction: Partial<Transaction>) => void;
+  onVoiceUpdate?: (updates: Partial<Transaction>) => void;
   userId: string;
 }
 
@@ -25,6 +26,7 @@ export function TransactionModal({
   transaction,
   categories,
   onSave,
+  onVoiceUpdate,
   userId,
 }: TransactionModalProps) {
   const { t, i18n } = useTranslation();
@@ -93,20 +95,31 @@ export function TransactionModal({
           });
           
           // Update form data with the parsed changes
+          const updates: Partial<Transaction> = {};
           if (result.data.description) {
+            updates.description = result.data.description;
             setFormData(prev => ({ ...prev, description: result.data!.description! }));
           }
           if (result.data.amount) {
+            updates.amount = result.data.amount;
             setFormData(prev => ({ ...prev, amount: result.data!.amount!.toString() }));
           }
           if (result.data.type) {
+            updates.type = result.data.type;
             setFormData(prev => ({ ...prev, type: result.data!.type! }));
           }
           if (result.data.categoryId) {
+            updates.categoryId = result.data.categoryId;
             setFormData(prev => ({ ...prev, categoryId: result.data!.categoryId! }));
           }
           if (result.data.date) {
+            updates.date = result.data.date;
             setFormData(prev => ({ ...prev, date: result.data!.date! }));
+          }
+          
+          // Notify parent component about voice updates
+          if (onVoiceUpdate && Object.keys(updates).length > 0) {
+            onVoiceUpdate(updates);
           }
           
           // Clear success feedback after 3 seconds

@@ -123,6 +123,25 @@ export function Transactions() {
     setEditingTransaction(null);
   };
 
+  const handleVoiceUpdate = (updates: Partial<Transaction>) => {
+    // Update the local state immediately when voice changes are applied
+    if (editingTransaction) {
+      setTransactions(prev => prev.map(t => {
+        if (t.id === editingTransaction.id) {
+          const updatedCategory = updates.categoryId 
+            ? categories.find(c => c.id === updates.categoryId) 
+            : t.category;
+          return { 
+            ...t, 
+            ...updates, 
+            category: updatedCategory,
+          };
+        }
+        return t;
+      }));
+    }
+  };
+
   const filteredTransactions = transactions.filter((t) => {
     const matchesSearch = t.description
       .toLowerCase()
@@ -163,6 +182,7 @@ export function Transactions() {
         transaction={editingTransaction}
         categories={categories}
         onSave={handleSave}
+        onVoiceUpdate={handleVoiceUpdate}
         userId={user?.uid || ''}
       />
 
