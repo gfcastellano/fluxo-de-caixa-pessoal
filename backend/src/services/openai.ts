@@ -58,19 +58,46 @@ export class OpenAIService {
 
   /**
    * Parse transcription into transaction data using GPT-4
+   * @param transcription - The transcribed text from the audio
+   * @param categories - Available categories for matching
+   * @param language - The language code for the response (e.g., 'en', 'pt', 'es')
+   * @param defaultDescription - Default description to use if parsing fails
    */
   async parseTransaction(
     transcription: string,
-    categories: Category[]
+    categories: Category[],
+    language: string = 'en',
+    defaultDescription: string = 'Voice transaction'
   ): Promise<ParsedTransaction> {
-    const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    const currentDateTime = now.toISOString();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    const currentDay = now.getDate();
     
     // Build category mapping for the prompt
     const categoryList = categories
       .map(c => `"${c.name}" (ID: ${c.id}, Type: ${c.type})`)
       .join('\n');
 
+    // Language-specific instructions for the description
+    const languageInstructions: Record<string, string> = {
+      en: 'Return the description in English',
+      pt: 'Return the description in Portuguese (Português)',
+      es: 'Return the description in Spanish (Español)',
+    };
+    
+    const langInstruction = languageInstructions[language] || languageInstructions.en;
+
     const prompt = `Parse the following voice command into a transaction object.
+
+CURRENT DATE INFORMATION (use this as reference for any relative dates):
+- Current date: ${today}
+- Current year: ${currentYear}
+- Current month: ${currentMonth}
+- Current day: ${currentDay}
+- Full timestamp: ${currentDateTime}
 
 Available categories:
 ${categoryList}
@@ -80,14 +107,19 @@ Voice command: "${transcription}"
 Extract and return ONLY a JSON object with these exact fields:
 - amount: number (always positive, extract the numeric value)
 - type: "income" or "expense" (determine from context - words like "spent", "paid", "bought" indicate expense; "received", "earned", "got" indicate income)
-- description: string (what the transaction is for, keep it concise)
+- description: string (what the transaction is for, keep it concise, ${langInstruction})
 - categoryId: string (match to most appropriate category ID based on description, or empty string if uncertain)
 - date: string in YYYY-MM-DD format (default to "${today}" if not specified)
 
+IMPORTANT INSTRUCTIONS:
+1. The description field MUST be returned in the specified language (${language}).
+2. Use the CURRENT DATE (${today}) as the default date - GPT's training data cutoff does not matter, use the current date provided above.
+3. For relative dates like "yesterday", "last week", "next month", calculate based on the current date (${today}).
+
 Examples:
-- "I spent 50 euros on groceries" → {"amount": 50, "type": "expense", "description": "Groceries", "categoryId": "...", "date": "${today}"}
-- "Received 1000 salary" → {"amount": 1000, "type": "income", "description": "Salary", "categoryId": "...", "date": "${today}"}
-- "Paid 25 for lunch yesterday" → {"amount": 25, "type": "expense", "description": "Lunch", "categoryId": "...", "date": "YYYY-MM-DD for yesterday"}
+- "I spent 50 euros on groceries" (en) → {"amount": 50, "type": "expense", "description": "Groceries", "categoryId": "...", "date": "${today}"}
+- "Gastei 50 euros em supermercado" (pt) → {"amount": 50, "type": "expense", "description": "Supermercado", "categoryId": "...", "date": "${today}"}
+- "Gasté 50 euros en supermercado" (es) → {"amount": 50, "type": "expense", "description": "Supermercado", "categoryId": "...", "date": "${today}"}
 
 Response must be valid JSON only, no markdown, no explanation.`;
 
@@ -153,7 +185,7 @@ Response must be valid JSON only, no markdown, no explanation.`;
       }
       
       if (!parsed.description || typeof parsed.description !== 'string') {
-        parsed.description = 'Voice transaction';
+        parsed.description = defaultDescription;
       }
 
       return {

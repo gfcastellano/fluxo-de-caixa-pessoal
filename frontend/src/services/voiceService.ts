@@ -7,6 +7,7 @@ export interface VoiceTransactionResponse {
   success: boolean;
   data?: Transaction;
   transcription?: string;
+  message?: string;  // Localized success message from backend
   error?: string;
 }
 

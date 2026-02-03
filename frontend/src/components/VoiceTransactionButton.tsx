@@ -29,7 +29,7 @@ export function VoiceTransactionButton({
         if (result.success && result.data) {
           setFeedback({
             type: 'success',
-            message: t('voice.success'),
+            message: result.message || t('voice.success'),
           });
           onTransactionCreated?.(result.data);
           
@@ -41,7 +41,7 @@ export function VoiceTransactionButton({
         } else {
           setFeedback({
             type: 'error',
-            message: result.error || t('voice.error'),
+            message: result.error || result.message || t('voice.error'),
           });
           
           // Clear error feedback after 5 seconds

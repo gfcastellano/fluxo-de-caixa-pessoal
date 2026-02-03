@@ -4,6 +4,7 @@ import { FirebaseService } from '../services/firebase';
 import { OpenAIService } from '../services/openai';
 import { authMiddleware } from '../middleware/auth';
 import type { Transaction, Category } from '../types';
+import { getErrorTranslation, getSuccessTranslation, getDefaultTranslation } from '../i18n/voice-translations';
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -30,7 +31,7 @@ app.post('/transactions', async (c) => {
 
     if (!audioFile) {
       return c.json(
-        { success: false, error: 'No audio file provided' },
+        { success: false, error: getErrorTranslation(language, 'noAudioFile') },
         400
       );
     }
@@ -40,7 +41,7 @@ app.post('/transactions', async (c) => {
 
     if (audioBuffer.byteLength === 0) {
       return c.json(
-        { success: false, error: 'Empty audio file' },
+        { success: false, error: getErrorTranslation(language, 'emptyAudio') },
         400
       );
     }
@@ -56,14 +57,14 @@ app.post('/transactions', async (c) => {
     } catch (error) {
       console.error('Transcription error:', error);
       return c.json(
-        { success: false, error: 'Failed to transcribe audio' },
+        { success: false, error: getErrorTranslation(language, 'transcriptionFailed') },
         500
       );
     }
 
     if (!transcription || transcription.trim().length === 0) {
       return c.json(
-        { success: false, error: 'No speech detected' },
+        { success: false, error: getErrorTranslation(language, 'noSpeechDetected') },
         400
       );
     }
@@ -88,13 +89,14 @@ app.post('/transactions', async (c) => {
     };
     
     try {
-      parsedTransaction = await openai.parseTransaction(transcription, categories);
+      const defaultDescription = getDefaultTranslation(language, 'description');
+      parsedTransaction = await openai.parseTransaction(transcription, categories, language, defaultDescription);
     } catch (error) {
       console.error('Parsing error:', error);
       return c.json(
         { 
           success: false, 
-          error: 'Could not understand the transaction. Please try again.',
+          error: getErrorTranslation(language, 'parsingFailed'),
           transcription 
         },
         400
@@ -116,12 +118,21 @@ app.post('/transactions', async (c) => {
       success: true,
       data: createdTransaction as Transaction,
       transcription,
+      message: getSuccessTranslation(language, 'transactionCreated'),
     }, 201);
 
   } catch (error) {
     console.error('Voice transaction error:', error);
+    // Get language from formData if available, otherwise default to 'en'
+    let errorLanguage = 'en';
+    try {
+      const formData = await c.req.formData();
+      errorLanguage = (formData.get('language') as string) || 'en';
+    } catch {
+      // If we can't get the form data, use default language
+    }
     return c.json(
-      { success: false, error: 'Failed to process voice transaction' },
+      { success: false, error: getErrorTranslation(errorLanguage, 'processingFailed') },
       500
     );
   }
