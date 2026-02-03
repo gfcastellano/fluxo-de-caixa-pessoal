@@ -88,6 +88,9 @@ export function TransactionModal({
         );
         setIsProcessingVoice(false);
         
+        console.log('Voice update result:', result);
+        console.log('Voice update data received:', result.data);
+        
         if (result.success && result.data) {
           setVoiceFeedback({
             type: 'success',
@@ -96,30 +99,42 @@ export function TransactionModal({
           
           // Update form data with the parsed changes
           const updates: Partial<Transaction> = {};
+          console.log('Processing voice update fields:', Object.keys(result.data));
+          
           if (result.data.description) {
             updates.description = result.data.description;
             setFormData(prev => ({ ...prev, description: result.data!.description! }));
+            console.log('✓ Updated description:', result.data.description);
           }
           if (result.data.amount) {
             updates.amount = result.data.amount;
             setFormData(prev => ({ ...prev, amount: result.data!.amount!.toString() }));
+            console.log('✓ Updated amount:', result.data.amount);
           }
           if (result.data.type) {
             updates.type = result.data.type;
             setFormData(prev => ({ ...prev, type: result.data!.type! }));
+            console.log('✓ Updated type:', result.data.type);
           }
           if (result.data.categoryId) {
             updates.categoryId = result.data.categoryId;
             setFormData(prev => ({ ...prev, categoryId: result.data!.categoryId! }));
+            console.log('✓ Updated categoryId:', result.data.categoryId);
           }
           if (result.data.date) {
             updates.date = result.data.date;
             setFormData(prev => ({ ...prev, date: result.data!.date! }));
+            console.log('✓ Updated date:', result.data.date);
           }
+          
+          console.log('Total updates to apply:', Object.keys(updates));
           
           // Notify parent component about voice updates
           if (onVoiceUpdate && Object.keys(updates).length > 0) {
+            console.log('Calling onVoiceUpdate with:', updates);
             onVoiceUpdate(updates);
+          } else {
+            console.log('No updates to apply or onVoiceUpdate not provided');
           }
           
           // Clear success feedback after 3 seconds

@@ -124,21 +124,36 @@ export function Transactions() {
   };
 
   const handleVoiceUpdate = (updates: Partial<Transaction>) => {
+    console.log('handleVoiceUpdate called with:', updates);
+    console.log('Current editingTransaction:', editingTransaction);
+    
     // Update the local state immediately when voice changes are applied
     if (editingTransaction) {
-      setTransactions(prev => prev.map(t => {
-        if (t.id === editingTransaction.id) {
-          const updatedCategory = updates.categoryId 
-            ? categories.find(c => c.id === updates.categoryId) 
-            : t.category;
-          return { 
-            ...t, 
-            ...updates, 
-            category: updatedCategory,
-          };
-        }
-        return t;
-      }));
+      console.log('Updating transaction in local state:', editingTransaction.id);
+      setTransactions(prev => {
+        console.log('Previous transactions count:', prev.length);
+        const newTransactions = prev.map(t => {
+          if (t.id === editingTransaction.id) {
+            const updatedCategory = updates.categoryId 
+              ? categories.find(c => c.id === updates.categoryId) 
+              : t.category;
+            console.log('Found transaction to update:', t.id);
+            console.log('Updated category:', updatedCategory?.name || 'unchanged');
+            const updatedTransaction = { 
+              ...t, 
+              ...updates, 
+              category: updatedCategory,
+            };
+            console.log('Updated transaction:', updatedTransaction);
+            return updatedTransaction;
+          }
+          return t;
+        });
+        console.log('New transactions count:', newTransactions.length);
+        return newTransactions;
+      });
+    } else {
+      console.log('No editingTransaction found, cannot update state');
     }
   };
 

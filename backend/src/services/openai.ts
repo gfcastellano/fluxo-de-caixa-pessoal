@@ -321,30 +321,45 @@ Response must be valid JSON only, no markdown, no explanation.`;
     
     try {
       const parsed = JSON.parse(jsonString) as Partial<Transaction>;
-      console.log('Parsed transaction updates:', parsed);
+      console.log('Parsed transaction updates:', JSON.stringify(parsed, null, 2));
+      console.log('Raw parsed object:', parsed);
       
       // Validate and clean up the updates
       const updates: Partial<Transaction> = {};
       
+      console.log('Validating parsed fields:');
+      console.log('- amount:', parsed.amount, 'type:', typeof parsed.amount);
+      console.log('- type:', parsed.type, 'valid:', ['income', 'expense'].includes(parsed.type || ''));
+      console.log('- description:', parsed.description);
+      console.log('- categoryId:', parsed.categoryId);
+      console.log('- date:', parsed.date);
+      
       if (parsed.amount !== undefined && typeof parsed.amount === 'number' && parsed.amount > 0) {
         updates.amount = parsed.amount;
+        console.log('✓ amount validated:', updates.amount);
       }
       
       if (parsed.type !== undefined && ['income', 'expense'].includes(parsed.type)) {
         updates.type = parsed.type;
+        console.log('✓ type validated:', updates.type);
       }
       
       if (parsed.description !== undefined && typeof parsed.description === 'string' && parsed.description.trim()) {
         updates.description = parsed.description.trim();
+        console.log('✓ description validated:', updates.description);
       }
       
       if (parsed.categoryId !== undefined && typeof parsed.categoryId === 'string') {
         updates.categoryId = parsed.categoryId;
+        console.log('✓ categoryId validated:', updates.categoryId);
       }
       
       if (parsed.date !== undefined && typeof parsed.date === 'string') {
         updates.date = parsed.date;
+        console.log('✓ date validated:', updates.date);
       }
+      
+      console.log('Final validated updates:', JSON.stringify(updates, null, 2));
       
       return updates;
     } catch (error) {

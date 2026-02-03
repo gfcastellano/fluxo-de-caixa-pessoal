@@ -112,7 +112,13 @@ app.post('/transactions/update', async (c) => {
       updatedAt: now,
     };
     
+    console.log('Voice update - Transaction ID:', transactionId);
+    console.log('Voice update - Updates to apply:', JSON.stringify(updates, null, 2));
+    console.log('Voice update - Full update data:', JSON.stringify(updateData, null, 2));
+    
     await firebase.updateDocument('transactions', transactionId, updateData);
+    
+    console.log('Voice update - Successfully updated in Firestore');
     
     return c.json({
       success: true,
