@@ -199,4 +199,156 @@ Response must be valid JSON only, no markdown, no explanation.`;
       throw new Error(`Failed to parse transaction: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
+
+  /**
+   * Parse voice command for updating an existing transaction
+   * Returns only the fields that should be updated
+   */
+  async parseTransactionUpdate(
+    transcription: string,
+    currentTransaction: Transaction,
+    categories: Category[],
+    language: string = 'en'
+  ): Promise<Partial<Transaction>> {
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    const currentDay = now.getDate();
+    
+    const categoryList = categories
+      .map(c => `"${c.name}" (ID: ${c.id}, Type: ${c.type})`)
+      .join('\n');
+
+    const languageInstructions: Record<string, string> = {
+      en: 'Return the description in English',
+      pt: 'Return the description in Portuguese (Português)',
+      es: 'Return the description in Spanish (Español)',
+    };
+    
+    const langInstruction = languageInstructions[language] || languageInstructions.en;
+
+    const prompt = `You are helping update an existing transaction based on a voice command.
+
+CURRENT TRANSACTION:
+- Description: ${currentTransaction.description}
+- Amount: ${currentTransaction.amount}
+- Type: ${currentTransaction.type}
+- Category ID: ${currentTransaction.categoryId}
+- Date: ${currentTransaction.date}
+
+CURRENT DATE INFORMATION (use this as reference for any relative dates):
+- Current date: ${today}
+- Current year: ${currentYear}
+- Current month: ${currentMonth}
+- Current day: ${currentDay}
+
+Available categories:
+${categoryList}
+
+Voice command: "${transcription}"
+
+Analyze the voice command and determine what changes the user wants to make to the current transaction.
+Return ONLY a JSON object with the fields that should be updated. Include only fields that need to change.
+
+Possible fields to update:
+- amount: number (if the user mentions a new amount)
+- type: "income" or "expense" (if the user wants to change the type)
+- description: string (if the user wants to change the description, ${langInstruction})
+- categoryId: string (if the user mentions a different category, match to most appropriate category ID)
+- date: string in YYYY-MM-DD format (if the user mentions a different date - use current date ${today} as reference for relative dates like "yesterday", "next week", etc.)
+
+IMPORTANT INSTRUCTIONS:
+1. Only include fields in the JSON that the user explicitly wants to change.
+2. For date changes, calculate the exact date based on the current date (${today}).
+3. For category changes, return the categoryId from the available categories list.
+4. The description field MUST be returned in the specified language (${language}).
+
+Examples:
+- Current: {amount: 50, description: "Groceries", date: "${today}"}, Command: "change the amount to 100" → {"amount": 100}
+- Current: {date: "${today}"}, Command: "move it to yesterday" → {"date": "YYYY-MM-DD for yesterday"}
+- Current: {description: "Lunch"}, Command: "change it to dinner" → {"description": "Dinner"}
+- Current: {categoryId: "abc"}, Command: "this should be entertainment" → {"categoryId": "xyz"} (where xyz is the entertainment category ID)
+
+Response must be valid JSON only, no markdown, no explanation.`;
+
+    const response = await fetch(`${this.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a financial transaction update parser. Extract only the fields that need to be changed from voice commands and return valid JSON only.',
+          },
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        temperature: 0.1,
+        max_tokens: 500,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      console.error('GPT parsing API error:', response.status, error);
+      throw new Error(`Parsing failed: ${error}`);
+    }
+
+    const data = await response.json() as {
+      choices: Array<{
+        message: {
+          content: string;
+        };
+      }>;
+    };
+
+    const content = data.choices[0]?.message?.content || '';
+    console.log('GPT response for update:', content);
+    
+    const jsonMatch = content.match(/```json\s*([\s\S]*?)```/) || 
+                      content.match(/```\s*([\s\S]*?)```/) ||
+                      [null, content];
+    
+    const jsonString = jsonMatch[1]?.trim() || content.trim();
+    console.log('Extracted JSON for update:', jsonString);
+    
+    try {
+      const parsed = JSON.parse(jsonString) as Partial<Transaction>;
+      console.log('Parsed transaction updates:', parsed);
+      
+      // Validate and clean up the updates
+      const updates: Partial<Transaction> = {};
+      
+      if (parsed.amount !== undefined && typeof parsed.amount === 'number' && parsed.amount > 0) {
+        updates.amount = parsed.amount;
+      }
+      
+      if (parsed.type !== undefined && ['income', 'expense'].includes(parsed.type)) {
+        updates.type = parsed.type;
+      }
+      
+      if (parsed.description !== undefined && typeof parsed.description === 'string' && parsed.description.trim()) {
+        updates.description = parsed.description.trim();
+      }
+      
+      if (parsed.categoryId !== undefined && typeof parsed.categoryId === 'string') {
+        updates.categoryId = parsed.categoryId;
+      }
+      
+      if (parsed.date !== undefined && typeof parsed.date === 'string') {
+        updates.date = parsed.date;
+      }
+      
+      return updates;
+    } catch (error) {
+      throw new Error(`Failed to parse transaction updates: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
 }

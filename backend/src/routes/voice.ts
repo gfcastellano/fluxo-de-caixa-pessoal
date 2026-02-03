@@ -11,6 +11,126 @@ const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 app.use('*', authMiddleware);
 
 /**
+ * POST /api/voice/transactions/update
+ * Update a transaction from voice input
+ * Expects multipart/form-data with:
+ * - audio: audio file (webm/opus)
+ * - language: language code (e.g., 'pt', 'en', 'es')
+ * - transactionId: ID of the transaction to update
+ * - currentTransaction: JSON string of current transaction data
+ * - categories: JSON string of available categories
+ */
+app.post('/transactions/update', async (c) => {
+  let language = 'en';
+  
+  try {
+    const userId = c.get('userId');
+    console.log('Voice transaction update request received for user:', userId);
+    
+    const formData = await c.req.formData();
+    const audioFile = formData.get('audio') as File | null;
+    language = (formData.get('language') as string) || 'en';
+    const transactionId = formData.get('transactionId') as string;
+    const currentTransactionStr = formData.get('currentTransaction') as string;
+    const categoriesStr = formData.get('categories') as string;
+    
+    console.log('Audio file:', audioFile?.name, 'Size:', audioFile?.size, 'Language:', language);
+    
+    if (!audioFile) {
+      return c.json(
+        { success: false, error: getErrorTranslation(language, 'noAudioFile') },
+        400
+      );
+    }
+    
+    if (!transactionId || !currentTransactionStr) {
+      return c.json(
+        { success: false, error: getErrorTranslation(language, 'processingFailed') },
+        400
+      );
+    }
+    
+    const audioBuffer = await audioFile.arrayBuffer();
+    
+    if (audioBuffer.byteLength === 0) {
+      return c.json(
+        { success: false, error: getErrorTranslation(language, 'emptyAudio') },
+        400
+      );
+    }
+    
+    const currentTransaction = JSON.parse(currentTransactionStr) as Transaction;
+    const categories = categoriesStr ? JSON.parse(categoriesStr) as Category[] : [];
+    
+    const openai = new OpenAIService(c.env);
+    const firebase = new FirebaseService(c.env);
+    
+    // Step 1: Transcribe audio
+    let transcription: string;
+    try {
+      transcription = await openai.transcribeAudio(audioBuffer, language);
+    } catch (error) {
+      console.error('Transcription error:', error);
+      return c.json(
+        { success: false, error: getErrorTranslation(language, 'transcriptionFailed') },
+        500
+      );
+    }
+    
+    if (!transcription || transcription.trim().length === 0) {
+      return c.json(
+        { success: false, error: getErrorTranslation(language, 'noSpeechDetected') },
+        400
+      );
+    }
+    
+    // Step 2: Parse the voice command for updates
+    let updates: Partial<Transaction>;
+    try {
+      updates = await openai.parseTransactionUpdate(
+        transcription,
+        currentTransaction,
+        categories,
+        language
+      );
+    } catch (error) {
+      console.error('Parsing error:', error);
+      return c.json(
+        { 
+          success: false, 
+          error: getErrorTranslation(language, 'parsingFailed'),
+          transcription 
+        },
+        400
+      );
+    }
+    
+    // Step 3: Apply updates to Firestore
+    const now = new Date().toISOString();
+    const updateData = {
+      ...updates,
+      updatedAt: now,
+    };
+    
+    await firebase.updateDocument('transactions', transactionId, updateData);
+    
+    return c.json({
+      success: true,
+      data: updates,
+      transcription,
+      message: getSuccessTranslation(language, 'transactionCreated'),
+    }, 200);
+    
+  } catch (error) {
+    console.error('Voice transaction update error:', error);
+    return c.json(
+      { success: false, error: getErrorTranslation(language, 'processingFailed') },
+      500
+    );
+  }
+});
+
+/**
  * POST /api/voice/transactions
  * Create a transaction from voice input
  * Expects multipart/form-data with:
