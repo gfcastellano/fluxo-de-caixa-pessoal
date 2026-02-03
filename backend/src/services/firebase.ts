@@ -27,15 +27,15 @@ export class FirebaseService {
       throw new Error(`Failed to fetch documents: ${response.statusText}`);
     }
 
-    const data = await response.json();
+    const data = await response.json() as { documents?: Array<{ name: string; fields?: Record<string, unknown> }> };
     const documents = data.documents || [];
 
     // Filter by userId
     return documents
-      .filter((doc: { fields?: { userId?: { stringValue?: string } } }) =>
-        doc.fields?.userId?.stringValue === userId
+      .filter((doc) =>
+        (doc.fields?.userId as { stringValue?: string })?.stringValue === userId
       )
-      .map((doc: { name: string; fields: Record<string, unknown> }) =>
+      .map((doc) =>
         this.convertFromFirestore(doc)
       );
   }
@@ -58,7 +58,7 @@ export class FirebaseService {
       throw new Error(`Failed to create document: ${response.statusText}`);
     }
 
-    const result = await response.json();
+    const result = await response.json() as { name: string; fields?: Record<string, unknown> };
     return this.convertFromFirestore(result);
   }
 

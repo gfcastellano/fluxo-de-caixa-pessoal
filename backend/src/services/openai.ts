@@ -21,10 +21,14 @@ export class OpenAIService {
    * Transcribe audio using Whisper-1
    */
   async transcribeAudio(audioBuffer: ArrayBuffer, language: string): Promise<string> {
-    const formData = new FormData();
-    const blob = new Blob([audioBuffer], { type: 'audio/webm' });
+    // Convert ArrayBuffer to Uint8Array for Cloudflare Workers compatibility
+    const uint8Array = new Uint8Array(audioBuffer);
     
-    formData.append('file', blob, 'audio.webm');
+    // Create a File object instead of Blob for better compatibility
+    const file = new File([uint8Array], 'audio.webm', { type: 'audio/webm' });
+    
+    const formData = new FormData();
+    formData.append('file', file);
     formData.append('model', 'whisper-1');
     formData.append('language', language);
     formData.append('response_format', 'text');

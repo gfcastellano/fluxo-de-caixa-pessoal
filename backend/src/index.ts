@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import type { Context } from './types/context';
+import type { Env, Variables } from './types/context';
 
 // Import routes
 import categories from './routes/categories';
@@ -9,7 +9,7 @@ import budgets from './routes/budgets';
 import reports from './routes/reports';
 import voice from './routes/voice';
 
-const app = new Hono<Context>();
+const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
 // Enable CORS
 app.use(

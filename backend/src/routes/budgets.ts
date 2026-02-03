@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import type { Context } from '../types/context';
+import type { Env, Variables } from '../types/context';
 import { FirebaseService } from '../services/firebase';
 import { authMiddleware } from '../middleware/auth';
 import { z } from 'zod';
@@ -11,7 +11,7 @@ const budgetSchema = z.object({
   startDate: z.string(),
 });
 
-const app = new Hono<Context>();
+const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
 app.use('*', authMiddleware);
 

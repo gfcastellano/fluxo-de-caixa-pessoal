@@ -1,11 +1,11 @@
 import { Hono } from 'hono';
-import type { Context } from '../types/context';
+import type { Env, Variables } from '../types/context';
 import { FirebaseService } from '../services/firebase';
 import { OpenAIService } from '../services/openai';
 import { authMiddleware } from '../middleware/auth';
 import type { Transaction, Category } from '../types';
 
-const app = new Hono<Context>();
+const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
 app.use('*', authMiddleware);
 

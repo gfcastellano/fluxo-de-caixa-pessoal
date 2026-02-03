@@ -1,7 +1,7 @@
 import type { MiddlewareHandler } from 'hono';
-import type { Context } from '../types/context';
+import type { Env, Variables } from '../types/context';
 
-export const authMiddleware: MiddlewareHandler<Context> = async (c, next) => {
+export const authMiddleware: MiddlewareHandler<{ Bindings: Env; Variables: Variables }> = async (c, next) => {
   const authHeader = c.req.header('Authorization');
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -30,7 +30,7 @@ export const authMiddleware: MiddlewareHandler<Context> = async (c, next) => {
       return c.json({ success: false, error: 'Invalid token', details: errorData }, 401);
     }
 
-    const data = await response.json();
+    const data = await response.json() as { users?: Array<{ localId: string; email: string }> };
 
     if (!data.users || data.users.length === 0) {
       return c.json({ success: false, error: 'User not found' }, 401);
