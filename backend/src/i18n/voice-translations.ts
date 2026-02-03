@@ -14,6 +14,7 @@ export interface VoiceTranslations {
   };
   success: {
     transactionCreated: string;
+    transactionUpdated: string;
   };
   defaults: {
     description: string;
@@ -32,6 +33,7 @@ export const voiceTranslations: Record<string, VoiceTranslations> = {
     },
     success: {
       transactionCreated: 'Transaction created successfully',
+      transactionUpdated: 'Transaction updated successfully',
     },
     defaults: {
       description: 'Voice transaction',
@@ -48,6 +50,7 @@ export const voiceTranslations: Record<string, VoiceTranslations> = {
     },
     success: {
       transactionCreated: 'Transação criada com sucesso',
+      transactionUpdated: 'Transação atualizada com sucesso',
     },
     defaults: {
       description: 'Transação por voz',
@@ -64,6 +67,7 @@ export const voiceTranslations: Record<string, VoiceTranslations> = {
     },
     success: {
       transactionCreated: 'Transacción creada exitosamente',
+      transactionUpdated: 'Transacción actualizada exitosamente',
     },
     defaults: {
       description: 'Transacción por voz',

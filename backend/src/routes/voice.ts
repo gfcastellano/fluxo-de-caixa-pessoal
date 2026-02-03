@@ -118,7 +118,7 @@ app.post('/transactions/update', async (c) => {
       success: true,
       data: updates,
       transcription,
-      message: getSuccessTranslation(language, 'transactionCreated'),
+      message: getSuccessTranslation(language, 'transactionUpdated'),
     }, 200);
     
   } catch (error) {
