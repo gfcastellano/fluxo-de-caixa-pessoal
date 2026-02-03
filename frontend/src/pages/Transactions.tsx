@@ -66,11 +66,17 @@ export function Transactions() {
     try {
       if (editingTransaction) {
         await updateTransaction(editingTransaction.id, data);
+        // Update the local state immediately for better UX
+        setTransactions(prev => prev.map(t => 
+          t.id === editingTransaction.id 
+            ? { ...t, ...data, category: categories.find(c => c.id === data.categoryId) || t.category }
+            : t
+        ));
       } else {
         // Cast to the expected type for new transactions
         await createTransaction(user.uid, data as Omit<Transaction, 'id' | 'userId' | 'createdAt' | 'updatedAt'>);
+        await loadData();
       }
-      await loadData();
       handleCloseModal();
     } catch (error) {
       console.error('Error saving transaction:', error);

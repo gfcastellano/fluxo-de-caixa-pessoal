@@ -223,6 +223,9 @@ export const enTranslations = {
     error: 'Could not understand. Please try again.',
     permissionDenied: 'Microphone permission denied. Please enable it in your browser settings.',
     recordingHint: 'Recording... Speak now',
+    updateByVoice: 'Update by Voice',
+    updateHint: 'Say what you want to change, for example: "change the amount to 100" or "move it to yesterday"',
+    updateSuccess: 'Transaction updated successfully',
   },
 
   // Errors

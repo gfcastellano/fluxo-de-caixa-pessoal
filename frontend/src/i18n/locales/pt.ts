@@ -223,6 +223,9 @@ export const ptTranslations = {
     error: 'Não consegui entender. Tente novamente.',
     permissionDenied: 'Permissão de microfone negada. Habilite-a nas configurações do seu navegador.',
     recordingHint: 'Gravando... Fale agora',
+    updateByVoice: 'Atualizar por Voz',
+    updateHint: 'Diga o que deseja alterar, por exemplo: "mudar o valor para 100" ou "alterar a data para ontem"',
+    updateSuccess: 'Transação atualizada com sucesso',
   },
 
   // Errors
