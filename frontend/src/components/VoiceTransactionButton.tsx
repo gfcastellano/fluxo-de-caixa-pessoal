@@ -4,7 +4,8 @@ import { Mic, Square, Loader2, Check, AlertCircle } from 'lucide-react';
 import { Button } from './Button';
 import { useVoiceRecorder } from '../hooks/useVoiceRecorder';
 import { sendVoiceTransaction } from '../services/voiceService';
-import type { Transaction } from '../types';
+import { getCategories } from '../services/categoryService';
+import type { Transaction, Category } from '../types';
 
 interface VoiceTransactionButtonProps {
   onTransactionCreated?: (transaction: Transaction) => void;
@@ -31,7 +32,25 @@ export function VoiceTransactionButton({
             type: 'success',
             message: result.message || t('voice.success'),
           });
-          onTransactionCreated?.(result.data);
+          
+          // Fetch the full category data if categoryId exists
+          let transactionWithCategory = result.data;
+          if (result.data.categoryId) {
+            try {
+              const categories = await getCategories(result.data.userId);
+              const category = categories.find(c => c.id === result.data!.categoryId);
+              if (category) {
+                transactionWithCategory = {
+                  ...result.data,
+                  category
+                };
+              }
+            } catch (error) {
+              console.error('Error fetching category:', error);
+            }
+          }
+          
+          onTransactionCreated?.(transactionWithCategory);
           
           // Clear success feedback after 3 seconds
           setTimeout(() => {
