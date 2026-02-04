@@ -49,6 +49,7 @@ export function TransactionModal({
   const { state: voiceState, error: voiceError, startRecording, stopRecording, reset: resetVoice } = useVoiceRecorder();
   const [voiceFeedback, setVoiceFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [isProcessingVoice, setIsProcessingVoice] = useState(false);
+  const [hasVoiceData, setHasVoiceData] = useState(false);
 
   // Fetch accounts when modal opens
   useEffect(() => {
@@ -95,6 +96,7 @@ export function TransactionModal({
       });
     }
     setVoiceFeedback(null);
+    setHasVoiceData(false);
   }, [transaction, isOpen]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -220,6 +222,9 @@ export function TransactionModal({
             if (parsedTransaction.accountId) {
               setSelectedAccountId(parsedTransaction.accountId);
             }
+
+            // Mark that we have voice data - this will change the button text
+            setHasVoiceData(true);
 
             setVoiceFeedback({
               type: 'success',
@@ -521,7 +526,7 @@ export function TransactionModal({
             <div className="flex gap-2 pt-4">
               <Button type="submit">
                 <Check className="mr-2 h-4 w-4" />
-                {isEditing ? t('common.update') : t('common.create')}
+                {isEditing ? t('common.update') : hasVoiceData ? t('common.update') : t('common.create')}
               </Button>
               <Button type="button" variant="secondary" onClick={onClose}>
                 <X className="mr-2 h-4 w-4" />

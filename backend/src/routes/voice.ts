@@ -183,7 +183,7 @@ app.post('/transactions', async (c) => {
       );
     }
 
-    // Step 2: Get user's categories for parsing
+    // Step 3: Get user's categories for parsing
     let categories: Category[] = [];
     try {
       const categoriesData = await firebase.getDocuments('categories', userId);
@@ -192,7 +192,7 @@ app.post('/transactions', async (c) => {
       // Continue without categories - GPT will return empty categoryId
     }
 
-    // Step 3: Parse transcription into transaction data
+    // Step 4: Parse transcription into transaction data
     let parsedTransaction: {
       amount: number;
       type: 'income' | 'expense';
@@ -216,23 +216,14 @@ app.post('/transactions', async (c) => {
       );
     }
 
-    // Step 4: Create transaction in Firestore
-    const now = new Date().toISOString();
-    const transactionData = {
-      ...parsedTransaction,
-      userId,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    const createdTransaction = await firebase.createDocument('transactions', transactionData);
-
+    // Step 5: Return parsed transaction data without creating it
+    // The transaction will be created when the user clicks the button
     return c.json({
       success: true,
-      data: createdTransaction as Transaction,
+      data: parsedTransaction as Transaction,
       transcription,
       message: getSuccessTranslation(language, 'transactionCreated'),
-    }, 201);
+    }, 200);
 
   } catch (error) {
     console.error('Voice transaction error:', error);
