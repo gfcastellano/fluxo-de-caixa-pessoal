@@ -5,39 +5,37 @@ import { Card, CardHeader, CardTitle, CardContent } from './Card';
 import { Button } from './Button';
 import { Input } from './Input';
 import { useVoiceRecorder } from '../hooks/useVoiceRecorder';
-import { sendVoiceAccountUpdate } from '../services/voiceService';
-import type { Account } from '../types';
+import { sendVoiceCategoryUpdate } from '../services/voiceService';
+import type { Category } from '../types';
 
-interface AccountModalProps {
+interface CategoryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  account?: Account | null;
-  onSave: (account: Partial<Account>) => void;
+  category?: Category | null;
+  onSave: (category: Partial<Category>) => void;
   userId: string;
 }
 
-const CURRENCIES = [
-  { code: 'BRL', name: 'Real Brasileiro' },
-  { code: 'USD', name: 'US Dollar' },
-  { code: 'EUR', name: 'Euro' },
+const CATEGORY_COLORS = [
+  '#ef4444', '#f97316', '#f59e0b', '#84cc16', '#22c55e',
+  '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6',
+  '#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899',
 ];
 
-export function AccountModal({
+export function CategoryModal({
   isOpen,
   onClose,
-  account,
+  category,
   onSave,
   userId,
-}: AccountModalProps) {
+}: CategoryModalProps) {
   const { t, i18n } = useTranslation();
-  const isEditing = !!account;
+  const isEditing = !!category;
 
   const [formData, setFormData] = useState({
     name: '',
-    currency: 'BRL',
-    initialBalance: 0,
-    balance: 0,
-    isDefault: false,
+    type: 'expense' as 'income' | 'expense',
+    color: CATEGORY_COLORS[0],
   });
 
   // Voice state
@@ -47,26 +45,22 @@ export function AccountModal({
   const [hasVoiceData, setHasVoiceData] = useState(false);
 
   useEffect(() => {
-    if (account) {
+    if (category) {
       setFormData({
-        name: account.name || '',
-        currency: account.currency || 'BRL',
-        initialBalance: account.initialBalance || 0,
-        balance: account.balance || 0,
-        isDefault: account.isDefault || false,
+        name: category.name || '',
+        type: category.type || 'expense',
+        color: category.color || CATEGORY_COLORS[0],
       });
     } else {
       setFormData({
         name: '',
-        currency: 'BRL',
-        initialBalance: 0,
-        balance: 0,
-        isDefault: false,
+        type: 'expense',
+        color: CATEGORY_COLORS[0],
       });
     }
     setVoiceFeedback(null);
     setHasVoiceData(false);
-  }, [account, isOpen]);
+  }, [category, isOpen]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,7 +79,7 @@ export function AccountModal({
 
         try {
           // Send audio to backend for processing
-          const result = await sendVoiceAccountUpdate(
+          const result = await sendVoiceCategoryUpdate(
             audioBlob,
             i18n.language,
             formData,
@@ -102,7 +96,7 @@ export function AccountModal({
 
             setVoiceFeedback({
               type: 'success',
-              message: result.message || t('voice.updateSuccess') || 'Account information extracted from voice',
+              message: result.message || t('voice.updateSuccess') || 'Category information extracted from voice',
             });
           } else {
             setVoiceFeedback({
@@ -143,7 +137,7 @@ export function AccountModal({
       <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>
-            {isEditing ? t('accounts.editAccount') : t('accounts.addNew')}
+            {isEditing ? t('categories.editCategory') : t('categories.addNew')}
           </CardTitle>
           <button
             onClick={onClose}
@@ -155,7 +149,7 @@ export function AccountModal({
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
-              label={t('accounts.form.name')}
+              label={t('common.name')}
               value={formData.name}
               onChange={(e) =>
                 setFormData({ ...formData, name: e.target.value })
@@ -165,61 +159,42 @@ export function AccountModal({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t('accounts.form.currency')}
+                {t('common.type')}
               </label>
               <select
-                value={formData.currency}
+                value={formData.type}
                 onChange={(e) =>
-                  setFormData({ ...formData, currency: e.target.value })
+                  setFormData({
+                    ...formData,
+                    type: e.target.value as 'income' | 'expense',
+                  })
                 }
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
-                {CURRENCIES.map((currency) => (
-                  <option key={currency.code} value={currency.code}>
-                    {currency.code} - {currency.name}
-                  </option>
-                ))}
+                <option value="expense">{t('common.expense')}</option>
+                <option value="income">{t('common.income')}</option>
               </select>
             </div>
 
-            {!isEditing && (
-              <Input
-                label={t('accounts.form.initialBalance')}
-                type="number"
-                step="0.01"
-                value={formData.initialBalance}
-                onChange={(e) =>
-                  setFormData({ ...formData, initialBalance: parseFloat(e.target.value) || 0 })
-                }
-                required
-              />
-            )}
-
-            {isEditing && (
-              <Input
-                label={t('accounts.form.balance') || 'Saldo Atual'}
-                type="number"
-                step="0.01"
-                value={formData.balance}
-                onChange={(e) =>
-                  setFormData({ ...formData, balance: parseFloat(e.target.value) || 0 })
-                }
-              />
-            )}
-
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="isDefault"
-                checked={formData.isDefault}
-                onChange={(e) =>
-                  setFormData({ ...formData, isDefault: e.target.checked })
-                }
-                className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-              />
-              <label htmlFor="isDefault" className="text-sm text-gray-700">
-                {t('accounts.form.setAsDefault')}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {t('categories.form.color')}
               </label>
+              <div className="flex flex-wrap gap-2">
+                {CATEGORY_COLORS.map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, color })}
+                    className={`w-8 h-8 rounded-full border-2 ${
+                      formData.color === color
+                        ? 'border-gray-900'
+                        : 'border-transparent'
+                    }`}
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
+              </div>
             </div>
 
             {/* Voice Input Section */}
@@ -277,7 +252,7 @@ export function AccountModal({
                 )}
               </div>
               <p className="text-xs text-gray-500 mt-3 italic">
-                {t('voice.accountHint') || 'Diga algo como: "Criar conta Nubank com saldo inicial de 1000 reais"'}
+                {t('voice.categoryHint') || 'Diga algo como: "Criar categoria Alimentação do tipo despesa com cor verde"'}
               </p>
             </div>
 

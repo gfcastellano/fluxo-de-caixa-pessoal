@@ -5,39 +5,35 @@ import { Card, CardHeader, CardTitle, CardContent } from './Card';
 import { Button } from './Button';
 import { Input } from './Input';
 import { useVoiceRecorder } from '../hooks/useVoiceRecorder';
-import { sendVoiceAccountUpdate } from '../services/voiceService';
-import type { Account } from '../types';
+import { sendVoiceBudgetUpdate } from '../services/voiceService';
+import { getTranslatedCategoryName } from '../utils/categoryTranslations';
+import type { Budget, Category } from '../types';
 
-interface AccountModalProps {
+interface BudgetModalProps {
   isOpen: boolean;
   onClose: () => void;
-  account?: Account | null;
-  onSave: (account: Partial<Account>) => void;
+  budget?: Budget | null;
+  categories: Category[];
+  onSave: (budget: Partial<Budget>) => void;
   userId: string;
 }
 
-const CURRENCIES = [
-  { code: 'BRL', name: 'Real Brasileiro' },
-  { code: 'USD', name: 'US Dollar' },
-  { code: 'EUR', name: 'Euro' },
-];
-
-export function AccountModal({
+export function BudgetModal({
   isOpen,
   onClose,
-  account,
+  budget,
+  categories,
   onSave,
   userId,
-}: AccountModalProps) {
+}: BudgetModalProps) {
   const { t, i18n } = useTranslation();
-  const isEditing = !!account;
+  const isEditing = !!budget;
 
   const [formData, setFormData] = useState({
-    name: '',
-    currency: 'BRL',
-    initialBalance: 0,
-    balance: 0,
-    isDefault: false,
+    categoryId: '',
+    amount: '',
+    period: 'monthly' as 'monthly' | 'yearly',
+    startDate: new Date().toISOString().split('T')[0],
   });
 
   // Voice state
@@ -46,32 +42,34 @@ export function AccountModal({
   const [isProcessingVoice, setIsProcessingVoice] = useState(false);
   const [hasVoiceData, setHasVoiceData] = useState(false);
 
+  // Filter only expense categories for budgets
+  const expenseCategories = categories.filter((c) => c.type === 'expense');
+
   useEffect(() => {
-    if (account) {
+    if (budget) {
       setFormData({
-        name: account.name || '',
-        currency: account.currency || 'BRL',
-        initialBalance: account.initialBalance || 0,
-        balance: account.balance || 0,
-        isDefault: account.isDefault || false,
+        categoryId: budget.categoryId || '',
+        amount: budget.amount?.toString() || '',
+        period: budget.period || 'monthly',
+        startDate: budget.startDate?.split('T')[0] || new Date().toISOString().split('T')[0],
       });
     } else {
       setFormData({
-        name: '',
-        currency: 'BRL',
-        initialBalance: 0,
-        balance: 0,
-        isDefault: false,
+        categoryId: '',
+        amount: '',
+        period: 'monthly',
+        startDate: new Date().toISOString().split('T')[0],
       });
     }
     setVoiceFeedback(null);
     setHasVoiceData(false);
-  }, [account, isOpen]);
+  }, [budget, isOpen]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave({
       ...formData,
+      amount: parseFloat(formData.amount),
       userId,
     });
   };
@@ -85,10 +83,13 @@ export function AccountModal({
 
         try {
           // Send audio to backend for processing
-          const result = await sendVoiceAccountUpdate(
+          const result = await sendVoiceBudgetUpdate(
             audioBlob,
             i18n.language,
-            formData,
+            {
+              ...formData,
+              amount: formData.amount ? parseFloat(formData.amount) : undefined,
+            },
             isEditing
           );
 
@@ -97,12 +98,13 @@ export function AccountModal({
             setFormData(prev => ({
               ...prev,
               ...result.data,
+              amount: result.data?.amount?.toString() || prev.amount,
             }));
             setHasVoiceData(true);
 
             setVoiceFeedback({
               type: 'success',
-              message: result.message || t('voice.updateSuccess') || 'Account information extracted from voice',
+              message: result.message || t('voice.updateSuccess') || 'Budget information extracted from voice',
             });
           } else {
             setVoiceFeedback({
@@ -143,7 +145,7 @@ export function AccountModal({
       <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>
-            {isEditing ? t('accounts.editAccount') : t('accounts.addNew')}
+            {isEditing ? t('budgets.editBudget') : t('budgets.addNew')}
           </CardTitle>
           <button
             onClick={onClose}
@@ -154,72 +156,67 @@ export function AccountModal({
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <Input
-              label={t('accounts.form.name')}
-              value={formData.name}
-              onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
-              }
-              required
-            />
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t('accounts.form.currency')}
-              </label>
-              <select
-                value={formData.currency}
-                onChange={(e) =>
-                  setFormData({ ...formData, currency: e.target.value })
-                }
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-              >
-                {CURRENCIES.map((currency) => (
-                  <option key={currency.code} value={currency.code}>
-                    {currency.code} - {currency.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {!isEditing && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {t('common.category')}
+                </label>
+                <select
+                  value={formData.categoryId}
+                  onChange={(e) =>
+                    setFormData({ ...formData, categoryId: e.target.value })
+                  }
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  required
+                >
+                  <option value="">{t('budgets.form.selectCategory')}</option>
+                  {expenseCategories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {t(getTranslatedCategoryName(category.name))}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <Input
-                label={t('accounts.form.initialBalance')}
+                label={t('budgets.form.amount')}
                 type="number"
                 step="0.01"
-                value={formData.initialBalance}
+                min="0"
+                value={formData.amount}
                 onChange={(e) =>
-                  setFormData({ ...formData, initialBalance: parseFloat(e.target.value) || 0 })
+                  setFormData({ ...formData, amount: e.target.value })
                 }
                 required
               />
-            )}
-
-            {isEditing && (
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {t('budgets.form.period')}
+                </label>
+                <select
+                  value={formData.period}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      period: e.target.value as 'monthly' | 'yearly',
+                    })
+                  }
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="monthly">{t('budgets.period.monthly')}</option>
+                  <option value="yearly">{t('budgets.period.yearly')}</option>
+                </select>
+              </div>
               <Input
-                label={t('accounts.form.balance') || 'Saldo Atual'}
-                type="number"
-                step="0.01"
-                value={formData.balance}
+                label={t('budgets.form.startDate')}
+                type="date"
+                value={formData.startDate}
                 onChange={(e) =>
-                  setFormData({ ...formData, balance: parseFloat(e.target.value) || 0 })
+                  setFormData({ ...formData, startDate: e.target.value })
                 }
+                required
               />
-            )}
-
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="isDefault"
-                checked={formData.isDefault}
-                onChange={(e) =>
-                  setFormData({ ...formData, isDefault: e.target.checked })
-                }
-                className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-              />
-              <label htmlFor="isDefault" className="text-sm text-gray-700">
-                {t('accounts.form.setAsDefault')}
-              </label>
             </div>
 
             {/* Voice Input Section */}
@@ -277,7 +274,7 @@ export function AccountModal({
                 )}
               </div>
               <p className="text-xs text-gray-500 mt-3 italic">
-                {t('voice.accountHint') || 'Diga algo como: "Criar conta Nubank com saldo inicial de 1000 reais"'}
+                {t('voice.budgetHint') || 'Diga algo como: "Criar orçamento de 500 reais para Alimentação mensal"'}
               </p>
             </div>
 
