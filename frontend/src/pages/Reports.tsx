@@ -195,12 +195,27 @@ export function Reports() {
 
         setExpenseBreakdown(filteredExpenseBreakdown);
         setIncomeBreakdown(filteredIncomeBreakdown);
+
+        // Calculate summary from filtered transactions for the selected currency
+        const filteredIncome = allTransactions
+          .filter(t => t.type === 'income')
+          .reduce((sum, t) => sum + t.amount, 0);
+        const filteredExpenses = allTransactions
+          .filter(t => t.type === 'expense')
+          .reduce((sum, t) => sum + t.amount, 0);
+        const filteredSummary: MonthlySummary = {
+          income: filteredIncome,
+          expenses: filteredExpenses,
+          balance: filteredIncome - filteredExpenses,
+          month: `${year}-${String(month).padStart(2, '0')}`,
+          year: year,
+        };
+        setSummary(filteredSummary);
       } else {
         setExpenseBreakdown(expenseData);
         setIncomeBreakdown(incomeData);
+        setSummary(summaryData);
       }
-      
-      setSummary(summaryData);
       
       // Fetch trend data - handle currency filtering by aggregating multiple account trends
       let trend: { month: string; income: number; expenses: number }[] = [];
