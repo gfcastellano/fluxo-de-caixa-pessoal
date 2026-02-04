@@ -155,7 +155,7 @@ npm run deploy
 ```
 
 ### Live URLs
-- **Frontend:** https://281f2731.fluxo-de-caixa-frontend.pages.dev
+- **Frontend:** https://fluxo-de-caixa-frontend.pages.dev
 - **Backend:** https://fluxo-de-caixa-backend.gabrielcastellano25.workers.dev
 
 ## Documentation
