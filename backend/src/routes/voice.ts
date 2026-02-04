@@ -408,6 +408,7 @@ app.post('/budgets', async (c) => {
       amount: number;
       period: 'monthly' | 'yearly';
       startDate: string;
+      matchedCategory: string | null;
     };
     
     try {
@@ -424,7 +425,25 @@ app.post('/budgets', async (c) => {
       );
     }
 
-    // Step 3: Return parsed budget data without creating it
+    // Step 3: Validate that a category was matched
+    if (!parsedBudget.categoryId || parsedBudget.categoryId === '') {
+      return c.json(
+        {
+          success: false,
+          error: getErrorTranslation(language, 'categoryNotFound'),
+          transcription,
+          data: {
+            amount: parsedBudget.amount,
+            period: parsedBudget.period,
+            startDate: parsedBudget.startDate,
+            matchedCategory: parsedBudget.matchedCategory,
+          }
+        },
+        400
+      );
+    }
+
+    // Step 4: Return parsed budget data without creating it
     return c.json({
       success: true,
       data: parsedBudget,

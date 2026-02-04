@@ -11,6 +11,7 @@ export interface VoiceTranslations {
     noSpeechDetected: string;
     parsingFailed: string;
     processingFailed: string;
+    categoryNotFound: string;
   };
   success: {
     transactionCreated: string;
@@ -33,6 +34,7 @@ export const voiceTranslations: Record<string, VoiceTranslations> = {
       noSpeechDetected: 'No speech detected',
       parsingFailed: 'Could not understand the transaction. Please try again.',
       processingFailed: 'Failed to process voice transaction',
+      categoryNotFound: 'Category not found. Please create the category first.',
     },
     success: {
       transactionCreated: 'Transaction created successfully',
@@ -53,6 +55,7 @@ export const voiceTranslations: Record<string, VoiceTranslations> = {
       noSpeechDetected: 'Nenhuma fala detectada',
       parsingFailed: 'Não foi possível entender a transação. Tente novamente.',
       processingFailed: 'Falha ao processar transação por voz',
+      categoryNotFound: 'Categoria não encontrada. Por favor, crie a categoria primeiro.',
     },
     success: {
       transactionCreated: 'Transação criada com sucesso',
@@ -73,6 +76,7 @@ export const voiceTranslations: Record<string, VoiceTranslations> = {
       noSpeechDetected: 'No se detectó voz',
       parsingFailed: 'No se pudo entender la transacción. Inténtalo de nuevo.',
       processingFailed: 'Error al procesar la transacción por voz',
+      categoryNotFound: 'Categoría no encontrada. Por favor, crea la categoría primero.',
     },
     success: {
       transactionCreated: 'Transacción creada exitosamente',

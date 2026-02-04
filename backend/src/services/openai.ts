@@ -446,7 +446,7 @@ Response must be valid JSON only, no markdown, no explanation.`;
     transcription: string,
     categories: Category[],
     language: string = 'en'
-  ): Promise<{ categoryId: string; amount: number; period: 'monthly' | 'yearly'; startDate: string }> {
+  ): Promise<{ categoryId: string; amount: number; period: 'monthly' | 'yearly'; startDate: string; matchedCategory: string | null }> {
     const now = new Date();
     const today = now.toISOString().split('T')[0];
     
@@ -459,20 +459,29 @@ Response must be valid JSON only, no markdown, no explanation.`;
 CURRENT DATE: ${today}
 
 Available categories:
-${categoryList}
+${categoryList || 'No categories available'}
 
 Voice command: "${transcription}"
 
 Extract and return ONLY a JSON object with these exact fields:
-- categoryId: string (match to most appropriate category ID from the available categories list, or empty string if uncertain)
+- categoryId: string (match to most appropriate category ID from the available categories list, or empty string if no match found)
 - amount: number (the budget amount, always positive)
 - period: "monthly" or "yearly" (default to "monthly" if not specified)
 - startDate: string in YYYY-MM-DD format (default to "${today}" if not specified)
+- matchedCategory: string or null (the name of the category that was matched, or null if no category matched)
+
+IMPORTANT MATCHING RULES:
+1. Compare the category mentioned in the voice command with the available categories list
+2. Use fuzzy matching: "Pet Shop" should match "PetShop", "petshop", "Pet", etc.
+3. Consider variations and translations: "transporte" matches "Transport", "comida" matches "Food", etc.
+4. If NO category matches well, return empty string for categoryId and null for matchedCategory
 
 Examples:
-- "Set a budget of 500 for groceries" → {"categoryId": "...", "amount": 500, "period": "monthly", "startDate": "${today}"}
-- "Orçamento mensal de 1000 reais para transporte" → {"categoryId": "...", "amount": 1000, "period": "monthly", "startDate": "${today}"}
-- "Presupuesto anual de 5000 para vacaciones" → {"categoryId": "...", "amount": 5000, "period": "yearly", "startDate": "${today}"}
+- "Set a budget of 500 for groceries" → {"categoryId": "...", "amount": 500, "period": "monthly", "startDate": "${today}", "matchedCategory": "Groceries"}
+- "Orçamento mensal de 1000 reais para transporte" → {"categoryId": "...", "amount": 1000, "period": "monthly", "startDate": "${today}", "matchedCategory": "Transport"}
+- "Presupuesto anual de 5000 para vacaciones" → {"categoryId": "...", "amount": 5000, "period": "yearly", "startDate": "${today}", "matchedCategory": "Vacation"}
+- "Orçamento de 500 para Pet Shop" (when "Pet Shop" exists) → {"categoryId": "...", "amount": 500, "period": "monthly", "startDate": "${today}", "matchedCategory": "Pet Shop"}
+- "Orçamento de 500 para XYZ" (when "XYZ" doesn't exist) → {"categoryId": "", "amount": 500, "period": "monthly", "startDate": "${today}", "matchedCategory": null}
 
 Response must be valid JSON only, no markdown, no explanation.`;
 
@@ -521,7 +530,7 @@ Response must be valid JSON only, no markdown, no explanation.`;
     const jsonString = jsonMatch[1]?.trim() || content.trim();
     
     try {
-      const parsed = JSON.parse(jsonString) as Partial<{ categoryId: string; amount: number; period: string; startDate: string }>;
+      const parsed = JSON.parse(jsonString) as Partial<{ categoryId: string; amount: number; period: string; startDate: string; matchedCategory: string | null }>;
       
       // Validate required fields
       if (typeof parsed.amount !== 'number' || parsed.amount <= 0) {
@@ -537,6 +546,7 @@ Response must be valid JSON only, no markdown, no explanation.`;
         amount: parsed.amount,
         period: parsed.period as 'monthly' | 'yearly',
         startDate: parsed.startDate || today,
+        matchedCategory: parsed.matchedCategory || null,
       };
     } catch (error) {
       throw new Error(`Failed to parse budget: ${error instanceof Error ? error.message : 'Unknown error'}`);
