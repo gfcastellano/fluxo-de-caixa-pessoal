@@ -482,7 +482,7 @@ export function Transactions() {
                             }`}
                           >
                             {parent.type === 'income' ? '+' : '-'}
-                            {formatCurrency(parent.amount)}
+                            {formatCurrency(parent.amount, parent.account?.currency)}
                           </td>
                           <td className="py-3 px-4 text-right">
                             <div className="flex flex-wrap justify-end gap-1">
@@ -538,7 +538,7 @@ export function Transactions() {
                               }`}
                             >
                               {instance.type === 'income' ? '+' : '-'}
-                              {formatCurrency(instance.amount)}
+                              {formatCurrency(instance.amount, instance.account?.currency)}
                             </td>
                             <td className="py-2 px-4 text-right">
                               <button
@@ -586,7 +586,7 @@ export function Transactions() {
                         }`}
                       >
                         {transaction.type === 'income' ? '+' : '-'}
-                        {formatCurrency(transaction.amount)}
+                        {formatCurrency(transaction.amount, transaction.account?.currency)}
                       </td>
                       <td className="py-3 px-4 text-right">
                         <div className="flex flex-wrap justify-end gap-1">
