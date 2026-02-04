@@ -374,16 +374,65 @@ export function Reports() {
     if (!user) return;
     
     try {
-      // Get total balance for accounts based on filter
-      let accountsToSum = accounts;
+      // Get accounts to calculate based on filter
+      let accountsToCalculate = accounts;
       if (selectedAccountId) {
-        accountsToSum = accounts.filter(a => a.id === selectedAccountId);
+        accountsToCalculate = accounts.filter(a => a.id === selectedAccountId);
       } else if (selectedCurrency) {
-        accountsToSum = accounts.filter(a => a.currency === selectedCurrency);
+        accountsToCalculate = accounts.filter(a => a.currency === selectedCurrency);
       }
       
-      const total = accountsToSum.reduce((sum, account) => sum + account.balance, 0);
-      setTotalAccountBalance(total);
+      // Calculate stored balance (sum of account balances)
+      const storedBalance = accountsToCalculate.reduce((sum, account) => sum + account.balance, 0);
+      
+      // Find the earliest balanceDate among the accounts we're calculating for
+      const balanceDates = accountsToCalculate
+        .map(a => a.balanceDate)
+        .filter((date): date is string => !!date);
+      
+      // If no balance dates exist, use the earliest possible date
+      const earliestBalanceDate = balanceDates.length > 0 
+        ? balanceDates.reduce((earliest, current) => current < earliest ? current : earliest)
+        : '1970-01-01';
+      
+      // Calculate the end date (last day of the month BEFORE the current selected month)
+      // This gives us the balance at the start of the current month
+      let previousYear = year;
+      let previousMonth = month - 1;
+      if (previousMonth === 0) {
+        previousMonth = 12;
+        previousYear = year - 1;
+      }
+      const previousMonthEndDate = `${previousYear}-${String(previousMonth).padStart(2, '0')}-31`;
+      
+      // Import getTransactions
+      const { getTransactions } = await import('../services/transactionService');
+      
+      // Fetch ALL transactions from balanceDate up to the end of the previous month
+      const transactions = await getTransactions(user.uid, {
+        startDate: earliestBalanceDate,
+        endDate: previousMonthEndDate,
+        accountId: selectedAccountId || undefined,
+      });
+      
+      // If currency filter is applied (but not specific account), filter by account IDs
+      let filteredTransactions = transactions;
+      if (selectedCurrency && !selectedAccountId) {
+        const accountIdsInCurrency = new Set(accountsToCalculate.map(a => a.id));
+        filteredTransactions = transactions.filter(t => t.accountId && accountIdsInCurrency.has(t.accountId));
+      }
+      
+      // Calculate total net balance from all transactions up to end of previous month
+      const totalNetBalance = filteredTransactions.reduce((sum, transaction) => {
+        const transactionAmount = transaction.type === 'income' ? transaction.amount : -transaction.amount;
+        return sum + transactionAmount;
+      }, 0);
+      
+      // Calculate: stored balance + sum of all net balances up to previous month
+      // This gives us the balance at the START of the current month
+      const monthStartBalance = storedBalance + totalNetBalance;
+      
+      setTotalAccountBalance(monthStartBalance);
     } catch (error) {
       console.error('Error loading total account balance:', error);
     }

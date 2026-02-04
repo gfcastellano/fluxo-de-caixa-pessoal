@@ -244,7 +244,7 @@ export const enTranslations = {
     expensesByCategory: 'Expenses by Category',
     monthlyTrend: 'Monthly Trend',
     monthlyBalance: 'Monthly Balance',
-    totalBalance: 'Total Balance',
+    totalBalance: 'Month Start Balance',
     calculatedBalance: 'Calculated balance next month',
     projectedBalance: 'Projected Balance',
     noData: 'No data available for the selected period',

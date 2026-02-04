@@ -244,7 +244,7 @@ export const ptTranslations = {
     expensesByCategory: 'Despesas por Categoria',
     monthlyTrend: 'Tendência Mensal',
     monthlyBalance: 'Saldo Atual do Mês',
-    totalBalance: 'Saldo Total',
+    totalBalance: 'Saldo inicial do mês',
     calculatedBalance: 'Saldo calculado mês seguinte',
     projectedBalance: 'Saldo Projetado',
     noData: 'Nenhum dado disponível para o período selecionado',
