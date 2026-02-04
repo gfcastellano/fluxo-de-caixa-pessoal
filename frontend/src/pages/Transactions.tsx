@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/Card';
 import { Button } from '../components/Button';
-import { VoiceTransactionButton } from '../components/VoiceTransactionButton';
 import { TransactionModal } from '../components/TransactionModal';
 import {
   getTransactions,
@@ -192,17 +191,10 @@ export function Transactions() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">{t('transactions.title')}</h1>
-        <div className="flex items-center gap-3">
-          <VoiceTransactionButton
-            onTransactionCreated={(transaction) => {
-              setTransactions((prev) => [transaction, ...prev]);
-            }}
-          />
-          <Button onClick={handleOpenAddModal}>
-            <Plus className="mr-2 h-4 w-4" />
-            {t('transactions.addNew')}
-          </Button>
-        </div>
+        <Button onClick={handleOpenAddModal}>
+          <Plus className="mr-2 h-4 w-4" />
+          {t('transactions.addNew')}
+        </Button>
       </div>
 
       {/* Transaction Modal */}
