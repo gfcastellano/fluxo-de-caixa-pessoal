@@ -237,7 +237,7 @@ export function Dashboard() {
               {recentTransactions.map((transaction) => (
                 <div
                   key={transaction.id}
-                  className="flex items-center justify-between p-4 bg-neutral-50 rounded-xl hover:bg-neutral-100 transition-colors"
+                  className="grid grid-cols-3 items-center p-4 bg-neutral-50 rounded-xl hover:bg-neutral-100 transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
@@ -257,13 +257,13 @@ export function Dashboard() {
                       </p>
                       <p className="text-sm text-neutral-500">
                         {transaction.category ? t(getTranslatedCategoryName(transaction.category.name)) : t('common.category')}
-                        {transaction.accountId && accounts.find(a => a.id === transaction.accountId)?.name && (
-                          <span className="ml-2">
-                            • <span className="font-medium text-neutral-600">{accounts.find(a => a.id === transaction.accountId)?.name}</span>
-                          </span>
-                        )}
                       </p>
                     </div>
+                  </div>
+                  <div className="flex items-center justify-center">
+                    <p className="font-medium text-neutral-700">
+                      {transaction.accountId && accounts.find(a => a.id === transaction.accountId)?.name}
+                    </p>
                   </div>
                   <div className="text-right">
                     <p
