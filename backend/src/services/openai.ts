@@ -22,8 +22,6 @@ export class OpenAIService {
    * Transcribe audio using Whisper-1
    */
   async transcribeAudio(audioBuffer: ArrayBuffer, language: string): Promise<string> {
-    console.log('Starting transcription, buffer size:', audioBuffer.byteLength);
-    
     // Convert ArrayBuffer to Uint8Array for Cloudflare Workers compatibility
     const uint8Array = new Uint8Array(audioBuffer);
     
@@ -36,7 +34,6 @@ export class OpenAIService {
     formData.append('language', language);
     formData.append('response_format', 'text');
 
-    console.log('Sending to OpenAI Whisper API...');
     const response = await fetch(`${this.baseUrl}/audio/transcriptions`, {
       method: 'POST',
       headers: {
@@ -47,13 +44,10 @@ export class OpenAIService {
 
     if (!response.ok) {
       const error = await response.text();
-      console.error('Transcription API error:', response.status, error);
       throw new Error(`Transcription failed: ${error}`);
     }
 
-    const text = await response.text();
-    console.log('Transcription successful:', text);
-    return text;
+    return response.text();
   }
 
   /**
@@ -148,7 +142,6 @@ Response must be valid JSON only, no markdown, no explanation.`;
 
     if (!response.ok) {
       const error = await response.text();
-      console.error('GPT parsing API error:', response.status, error);
       throw new Error(`Parsing failed: ${error}`);
     }
 
@@ -161,7 +154,6 @@ Response must be valid JSON only, no markdown, no explanation.`;
     };
 
     const content = data.choices[0]?.message?.content || '';
-    console.log('GPT response:', content);
     
     // Extract JSON from the response (handle markdown code blocks)
     const jsonMatch = content.match(/```json\s*([\s\S]*?)```/) || 
@@ -169,11 +161,9 @@ Response must be valid JSON only, no markdown, no explanation.`;
                       [null, content];
     
     const jsonString = jsonMatch[1]?.trim() || content.trim();
-    console.log('Extracted JSON:', jsonString);
     
     try {
       const parsed = JSON.parse(jsonString) as Partial<ParsedTransaction>;
-      console.log('Parsed transaction:', parsed);
       
       // Validate required fields
       if (typeof parsed.amount !== 'number' || parsed.amount <= 0) {
@@ -297,7 +287,6 @@ Response must be valid JSON only, no markdown, no explanation.`;
 
     if (!response.ok) {
       const error = await response.text();
-      console.error('GPT parsing API error:', response.status, error);
       throw new Error(`Parsing failed: ${error}`);
     }
 
@@ -310,56 +299,38 @@ Response must be valid JSON only, no markdown, no explanation.`;
     };
 
     const content = data.choices[0]?.message?.content || '';
-    console.log('GPT response for update:', content);
     
     const jsonMatch = content.match(/```json\s*([\s\S]*?)```/) || 
                       content.match(/```\s*([\s\S]*?)```/) ||
                       [null, content];
     
     const jsonString = jsonMatch[1]?.trim() || content.trim();
-    console.log('Extracted JSON for update:', jsonString);
     
     try {
       const parsed = JSON.parse(jsonString) as Partial<Transaction>;
-      console.log('Parsed transaction updates:', JSON.stringify(parsed, null, 2));
-      console.log('Raw parsed object:', parsed);
       
       // Validate and clean up the updates
       const updates: Partial<Transaction> = {};
       
-      console.log('Validating parsed fields:');
-      console.log('- amount:', parsed.amount, 'type:', typeof parsed.amount);
-      console.log('- type:', parsed.type, 'valid:', ['income', 'expense'].includes(parsed.type || ''));
-      console.log('- description:', parsed.description);
-      console.log('- categoryId:', parsed.categoryId);
-      console.log('- date:', parsed.date);
-      
       if (parsed.amount !== undefined && typeof parsed.amount === 'number' && parsed.amount > 0) {
         updates.amount = parsed.amount;
-        console.log('✓ amount validated:', updates.amount);
       }
       
       if (parsed.type !== undefined && ['income', 'expense'].includes(parsed.type)) {
         updates.type = parsed.type;
-        console.log('✓ type validated:', updates.type);
       }
       
       if (parsed.description !== undefined && typeof parsed.description === 'string' && parsed.description.trim()) {
         updates.description = parsed.description.trim();
-        console.log('✓ description validated:', updates.description);
       }
       
       if (parsed.categoryId !== undefined && typeof parsed.categoryId === 'string') {
         updates.categoryId = parsed.categoryId;
-        console.log('✓ categoryId validated:', updates.categoryId);
       }
       
       if (parsed.date !== undefined && typeof parsed.date === 'string') {
         updates.date = parsed.date;
-        console.log('✓ date validated:', updates.date);
       }
-      
-      console.log('Final validated updates:', JSON.stringify(updates, null, 2));
       
       return updates;
     } catch (error) {

@@ -25,7 +25,6 @@ app.post('/transactions/update', async (c) => {
   
   try {
     const userId = c.get('userId');
-    console.log('Voice transaction update request received for user:', userId);
     
     const formData = await c.req.formData();
     const audioFile = formData.get('audio') as File | null;
@@ -33,8 +32,6 @@ app.post('/transactions/update', async (c) => {
     const transactionId = formData.get('transactionId') as string;
     const currentTransactionStr = formData.get('currentTransaction') as string;
     const categoriesStr = formData.get('categories') as string;
-    
-    console.log('Audio file:', audioFile?.name, 'Size:', audioFile?.size, 'Language:', language);
     
     if (!audioFile) {
       return c.json(
@@ -112,18 +109,7 @@ app.post('/transactions/update', async (c) => {
       updatedAt: now,
     };
     
-    console.log('Voice update - Transaction ID:', transactionId);
-    console.log('Voice update - Updates to apply:', JSON.stringify(updates, null, 2));
-    console.log('Voice update - Full update data:', JSON.stringify(updateData, null, 2));
-    
     await firebase.updateDocument('transactions', transactionId, updateData);
-    
-    console.log('Voice update - Successfully updated in Firestore');
-    
-    // Verify the update by reading the document back
-    console.log('Voice update - Verifying document state...');
-    const verifyDoc = await firebase.getDocument('transactions', transactionId);
-    console.log('Voice update - Verified document:', JSON.stringify(verifyDoc, null, 2));
     
     return c.json({
       success: true,
@@ -151,14 +137,11 @@ app.post('/transactions/update', async (c) => {
 app.post('/transactions', async (c) => {
   try {
     const userId = c.get('userId');
-    console.log('Voice transaction request received for user:', userId);
     
     // Parse multipart form data
     const formData = await c.req.formData();
     const audioFile = formData.get('audio') as File | null;
     const language = (formData.get('language') as string) || 'en';
-    
-    console.log('Audio file:', audioFile?.name, 'Size:', audioFile?.size, 'Language:', language);
 
     if (!audioFile) {
       return c.json(
@@ -206,7 +189,6 @@ app.post('/transactions', async (c) => {
       const categoriesData = await firebase.getDocuments('categories', userId);
       categories = categoriesData as Category[];
     } catch (error) {
-      console.error('Failed to fetch categories:', error);
       // Continue without categories - GPT will return empty categoryId
     }
 

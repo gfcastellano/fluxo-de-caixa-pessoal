@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/Card';
 import { Button } from '../components/Button';
-import { Input } from '../components/Input';
+import { AccountModal } from '../components/AccountModal';
 import {
   getAccounts,
   createAccount,
@@ -12,27 +12,15 @@ import {
   setDefaultAccount,
 } from '../services/accountService';
 import type { Account } from '../types';
-import { Plus, Edit2, Trash2, X, Check, Star, Wallet } from 'lucide-react';
-
-const CURRENCIES = [
-  { code: 'BRL', name: 'Real Brasileiro' },
-  { code: 'USD', name: 'US Dollar' },
-  { code: 'EUR', name: 'Euro' },
-];
+import { Plus, Edit2, Trash2, Star, Wallet } from 'lucide-react';
 
 export function Accounts() {
   const { user } = useAuth();
   const { t } = useTranslation();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isAdding, setIsAdding] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    currency: 'BRL',
-    initialBalance: 0,
-    isDefault: false,
-  });
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<Account | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -52,28 +40,27 @@ export function Accounts() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSave = async (accountData: Partial<Account>) => {
     if (!user) return;
 
     try {
-      if (editingId) {
-        await updateAccount(editingId, {
-          name: formData.name,
-          currency: formData.currency,
+      if (editingAccount) {
+        await updateAccount(editingAccount.id, {
+          name: accountData.name,
+          currency: accountData.currency,
         });
       } else {
         await createAccount({
           userId: user.uid,
-          name: formData.name,
-          currency: formData.currency,
-          balance: formData.initialBalance,
-          initialBalance: formData.initialBalance,
-          isDefault: formData.isDefault,
+          name: accountData.name!,
+          currency: accountData.currency!,
+          balance: accountData.initialBalance || 0,
+          initialBalance: accountData.initialBalance || 0,
+          isDefault: accountData.isDefault || false,
         });
       }
       await loadAccounts();
-      resetForm();
+      handleCloseModal();
     } catch (error) {
       console.error('Error saving account:', error);
     }
@@ -101,21 +88,14 @@ export function Accounts() {
     }
   };
 
-  const startEdit = (account: Account) => {
-    setEditingId(account.id);
-    setFormData({
-      name: account.name,
-      currency: account.currency,
-      initialBalance: account.initialBalance,
-      isDefault: account.isDefault,
-    });
-    setIsAdding(true);
+  const handleOpenModal = (account?: Account) => {
+    setEditingAccount(account || null);
+    setIsModalOpen(true);
   };
 
-  const resetForm = () => {
-    setIsAdding(false);
-    setEditingId(null);
-    setFormData({ name: '', currency: 'BRL', initialBalance: 0, isDefault: false });
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingAccount(null);
   };
 
   const formatCurrency = (amount: number, currency: string) => {
@@ -137,87 +117,19 @@ export function Accounts() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">{t('accounts.title')}</h1>
-        {!isAdding && (
-          <Button onClick={() => setIsAdding(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            {t('accounts.addNew')}
-          </Button>
-        )}
+        <Button onClick={() => handleOpenModal()}>
+          <Plus className="mr-2 h-4 w-4" />
+          {t('accounts.addNew')}
+        </Button>
       </div>
 
-      {isAdding && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{editingId ? t('accounts.editAccount') : t('accounts.addNew')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <Input
-                label={t('accounts.form.name')}
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-                required
-              />
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('accounts.form.currency')}
-                </label>
-                <select
-                  value={formData.currency}
-                  onChange={(e) =>
-                    setFormData({ ...formData, currency: e.target.value })
-                  }
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                >
-                  {CURRENCIES.map((currency) => (
-                    <option key={currency.code} value={currency.code}>
-                      {currency.code} - {currency.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {!editingId && (
-                <Input
-                  label={t('accounts.form.initialBalance')}
-                  type="number"
-                  step="0.01"
-                  value={formData.initialBalance}
-                  onChange={(e) =>
-                    setFormData({ ...formData, initialBalance: parseFloat(e.target.value) || 0 })
-                  }
-                  required
-                />
-              )}
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="isDefault"
-                  checked={formData.isDefault}
-                  onChange={(e) =>
-                    setFormData({ ...formData, isDefault: e.target.checked })
-                  }
-                  className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                />
-                <label htmlFor="isDefault" className="text-sm text-gray-700">
-                  {t('accounts.form.setAsDefault')}
-                </label>
-              </div>
-              <div className="flex gap-2">
-                <Button type="submit">
-                  <Check className="mr-2 h-4 w-4" />
-                  {editingId ? t('common.update') : t('common.create')}
-                </Button>
-                <Button type="button" variant="secondary" onClick={resetForm}>
-                  <X className="mr-2 h-4 w-4" />
-                  {t('common.cancel')}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
+      <AccountModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        account={editingAccount}
+        onSave={handleSave}
+        userId={user?.uid || ''}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {accounts.length === 0 ? (
@@ -276,7 +188,7 @@ export function Accounts() {
                     type="button"
                     variant="ghost"
                     size="sm"
-                    onClick={() => startEdit(account)}
+                    onClick={() => handleOpenModal(account)}
                   >
                     <Edit2 className="mr-1 h-3 w-3" />
                     {t('common.edit')}

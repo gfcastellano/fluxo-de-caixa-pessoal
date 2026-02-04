@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/Card';
 import { Button } from '../components/Button';
-import { Input } from '../components/Input';
+import { BudgetModal } from '../components/BudgetModal';
 import {
   getBudgets,
   createBudget,
@@ -15,7 +15,7 @@ import { getCategories } from '../services/categoryService';
 import { getTranslatedCategoryName } from '../utils/categoryTranslations';
 import type { Budget, Category, BudgetStatus } from '../types';
 import { formatCurrency } from '../utils/format';
-import { Plus, Edit2, Trash2, X, Check } from 'lucide-react';
+import { Plus, Edit2, Trash2 } from 'lucide-react';
 import { getCurrentMonth } from '../utils/format';
 
 export function Budgets() {
@@ -27,14 +27,10 @@ export function Budgets() {
     new Map()
   );
   const [loading, setLoading] = useState(true);
-  const [isAdding, setIsAdding] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    categoryId: '',
-    amount: '',
-    period: 'monthly' as 'monthly' | 'yearly',
-    startDate: new Date().toISOString().split('T')[0],
-  });
+  
+  // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -67,23 +63,17 @@ export function Budgets() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSave = async (budgetData: Partial<Budget>) => {
     if (!user) return;
 
     try {
-      const data = {
-        ...formData,
-        amount: parseFloat(formData.amount),
-      };
-
-      if (editingId) {
-        await updateBudget(editingId, data);
+      if (editingBudget) {
+        await updateBudget(editingBudget.id, budgetData);
       } else {
-        await createBudget(user.uid, data);
+        await createBudget(user.uid, budgetData as Omit<Budget, 'id' | 'userId' | 'createdAt'>);
       }
       await loadData();
-      resetForm();
+      handleCloseModal();
     } catch (error) {
       console.error('Error saving budget:', error);
     }
@@ -100,26 +90,18 @@ export function Budgets() {
     }
   };
 
-  const startEdit = (budget: Budget) => {
-    setEditingId(budget.id);
-    setFormData({
-      categoryId: budget.categoryId,
-      amount: budget.amount.toString(),
-      period: budget.period,
-      startDate: budget.startDate.split('T')[0],
-    });
-    setIsAdding(true);
+  const handleOpenModal = (budget?: Budget) => {
+    if (budget) {
+      setEditingBudget(budget);
+    } else {
+      setEditingBudget(null);
+    }
+    setIsModalOpen(true);
   };
 
-  const resetForm = () => {
-    setIsAdding(false);
-    setEditingId(null);
-    setFormData({
-      categoryId: '',
-      amount: '',
-      period: 'monthly',
-      startDate: new Date().toISOString().split('T')[0],
-    });
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingBudget(null);
   };
 
   const getCategoryName = (categoryId: string) => {
@@ -130,8 +112,6 @@ export function Budgets() {
   const getCategoryColor = (categoryId: string) => {
     return categories.find((c) => c.id === categoryId)?.color || '#999999';
   };
-
-  const expenseCategories = categories.filter((c) => c.type === 'expense');
 
   if (loading) {
     return (
@@ -145,103 +125,21 @@ export function Budgets() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">{t('budgets.title')}</h1>
-        {!isAdding && (
-          <Button onClick={() => setIsAdding(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            {t('budgets.addNew')}
-          </Button>
-        )}
+        <Button onClick={() => handleOpenModal()}>
+          <Plus className="mr-2 h-4 w-4" />
+          {t('budgets.addNew')}
+        </Button>
       </div>
-
-      {isAdding && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{editingId ? t('budgets.editBudget') : t('budgets.addNew')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t('common.category')}
-                  </label>
-                  <select
-                    value={formData.categoryId}
-                    onChange={(e) =>
-                      setFormData({ ...formData, categoryId: e.target.value })
-                    }
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    required
-                  >
-                    <option value="">{t('budgets.form.selectCategory')}</option>
-                    {expenseCategories.map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {t(getTranslatedCategoryName(category.name))}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <Input
-                  label={t('budgets.form.amount')}
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.amount}
-                  onChange={(e) =>
-                    setFormData({ ...formData, amount: e.target.value })
-                  }
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t('budgets.form.period')}
-                  </label>
-                  <select
-                    value={formData.period}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        period: e.target.value as 'monthly' | 'yearly',
-                      })
-                    }
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  >
-                    <option value="monthly">{t('budgets.period.monthly')}</option>
-                    <option value="yearly">{t('budgets.period.yearly')}</option>
-                  </select>
-                </div>
-                <Input
-                  label={t('budgets.form.startDate')}
-                  type="date"
-                  value={formData.startDate}
-                  onChange={(e) =>
-                    setFormData({ ...formData, startDate: e.target.value })
-                  }
-                  required
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button type="submit">
-                  <Check className="mr-2 h-4 w-4" />
-                  {editingId ? t('common.update') : t('common.create')}
-                </Button>
-                <Button type="button" variant="secondary" onClick={resetForm}>
-                  <X className="mr-2 h-4 w-4" />
-                  {t('common.cancel')}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {budgets.length === 0 ? (
           <Card className="md:col-span-2">
             <CardContent className="text-center py-8">
               <p className="text-gray-500">{t('budgets.noBudgets')}</p>
+              <Button onClick={() => handleOpenModal()} className="mt-4">
+                <Plus className="mr-2 h-4 w-4" />
+                {t('budgets.addNew')}
+              </Button>
             </CardContent>
           </Card>
         ) : (
@@ -264,7 +162,7 @@ export function Budgets() {
                   </div>
                   <div className="flex gap-1">
                     <button
-                      onClick={() => startEdit(budget)}
+                      onClick={() => handleOpenModal(budget)}
                       className="p-2 text-gray-600 hover:bg-gray-200 rounded-md"
                     >
                       <Edit2 className="h-4 w-4" />
@@ -319,6 +217,16 @@ export function Budgets() {
           })
         )}
       </div>
+
+      {/* Budget Modal */}
+      <BudgetModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        budget={editingBudget}
+        categories={categories}
+        onSave={handleSave}
+        userId={user?.uid || ''}
+      />
     </div>
   );
 }

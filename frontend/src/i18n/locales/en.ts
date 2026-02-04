@@ -267,6 +267,8 @@ export const enTranslations = {
     updateByVoice: 'Update by Voice',
     updateHint: 'Say what you want to change, for example: "change the amount to 100" or "move it to yesterday"',
     updateSuccess: 'Transaction updated successfully',
+    accountHint: 'Say something like: "Create Nubank account with initial balance of 1000 dollars"',
+    backendIntegrationNeeded: 'Backend integration needed for voice processing',
   },
 
   // Errors

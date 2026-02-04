@@ -73,7 +73,6 @@ export class FirebaseService {
     console.log('Firebase updateDocument - Raw data:', JSON.stringify(data, null, 2));
 
     const firestoreData = this.convertToFirestore(data);
-    console.log('Firebase updateDocument - Firestore formatted data:', JSON.stringify(firestoreData, null, 2));
 
     // Firestore PATCH updates need to use updateMask to only update specific fields
     // Build updateMask.fieldPaths parameter for each field being updated
@@ -81,10 +80,8 @@ export class FirebaseService {
     const updateMaskParams = fieldPaths.map(field => `updateMask.fieldPaths=${encodeURIComponent(field)}`).join('&');
     
     const urlWithMask = `${url}&${updateMaskParams}`;
-    console.log('Firebase updateDocument - URL with updateMask:', urlWithMask);
 
     const requestBody = JSON.stringify({ fields: firestoreData });
-    console.log('Firebase updateDocument - Request body:', requestBody);
 
     const response = await fetch(urlWithMask, {
       method: 'PATCH',
@@ -92,16 +89,10 @@ export class FirebaseService {
       body: requestBody,
     });
 
-    console.log('Firebase updateDocument - Response status:', response.status);
-    
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Firebase updateDocument - Error response:', errorText);
       throw new Error(`Failed to update document: ${response.statusText} - ${errorText}`);
     }
-    
-    const responseData = await response.json();
-    console.log('Firebase updateDocument - Success response:', JSON.stringify(responseData, null, 2));
   }
 
   async deleteDocument(collection: string, documentId: string): Promise<void> {
@@ -187,11 +178,8 @@ export class FirebaseService {
     return value;
   }
 
-  // Debug helper to check document state
   async getDocument(collection: string, documentId: string): Promise<Record<string, unknown> | null> {
     const url = `${this.getBaseUrl()}/${collection}/${documentId}?key=${this.apiKey}`;
-    
-    console.log('Firebase getDocument - URL:', url);
     
     const response = await fetch(url);
     
@@ -201,11 +189,7 @@ export class FirebaseService {
     }
     
     const data = await response.json() as { name: string; fields?: Record<string, unknown> };
-    console.log('Firebase getDocument - Raw response:', JSON.stringify(data, null, 2));
     
-    const converted = this.convertFromFirestore(data);
-    console.log('Firebase getDocument - Converted:', JSON.stringify(converted, null, 2));
-    
-    return converted;
+    return this.convertFromFirestore(data);
   }
 }

@@ -267,6 +267,8 @@ export const esTranslations = {
     updateByVoice: 'Actualizar por Voz',
     updateHint: 'Di lo que quieres cambiar, por ejemplo: "cambiar el valor a 100" o "moverlo a ayer"',
     updateSuccess: 'Transacción actualizada con éxito',
+    accountHint: 'Di algo como: "Crear cuenta Nubank con saldo inicial de 1000 euros"',
+    backendIntegrationNeeded: 'Se necesita integración con backend para el procesamiento de voz',
   },
 
   // Errors
