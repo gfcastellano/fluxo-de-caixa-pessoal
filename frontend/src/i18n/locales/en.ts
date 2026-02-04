@@ -233,6 +233,7 @@ export const enTranslations = {
     last6Months: 'Last 6 Months',
     thisYear: 'This Year',
     custom: 'Custom Range',
+    allAccounts: 'All Accounts',
   },
 
   // Default Categories

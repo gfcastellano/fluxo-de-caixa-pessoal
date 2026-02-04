@@ -5,12 +5,13 @@ import { getCategories } from './categoryService';
 export async function getMonthlySummary(
   userId: string,
   year: number,
-  month: number
+  month: number,
+  accountId?: string
 ): Promise<MonthlySummary> {
   const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
   const endDate = `${year}-${String(month).padStart(2, '0')}-31`;
 
-  const transactions = await getTransactions(userId, { startDate, endDate });
+  const transactions = await getTransactions(userId, { startDate, endDate, accountId });
 
   const income = transactions
     .filter((t) => t.type === 'income')
@@ -33,13 +34,14 @@ export async function getCategoryBreakdown(
   userId: string,
   year: number,
   month: number,
-  type: 'income' | 'expense'
+  type: 'income' | 'expense',
+  accountId?: string
 ): Promise<CategoryBreakdown[]> {
   const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
   const endDate = `${year}-${String(month).padStart(2, '0')}-31`;
 
   const [transactions, categories] = await Promise.all([
-    getTransactions(userId, { startDate, endDate, type }),
+    getTransactions(userId, { startDate, endDate, type, accountId }),
     getCategories(userId),
   ]);
 
@@ -74,7 +76,8 @@ export async function getTrendData(
   startYear: number,
   startMonth: number,
   endYear: number,
-  endMonth: number
+  endMonth: number,
+  accountId?: string
 ): Promise<{ month: string; income: number; expenses: number }[]> {
   const data: { month: string; income: number; expenses: number }[] = [];
 
@@ -85,7 +88,7 @@ export async function getTrendData(
     currentYear < endYear ||
     (currentYear === endYear && currentMonth <= endMonth)
   ) {
-    const summary = await getMonthlySummary(userId, currentYear, currentMonth);
+    const summary = await getMonthlySummary(userId, currentYear, currentMonth, accountId);
     data.push({
       month: `${currentYear}-${String(currentMonth).padStart(2, '0')}`,
       income: summary.income,

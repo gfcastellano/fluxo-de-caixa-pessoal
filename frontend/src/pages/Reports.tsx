@@ -8,7 +8,8 @@ import {
   getCategoryBreakdown,
   getTrendData,
 } from '../services/reportService';
-import type { MonthlySummary, CategoryBreakdown } from '../types';
+import { getAccounts } from '../services/accountService';
+import type { MonthlySummary, CategoryBreakdown, Account } from '../types';
 import { formatCurrency, formatMonthYear, getCurrentMonth } from '../utils/format';
 import { getCategoryTranslationKey } from '../utils/categoryTranslations';
 import {
@@ -44,6 +45,8 @@ export function Reports() {
   const [loading, setLoading] = useState(true);
   const [year, setYear] = useState(getCurrentMonth().year);
   const [month, setMonth] = useState(getCurrentMonth().month);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [selectedAccountId, setSelectedAccountId] = useState<string>('');
 
   // Helper function to get translated category name
   const getTranslatedCategoryName = (categoryName: string): string => {
@@ -53,23 +56,41 @@ export function Reports() {
 
   useEffect(() => {
     if (user) {
+      loadAccounts();
       loadData();
     }
   }, [user, year, month]);
 
+  useEffect(() => {
+    if (user) {
+      loadData();
+    }
+  }, [selectedAccountId]);
+
+  const loadAccounts = async () => {
+    try {
+      const accountsData = await getAccounts(user!.uid);
+      setAccounts(accountsData);
+    } catch (error) {
+      console.error('Error loading accounts:', error);
+    }
+  };
+
   const loadData = async () => {
     setLoading(true);
     try {
+      const accountId = selectedAccountId || undefined;
       const [summaryData, expenseData, incomeData, trend] = await Promise.all([
-        getMonthlySummary(user!.uid, year, month),
-        getCategoryBreakdown(user!.uid, year, month, 'expense'),
-        getCategoryBreakdown(user!.uid, year, month, 'income'),
+        getMonthlySummary(user!.uid, year, month, accountId),
+        getCategoryBreakdown(user!.uid, year, month, 'expense', accountId),
+        getCategoryBreakdown(user!.uid, year, month, 'income', accountId),
         getTrendData(
           user!.uid,
           year,
           1,
           year,
-          12
+          12,
+          accountId
         ),
       ]);
       setSummary(summaryData);
@@ -115,7 +136,19 @@ export function Reports() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-gray-900">{t('reports.title')}</h1>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <select
+            value={selectedAccountId}
+            onChange={(e) => setSelectedAccountId(e.target.value)}
+            className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+          >
+            <option value="">{t('reports.allAccounts')}</option>
+            {accounts.map((account) => (
+              <option key={account.id} value={account.id}>
+                {account.name}
+              </option>
+            ))}
+          </select>
           <select
             value={year}
             onChange={(e) => setYear(parseInt(e.target.value))}

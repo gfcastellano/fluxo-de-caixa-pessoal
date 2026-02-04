@@ -233,6 +233,7 @@ export const ptTranslations = {
     last6Months: 'Últimos 6 Meses',
     thisYear: 'Este Ano',
     custom: 'Período Personalizado',
+    allAccounts: 'Todas as Contas',
   },
 
   // Default Categories

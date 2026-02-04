@@ -20,6 +20,7 @@ export async function getTransactions(userId: string, filters?: {
   endDate?: string;
   categoryId?: string;
   type?: 'income' | 'expense';
+  accountId?: string;
 }): Promise<Transaction[]> {
   // Build constraints - only use where clauses to avoid composite index requirements
   let constraints: Parameters<typeof query>[1][] = [
@@ -32,6 +33,10 @@ export async function getTransactions(userId: string, filters?: {
 
   if (filters?.categoryId) {
     constraints.push(where('categoryId', '==', filters.categoryId));
+  }
+
+  if (filters?.accountId) {
+    constraints.push(where('accountId', '==', filters.accountId));
   }
 
   const q = query(collection(db, COLLECTION_NAME), ...constraints);
