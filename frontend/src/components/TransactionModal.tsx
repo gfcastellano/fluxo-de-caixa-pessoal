@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from './Card';
 import { Button } from './Button';
 import { Input } from './Input';
 import { useVoiceRecorder } from '../hooks/useVoiceRecorder';
-import { sendVoiceTransactionUpdate } from '../services/voiceService';
+import { sendVoiceTransaction, sendVoiceTransactionUpdate } from '../services/voiceService';
 import { getCategories } from '../services/categoryService';
 import { getAccounts } from '../services/accountService';
 import { getTranslatedCategoryName } from '../utils/categoryTranslations';
@@ -201,35 +201,34 @@ export function TransactionModal({
         setIsProcessingVoice(true);
 
         try {
-          // Simulate processing delay (in a real implementation, this would call a backend service)
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          // Send audio to backend for transcription and parsing
+          const result = await sendVoiceTransaction(audioBlob, i18n.language);
 
-          // For demo purposes, we'll use local parsing
-          // In production, replace this with actual transcription from backend
-          const mockTranscription = 'Gastei 50 reais em Alimentação no Nubank hoje';
-          const parsedUpdates = parseVoiceInput(mockTranscription);
-
-          // Apply parsed updates to form
-          if (Object.keys(parsedUpdates).length > 0) {
+          if (result.success && result.data) {
+            // Apply parsed updates to form
+            const parsedTransaction = result.data;
             setFormData(prev => ({
               ...prev,
-              ...parsedUpdates,
-              amount: parsedUpdates.amount?.toString() || prev.amount,
+              description: parsedTransaction.description || prev.description,
+              amount: parsedTransaction.amount?.toString() || prev.amount,
+              type: parsedTransaction.type || prev.type,
+              categoryId: parsedTransaction.categoryId || prev.categoryId,
+              date: parsedTransaction.date || prev.date,
             }));
 
             // Update selected account if parsed
-            if (parsedUpdates.accountId) {
-              setSelectedAccountId(parsedUpdates.accountId);
+            if (parsedTransaction.accountId) {
+              setSelectedAccountId(parsedTransaction.accountId);
             }
 
             setVoiceFeedback({
               type: 'success',
-              message: t('voice.updateSuccess') || 'Transaction information extracted from voice',
+              message: result.message || t('voice.updateSuccess') || 'Transaction information extracted from voice',
             });
           } else {
             setVoiceFeedback({
               type: 'error',
-              message: t('voice.error') || 'Could not understand. Please try again.',
+              message: result.error || t('voice.error') || 'Could not understand. Please try again.',
             });
           }
 
@@ -256,7 +255,7 @@ export function TransactionModal({
       setVoiceFeedback(null);
       await startRecording();
     }
-  }, [voiceState, stopRecording, startRecording, resetVoice, parseVoiceInput, t]);
+  }, [voiceState, stopRecording, startRecording, resetVoice, i18n.language, t]);
 
   const handleVoiceUpdate = useCallback(async () => {
     if (voiceState === 'recording') {
