@@ -73,6 +73,7 @@ export async function getTransactions(userId: string, filters?: {
 }
 
 // Helper function to get the next date based on recurrence pattern
+// Handles 'monthly', 'weekly', and 'yearly' patterns
 function getNextDate(
   currentDate: Date,
   pattern: string | null | undefined,
@@ -82,71 +83,76 @@ function getNextDate(
 
   switch (pattern) {
     case 'weekly':
-      // Add 7 days
+      // Move to next week (7 days)
       nextDate.setDate(nextDate.getDate() + 7);
       break;
 
-    case 'monthly':
-      // Move to next month, same day (or last day if day doesn't exist)
-      nextDate.setMonth(nextDate.getMonth() + 1);
-
+    case 'yearly':
+      // Move to next year
+      nextDate.setFullYear(nextDate.getFullYear() + 1);
       // If recurrenceDay is specified, use it; otherwise use the current day
-      const targetDay =
+      const targetDayYearly =
         recurrenceDay !== null && recurrenceDay !== undefined
           ? recurrenceDay
           : currentDate.getDate();
-      const lastDayOfMonth = new Date(
+      const lastDayOfMonthYearly = new Date(
         nextDate.getFullYear(),
         nextDate.getMonth() + 1,
         0
       ).getDate();
-      nextDate.setDate(Math.min(targetDay, lastDayOfMonth));
+      nextDate.setDate(Math.min(targetDayYearly, lastDayOfMonthYearly));
       break;
 
-    case 'yearly':
-      // Move to next year, same month and day
-      nextDate.setFullYear(nextDate.getFullYear() + 1);
-      break;
-
+    case 'monthly':
     default:
-      // Default to monthly if no pattern specified
+      // Move to next month
       nextDate.setMonth(nextDate.getMonth() + 1);
+      // If recurrenceDay is specified, use it; otherwise use the current day
+      const targetDayMonthly =
+        recurrenceDay !== null && recurrenceDay !== undefined
+          ? recurrenceDay
+          : currentDate.getDate();
+      const lastDayOfMonthMonthly = new Date(
+        nextDate.getFullYear(),
+        nextDate.getMonth() + 1,
+        0
+      ).getDate();
+      nextDate.setDate(Math.min(targetDayMonthly, lastDayOfMonthMonthly));
+      break;
   }
 
   return nextDate;
 }
 
 // Helper function to generate recurring instances for a transaction
+// NOTE: This is now deprecated in favor of the backend API
+// Kept for fallback purposes only
+// Creates instances based on recurrence pattern until recurrenceEndDate
 async function generateRecurringInstances(
   parentTransaction: Transaction
 ): Promise<number> {
   const instances: Omit<Transaction, 'id'>[] = [];
   const startDate = new Date(parentTransaction.date);
-  const currentYear = new Date().getFullYear();
-  const endOfYear = new Date(currentYear, 11, 31); // December 31st
 
-  // Use provided end date or end of year, whichever comes first
-  const endDate = parentTransaction.recurrenceEndDate
-    ? new Date(
-        Math.min(
-          new Date(parentTransaction.recurrenceEndDate).getTime(),
-          endOfYear.getTime()
-        )
-      )
-    : endOfYear;
+  // Use recurrenceEndDate if provided, otherwise don't create any instances
+  if (!parentTransaction.recurrenceEndDate) {
+    return 0;
+  }
 
-  const pattern = parentTransaction.recurrencePattern;
+  const endDate = new Date(parentTransaction.recurrenceEndDate);
+  const recurrencePattern = parentTransaction.recurrencePattern || 'monthly';
   const recurrenceDay = parentTransaction.recurrenceDay;
 
   let currentDate = new Date(startDate);
 
-  // Move to the next period (skip the first date since that's the parent transaction)
-  currentDate = getNextDate(currentDate, pattern, recurrenceDay);
+  // Move to the next occurrence (skip the first date since that's the parent transaction)
+  currentDate = getNextDate(currentDate, recurrencePattern, recurrenceDay);
 
+  // Create instances based on pattern until we reach the end date
   while (currentDate <= endDate) {
     const dateStr = currentDate.toISOString().split('T')[0];
 
-    // Create the recurring instance
+    // Create the recurring instance with isRecurringInstance flag
     const instance: Omit<Transaction, 'id'> = {
       userId: parentTransaction.userId,
       accountId: parentTransaction.accountId,
@@ -157,14 +163,15 @@ async function generateRecurringInstances(
       date: dateStr,
       parentTransactionId: parentTransaction.id,
       isRecurring: false, // Instances are not recurring themselves
+      isRecurringInstance: true, // Mark as generated child instance
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
     instances.push(instance);
 
-    // Move to next occurrence
-    currentDate = getNextDate(currentDate, pattern, recurrenceDay);
+    // Move to next occurrence based on pattern
+    currentDate = getNextDate(currentDate, recurrencePattern, recurrenceDay);
   }
 
   // Batch write all instances
@@ -202,13 +209,14 @@ export async function createTransaction(
     updatedAt: new Date().toISOString(),
   };
 
-  // If this is a recurring transaction, generate future instances
-  if (transaction.isRecurring && transaction.recurrencePattern) {
+  // If this is a recurring transaction, generate future instances via backend API
+  if (transaction.isRecurring) {
     try {
-      await generateRecurringInstances(createdTransaction);
+      await generateRecurringInstancesAPI(createdTransaction.id);
     } catch (error) {
-      console.error('Error generating recurring instances:', error);
+      console.error('Error generating recurring instances via API:', error);
       // Don't throw - we still want to return the created transaction
+      // The backend will handle generation when viewing months
     }
   }
 
@@ -252,7 +260,7 @@ export async function generateRecurringInstancesAPI(
   const API_URL = import.meta.env.VITE_API_URL || '';
   
   if (API_URL) {
-    const response = await fetch(`${API_URL}/transactions/${transactionId}/generate-recurring`, {
+    const response = await fetch(`${API_URL}/api/transactions/${transactionId}/generate-recurring`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -312,6 +320,37 @@ export async function getAllTransactionsWithRecurring(
     recurringParents,
     recurringInstances,
   };
+}
+
+// Generate recurring instances for all recurring transactions that need them
+// Note: The backend handles date range logic based on recurrenceEndDate
+export async function generateMissingRecurringInstances(
+  userId: string
+): Promise<{ success: boolean; totalGenerated: number }> {
+  try {
+    // Get all recurring parent transactions
+    const recurringParents = await getRecurringTransactions(userId);
+    
+    let totalGenerated = 0;
+    
+    // For each recurring transaction, call the backend to generate instances
+    for (const parent of recurringParents) {
+      try {
+        const result = await generateRecurringInstancesAPI(parent.id);
+        if (result.success) {
+          totalGenerated += result.generatedCount;
+        }
+      } catch (error) {
+        console.error(`Error generating instances for transaction ${parent.id}:`, error);
+        // Continue with other transactions even if one fails
+      }
+    }
+    
+    return { success: true, totalGenerated };
+  } catch (error) {
+    console.error('Error in generateMissingRecurringInstances:', error);
+    return { success: false, totalGenerated: 0 };
+  }
 }
 
 // Delete a recurring transaction and all its instances

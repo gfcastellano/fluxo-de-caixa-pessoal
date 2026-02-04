@@ -68,5 +68,6 @@ node_modules/
 # dataconnect generated files
 .dataconnect
 
-# Wrangler temporary files
-.wrangler/tmp/
+# Wrangler temporary files and cache
+.wrangler/
+**/.wrangler/

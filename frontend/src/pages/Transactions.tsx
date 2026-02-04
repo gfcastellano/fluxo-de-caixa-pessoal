@@ -10,13 +10,14 @@ import {
   updateTransaction,
   deleteTransaction,
   deleteRecurringTransaction,
+  generateMissingRecurringInstances,
 } from '../services/transactionService';
 import { getCategories } from '../services/categoryService';
 import { getAccounts } from '../services/accountService';
 import { getTranslatedCategoryName } from '../utils/categoryTranslations';
 import type { Transaction, Category, Account } from '../types';
 import { formatCurrency, formatDate, getCurrentMonth } from '../utils/format';
-import { Plus, Edit2, Trash2, Search, ChevronLeft, ChevronRight, Repeat, Calendar } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, ChevronLeft, ChevronRight, Repeat, Calendar, Copy } from 'lucide-react';
 
 export function Transactions() {
   const { user } = useAuth();
@@ -57,6 +58,16 @@ export function Transactions() {
           startDate = `${filterYear}-01-01`;
           endDate = `${filterYear}-12-31`;
         }
+      }
+
+      // Generate missing recurring instances before loading transactions
+      // Note: The backend now has duplicate checking, so this is safe to call repeatedly
+      // The backend handles date range logic based on recurrenceEndDate
+      try {
+        await generateMissingRecurringInstances(user!.uid);
+      } catch (error) {
+        console.error('Error generating recurring instances:', error);
+        // Continue loading data even if generation fails
       }
 
       const [transactionsData, categoriesData, accountsData] = await Promise.all([
@@ -202,14 +213,9 @@ export function Transactions() {
   };
 
   const handleVoiceUpdate = (updates: Partial<Transaction>) => {
-    console.log('handleVoiceUpdate called with:', updates);
-    console.log('Current editingTransaction:', editingTransaction);
-    
     // Update the local state immediately when voice changes are applied
     if (editingTransaction) {
-      console.log('Updating transaction in local state:', editingTransaction.id);
       setTransactions(prev => {
-        console.log('Previous transactions count:', prev.length);
         const newTransactions = prev.map(t => {
           if (t.id === editingTransaction.id) {
             const updatedCategory = updates.categoryId
@@ -218,24 +224,18 @@ export function Transactions() {
             const updatedAccount = updates.accountId
               ? accounts.find(a => a.id === updates.accountId)
               : t.account;
-            console.log('Found transaction to update:', t.id);
-            console.log('Updated category:', updatedCategory?.name || 'unchanged');
             const updatedTransaction = {
               ...t,
               ...updates,
               category: updatedCategory,
               account: updatedAccount,
             };
-            console.log('Updated transaction:', updatedTransaction);
             return updatedTransaction;
           }
           return t;
         });
-        console.log('New transactions count:', newTransactions.length);
         return newTransactions;
       });
-    } else {
-      console.log('No editingTransaction found, cannot update state');
     }
   };
 
@@ -267,8 +267,38 @@ export function Transactions() {
       }
     });
 
+    // Find recurring parent IDs that are in the current view
+    const recurringParentIds = new Set(transactions.filter(t => t.isRecurring).map(t => t.id));
+
+    // Find orphaned instances (instances whose parent is not in the current view)
+    const orphanedInstances: Transaction[] = [];
+    parentMap.forEach((instances, parentId) => {
+      if (!recurringParentIds.has(parentId)) {
+        // Parent is not in current view, treat instances as standalone
+        orphanedInstances.push(...instances);
+      }
+    });
+
+    // Add orphaned instances to standalone transactions
+    standalone.push(...orphanedInstances);
+
+    // Remove orphaned instances from parentMap
+    orphanedInstances.forEach(instance => {
+      if (instance.parentTransactionId) {
+        const parentInstances = parentMap.get(instance.parentTransactionId);
+        if (parentInstances) {
+          const filtered = parentInstances.filter(i => i.id !== instance.id);
+          if (filtered.length === 0) {
+            parentMap.delete(instance.parentTransactionId);
+          } else {
+            parentMap.set(instance.parentTransactionId, filtered);
+          }
+        }
+      }
+    });
+
     return { parentMap, standalone };
-    };
+  };
 
   // Get recurring parent transactions
   const recurringParents = transactions.filter(t => t.isRecurring);
@@ -513,13 +543,19 @@ export function Transactions() {
                             className="border-b border-neutral-100 bg-neutral-50/50"
                           >
                             <td className="py-2 px-4 text-sm pl-10">
-                              <div className="flex items-center gap-2">
-                                <Calendar className="h-3 w-3 text-neutral-400" />
+                              <div className="flex items-center gap-2" title={t('transactions.recurringInstance') || 'Recurring instance'}>
+                                <Copy className="h-3 w-3 text-primary-400" />
                                 {formatDate(instance.date)}
                               </div>
                             </td>
                             <td className="py-2 px-4 text-sm text-neutral-600">
-                              {instance.description}
+                              <div className="flex items-center gap-2">
+                                {instance.description}
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-primary-50 text-primary-600 border border-primary-100" title={t('transactions.generatedFromRecurring') || 'Generated from recurring transaction'}>
+                                  <Copy className="h-2.5 w-2.5 mr-0.5" />
+                                  {t('transactions.auto') || 'auto'}
+                                </span>
+                              </div>
                             </td>
                             <td className="py-2 px-4">
                               <span

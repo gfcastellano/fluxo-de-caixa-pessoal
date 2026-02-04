@@ -35,6 +35,10 @@ export interface Transaction {
   recurrenceDay?: number | null;
   recurrenceEndDate?: string | null;
   parentTransactionId?: string | null;
+  isRecurringInstance?: boolean; // true = generated child instance
+  // Recurring count for initial creation
+  recurringCount?: number; // Number of recurring instances to create initially
+  createdFromRecurring?: boolean; // true = this transaction was created as part of a recurring series
 }
 
 export interface Budget {

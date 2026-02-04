@@ -192,4 +192,86 @@ export class FirebaseService {
     
     return this.convertFromFirestore(data);
   }
+
+  /**
+   * Query documents with filters using Firestore REST API
+   * @param collection - The collection name
+   * @param filters - Array of filter conditions { field, op, value }
+   * @returns Array of matching documents
+   */
+  async queryDocuments(
+    collection: string,
+    filters: Array<{ field: string; op: string; value: unknown }>
+  ): Promise<Record<string, unknown>[]> {
+    // The :runQuery endpoint is at the documents level, not the collection level
+    // The collection is specified in the structuredQuery.from field
+    const url = `${this.getBaseUrl()}:runQuery?key=${this.apiKey}`;
+
+    // Build structured query
+    const structuredQuery: Record<string, unknown> = {
+      from: [{ collectionId: collection }],
+    };
+
+    // Add filters if provided
+    if (filters.length > 0) {
+      if (filters.length === 1) {
+        structuredQuery.where = this.buildFilter(filters[0]);
+      } else {
+        // Multiple filters - use composite filter
+        structuredQuery.where = {
+          compositeFilter: {
+            op: 'AND',
+            filters: filters.map(f => this.buildFilter(f)),
+          },
+        };
+      }
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ structuredQuery }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to query documents: ${response.statusText} - ${errorText}`);
+    }
+
+    const data = await response.json() as Array<{ document?: { name: string; fields?: Record<string, unknown> } }>;
+    
+    // Filter out empty results and convert from Firestore format
+    return data
+      .filter((item) => item.document)
+      .map((item) => this.convertFromFirestore(item.document!));
+  }
+
+  private buildFilter(filter: { field: string; op: string; value: unknown }): Record<string, unknown> {
+    const firestoreValue = this.convertToFirestore({ v: filter.value }).v;
+    
+    // Map JavaScript-style operators to Firestore REST API operators
+    const opMap: Record<string, string> = {
+      '==': 'EQUAL',
+      'EQUAL': 'EQUAL',
+      '!=': 'NOT_EQUAL',
+      '<': 'LESS_THAN',
+      '<=': 'LESS_THAN_OR_EQUAL',
+      '>': 'GREATER_THAN',
+      '>=': 'GREATER_THAN_OR_EQUAL',
+      'array-contains': 'ARRAY_CONTAINS',
+      'in': 'IN',
+      'array-contains-any': 'ARRAY_CONTAINS_ANY',
+      'not-in': 'NOT_IN',
+    };
+    
+    const firestoreOp = opMap[filter.op] || filter.op;
+    
+    return {
+      fieldFilter: {
+        field: { fieldPath: filter.field },
+        op: firestoreOp,
+        value: firestoreValue,
+      },
+    };
+  }
 }
