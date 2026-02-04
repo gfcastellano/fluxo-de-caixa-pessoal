@@ -604,12 +604,37 @@ export function Transactions() {
                   {filteredTransactions.map((transaction) => (
                     <tr
                       key={transaction.id}
-                      className="border-b border-neutral-100 hover:bg-neutral-50"
+                      className={`border-b border-neutral-100 hover:bg-neutral-50 ${
+                        (transaction.isRecurringInstance || transaction.parentTransactionId) ? 'bg-primary-50/30' : ''
+                      }`}
                     >
-                      <td className="py-3 px-4 text-sm text-neutral-900">
-                        {formatDate(transaction.date)}
+                      <td className="py-3 px-4 text-sm">
+                        <div className="flex items-center gap-2">
+                          {(transaction.isRecurringInstance || transaction.parentTransactionId) ? (
+                            <>
+                              <Repeat className="h-4 w-4 text-primary-500" />
+                              <span className="text-primary-600 font-medium">
+                                {formatDate(transaction.date)}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-neutral-900">{formatDate(transaction.date)}</span>
+                          )}
+                        </div>
                       </td>
-                      <td className="py-3 px-4 text-neutral-900">{transaction.description}</td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-neutral-900">{transaction.description}</span>
+                          {(transaction.isRecurringInstance || transaction.parentTransactionId) && transaction.recurrencePattern && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary-100 text-primary-800">
+                              <Repeat className="h-3 w-3 mr-1" />
+                              {transaction.recurrencePattern === 'monthly' && (t('common.monthly') || 'Monthly')}
+                              {transaction.recurrencePattern === 'weekly' && (t('common.weekly') || 'Weekly')}
+                              {transaction.recurrencePattern === 'yearly' && (t('common.yearly') || 'Yearly')}
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td className="py-3 px-4">
                         <span
                           className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"

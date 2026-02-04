@@ -204,6 +204,7 @@ async function generateRecurringInstancesWithCount(
     }
 
     // Create the recurring instance with isRecurringInstance and createdFromRecurring flags
+    // Include recurrencePattern so child transactions display the same as parent
     const instance = await firebase.createDocument('transactions', {
       userId: parentTransaction.userId,
       accountId: parentTransaction.accountId,
@@ -216,6 +217,7 @@ async function generateRecurringInstancesWithCount(
       isRecurring: false, // Instances are not recurring themselves
       isRecurringInstance: true, // Mark as generated child instance
       createdFromRecurring: true, // Mark that this was created from a recurring transaction
+      recurrencePattern: recurrencePattern, // Store the recurrence pattern for display purposes
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
@@ -268,6 +270,7 @@ async function generateRecurringInstances(
     // Only create if no instance exists for this date
     if (existingInstances.length === 0) {
       // Create the recurring instance with isRecurringInstance flag
+      // Include recurrencePattern so child transactions display the same as parent
       const instance = await firebase.createDocument('transactions', {
         userId: parentTransaction.userId,
         accountId: parentTransaction.accountId,
@@ -279,6 +282,7 @@ async function generateRecurringInstances(
         parentTransactionId: parentTransaction.id,
         isRecurring: false, // Instances are not recurring themselves
         isRecurringInstance: true, // Mark as generated child instance
+        recurrencePattern: recurrencePattern, // Store the recurrence pattern for display purposes
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
