@@ -216,7 +216,8 @@ export async function sendVoiceBudgetUpdate(
   audioBlob: Blob,
   language: string,
   currentBudget: Partial<Budget>,
-  isEditing: boolean
+  isEditing: boolean,
+  categories?: Category[]
 ): Promise<VoiceBudgetUpdateResponse> {
   const user = auth.currentUser;
 
@@ -235,6 +236,11 @@ export async function sendVoiceBudgetUpdate(
     formData.append('language', language);
     formData.append('currentBudget', JSON.stringify(currentBudget));
     formData.append('isEditing', isEditing.toString());
+    
+    // Add categories for budget parsing
+    if (categories && categories.length > 0) {
+      formData.append('categories', JSON.stringify(categories));
+    }
 
     const response = await fetch(`${API_BASE_URL}/api/voice/budgets`, {
       method: 'POST',

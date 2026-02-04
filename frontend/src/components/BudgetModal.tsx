@@ -82,7 +82,7 @@ export function BudgetModal({
         setIsProcessingVoice(true);
 
         try {
-          // Send audio to backend for processing
+          // Send audio to backend for processing with categories
           const result = await sendVoiceBudgetUpdate(
             audioBlob,
             i18n.language,
@@ -90,7 +90,8 @@ export function BudgetModal({
               ...formData,
               amount: formData.amount ? parseFloat(formData.amount) : undefined,
             },
-            isEditing
+            isEditing,
+            expenseCategories // Pass categories for budget parsing
           );
 
           if (result.success && result.data) {
