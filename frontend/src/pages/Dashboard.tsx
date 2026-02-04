@@ -261,9 +261,17 @@ export function Dashboard() {
                     </div>
                   </div>
                   <div className="flex items-center justify-center">
-                    <p className="font-medium text-neutral-700">
-                      {transaction.accountId && accounts.find(a => a.id === transaction.accountId)?.name}
-                    </p>
+                    {(() => {
+                      const account = transaction.accountId ? accounts.find(a => a.id === transaction.accountId) : null;
+                      return account ? (
+                        <p
+                          className="font-medium"
+                          style={{ color: account.color || '#4F46E5' }}
+                        >
+                          {account.name}
+                        </p>
+                      ) : null;
+                    })()}
                   </div>
                   <div className="text-right">
                     <p

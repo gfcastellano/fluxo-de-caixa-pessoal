@@ -54,6 +54,7 @@ export interface Account {
   initialBalance: number;
   balanceDate: string;
   isDefault: boolean;
+  color?: string;
   createdAt: string;
   updatedAt: string;
 }

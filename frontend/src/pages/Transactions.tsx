@@ -471,8 +471,13 @@ export function Transactions() {
                               {parent.category ? t(getTranslatedCategoryName(parent.category.name)) : t('common.category')}
                             </span>
                           </td>
-                          <td className="py-3 px-4 text-sm text-neutral-600">
-                            {parent.account?.name || '-'}
+                          <td className="py-3 px-4 text-sm">
+                            <span
+                              className="font-medium"
+                              style={{ color: parent.account?.color || '#4F46E5' }}
+                            >
+                              {parent.account?.name || '-'}
+                            </span>
                           </td>
                           <td
                             className={`py-3 px-4 text-right font-medium ${
@@ -527,8 +532,13 @@ export function Transactions() {
                                 {instance.category ? t(getTranslatedCategoryName(instance.category.name)) : t('common.category')}
                               </span>
                             </td>
-                            <td className="py-2 px-4 text-sm text-neutral-600">
-                              {instance.account?.name || '-'}
+                            <td className="py-2 px-4 text-sm">
+                              <span
+                                className="font-medium"
+                                style={{ color: instance.account?.color || '#4F46E5' }}
+                              >
+                                {instance.account?.name || '-'}
+                              </span>
                             </td>
                             <td
                               className={`py-2 px-4 text-right text-sm font-medium ${
@@ -575,8 +585,13 @@ export function Transactions() {
                           {transaction.category ? t(getTranslatedCategoryName(transaction.category.name)) : t('common.category')}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-sm text-neutral-600">
-                        {transaction.account?.name || '-'}
+                      <td className="py-3 px-4 text-sm">
+                        <span
+                          className="font-medium"
+                          style={{ color: transaction.account?.color || '#4F46E5' }}
+                        >
+                          {transaction.account?.name || '-'}
+                        </span>
                       </td>
                       <td
                         className={`py-3 px-4 text-right font-medium ${

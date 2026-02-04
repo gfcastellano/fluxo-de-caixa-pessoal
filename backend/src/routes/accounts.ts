@@ -10,6 +10,7 @@ const accountSchema = z.object({
   balance: z.number(),
   initialBalance: z.number(),
   isDefault: z.boolean().optional(),
+  color: z.string().optional(),
 });
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();

@@ -4,6 +4,7 @@ import { X, Mic, Square, Loader2, Check, AlertCircle } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from './Card';
 import { Button } from './Button';
 import { Input } from './Input';
+import { ColorPicker } from './ColorPicker';
 import { useVoiceRecorder } from '../hooks/useVoiceRecorder';
 import { sendVoiceAccountUpdate } from '../services/voiceService';
 import type { Account } from '../types';
@@ -38,6 +39,7 @@ export function AccountModal({
     initialBalance: 0,
     balance: 0,
     isDefault: false,
+    color: '#3B82F6',
   });
 
   // Voice state
@@ -54,6 +56,7 @@ export function AccountModal({
         initialBalance: account.initialBalance || 0,
         balance: account.balance || 0,
         isDefault: account.isDefault || false,
+        color: account.color || '#3B82F6',
       });
     } else {
       setFormData({
@@ -62,6 +65,7 @@ export function AccountModal({
         initialBalance: 0,
         balance: 0,
         isDefault: false,
+        color: '#3B82F6',
       });
     }
     setVoiceFeedback(null);
@@ -206,6 +210,12 @@ export function AccountModal({
                 }
               />
             )}
+
+            <ColorPicker
+              label={t('accounts.form.color') || 'Cor da conta'}
+              value={formData.color}
+              onChange={(color) => setFormData({ ...formData, color })}
+            />
 
             <div className="flex items-center gap-2">
               <input

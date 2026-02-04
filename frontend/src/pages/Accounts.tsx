@@ -61,6 +61,7 @@ export function Accounts() {
           currency: accountData.currency,
           balance: accountData.balance,
           balanceDate: new Date().toISOString().split('T')[0],
+          color: accountData.color,
         });
       } else {
         await createAccount({
@@ -71,6 +72,7 @@ export function Accounts() {
           initialBalance: accountData.initialBalance || 0,
           balanceDate: new Date().toISOString().split('T')[0],
           isDefault: accountData.isDefault || false,
+          color: accountData.color,
         });
       }
       await loadAccounts();
@@ -162,8 +164,16 @@ export function Accounts() {
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="p-2 bg-primary-100 rounded-lg">
-                      <Wallet className="h-5 w-5 text-primary-600" />
+                    <div
+                      className="p-2 rounded-lg"
+                      style={{
+                        backgroundColor: account.color ? `${account.color}20` : '#EEF2FF',
+                      }}
+                    >
+                      <Wallet
+                        className="h-5 w-5"
+                        style={{ color: account.color || '#4F46E5' }}
+                      />
                     </div>
                     <div>
                       <CardTitle className="text-base text-neutral-900">{account.name}</CardTitle>
