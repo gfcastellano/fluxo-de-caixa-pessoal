@@ -21,5 +21,6 @@ This is a personal cash flow management application (Fluxo de Caixa Pessoal).
 
 ## Development Workflow
 - Test changes before committing
+- Always confirm with the user before merging brachs, to make sure he can test the changes
 - Document significant changes
 - Keep the codebase clean and maintainable

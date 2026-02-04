@@ -75,10 +75,18 @@ export class FirebaseService {
     const firestoreData = this.convertToFirestore(data);
     console.log('Firebase updateDocument - Firestore formatted data:', JSON.stringify(firestoreData, null, 2));
 
+    // Firestore PATCH updates need to use updateMask to only update specific fields
+    // Build updateMask.fieldPaths parameter for each field being updated
+    const fieldPaths = Object.keys(data);
+    const updateMaskParams = fieldPaths.map(field => `updateMask.fieldPaths=${encodeURIComponent(field)}`).join('&');
+    
+    const urlWithMask = `${url}&${updateMaskParams}`;
+    console.log('Firebase updateDocument - URL with updateMask:', urlWithMask);
+
     const requestBody = JSON.stringify({ fields: firestoreData });
     console.log('Firebase updateDocument - Request body:', requestBody);
 
-    const response = await fetch(url, {
+    const response = await fetch(urlWithMask, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: requestBody,
