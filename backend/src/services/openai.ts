@@ -1,5 +1,5 @@
 import type { Env } from '../types/context';
-import type { Category, Transaction } from '../types';
+import type { Category, Transaction, Budget } from '../types';
 
 export interface ParsedTransaction {
   amount: number;
@@ -454,6 +454,14 @@ Response must be valid JSON only, no markdown, no explanation.`;
       .map(c => `"${c.name}" (ID: ${c.id}, Type: ${c.type})`)
       .join('\n');
 
+    const periodExamples: Record<string, string> = {
+      en: '- "Set a budget of 500 for groceries" → {"categoryId": "...", "amount": 500, "period": "monthly", "startDate": "${today}", "matchedCategory": "Groceries"}\n- "Annual budget of 5000 for vacation" → {"categoryId": "...", "amount": 5000, "period": "yearly", "startDate": "${today}", "matchedCategory": "Vacation"}',
+      pt: '- "Orçamento mensal de 1000 reais para transporte" → {"categoryId": "...", "amount": 1000, "period": "monthly", "startDate": "${today}", "matchedCategory": "Transport"}\n- "Orçamento anual de 5000 para férias" → {"categoryId": "...", "amount": 5000, "period": "yearly", "startDate": "${today}", "matchedCategory": "Vacation"}',
+      es: '- "Presupuesto mensual de 1000 para transporte" → {"categoryId": "...", "amount": 1000, "period": "monthly", "startDate": "${today}", "matchedCategory": "Transport"}\n- "Presupuesto anual de 5000 para vacaciones" → {"categoryId": "...", "amount": 5000, "period": "yearly", "startDate": "${today}", "matchedCategory": "Vacation"}',
+    };
+    
+    const examples = periodExamples[language] || periodExamples.en;
+
     const prompt = `Parse the following voice command into a budget object.
 
 CURRENT DATE: ${today}
@@ -476,10 +484,12 @@ IMPORTANT MATCHING RULES:
 3. Consider variations and translations: "transporte" matches "Transport", "comida" matches "Food", etc.
 4. If NO category matches well, return empty string for categoryId and null for matchedCategory
 
+PERIOD RECOGNITION:
+- "monthly", "mensal", "mensual" → "monthly"
+- "yearly", "anual", "anual" → "yearly"
+
 Examples:
-- "Set a budget of 500 for groceries" → {"categoryId": "...", "amount": 500, "period": "monthly", "startDate": "${today}", "matchedCategory": "Groceries"}
-- "Orçamento mensal de 1000 reais para transporte" → {"categoryId": "...", "amount": 1000, "period": "monthly", "startDate": "${today}", "matchedCategory": "Transport"}
-- "Presupuesto anual de 5000 para vacaciones" → {"categoryId": "...", "amount": 5000, "period": "yearly", "startDate": "${today}", "matchedCategory": "Vacation"}
+${examples}
 - "Orçamento de 500 para Pet Shop" (when "Pet Shop" exists) → {"categoryId": "...", "amount": 500, "period": "monthly", "startDate": "${today}", "matchedCategory": "Pet Shop"}
 - "Orçamento de 500 para XYZ" (when "XYZ" doesn't exist) → {"categoryId": "", "amount": 500, "period": "monthly", "startDate": "${today}", "matchedCategory": null}
 
@@ -550,6 +560,145 @@ Response must be valid JSON only, no markdown, no explanation.`;
       };
     } catch (error) {
       throw new Error(`Failed to parse budget: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Parse transcription into budget update data using GPT-4
+   * Used for partial updates to existing budgets
+   */
+  async parseBudgetUpdate(
+    transcription: string,
+    currentBudget: Partial<Budget>,
+    categories: Category[],
+    language: string = 'en'
+  ): Promise<Partial<Budget> & { matchedCategory?: string | null }> {
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    
+    const categoryList = categories
+      .map(c => `"${c.name}" (ID: ${c.id}, Type: ${c.type})`)
+      .join('\n');
+
+    const periodExamples: Record<string, string> = {
+      en: '- "Change the period to yearly" → {"period": "yearly"}\n- "Update the amount to 1000" → {"amount": 1000}\n- "Change category to groceries" → {"categoryId": "...", "matchedCategory": "Groceries"}',
+      pt: '- "Mude o período para anual" → {"period": "yearly"}\n- "Altere o valor para 1000" → {"amount": 1000}\n- "Mude a categoria para transporte" → {"categoryId": "...", "matchedCategory": "Transport"}',
+      es: '- "Cambie el período a anual" → {"period": "yearly"}\n- "Actualice el monto a 1000" → {"amount": 1000}\n- "Cambie la categoría a transporte" → {"categoryId": "...", "matchedCategory": "Transport"}',
+    };
+    
+    const examples = periodExamples[language] || periodExamples.en;
+
+    const prompt = `You are helping update an existing budget based on a voice command.
+
+CURRENT BUDGET:
+- Category ID: ${currentBudget.categoryId || 'Not set'}
+- Amount: ${currentBudget.amount || 'Not set'}
+- Period: ${currentBudget.period || 'Not set'}
+- Start Date: ${currentBudget.startDate || 'Not set'}
+
+CURRENT DATE: ${today}
+
+Available categories:
+${categoryList || 'No categories available'}
+
+Voice command: "${transcription}"
+
+Analyze the voice command and determine what changes the user wants to make to the current budget.
+Return ONLY a JSON object with the fields that should be updated. Include only fields that need to change.
+
+Possible fields to update:
+- categoryId: string (if the user mentions a different category, match to most appropriate category ID from available categories)
+- amount: number (if the user mentions a new amount)
+- period: "monthly" or "yearly" (if the user wants to change the period)
+- startDate: string in YYYY-MM-DD format (if the user mentions a different start date)
+- matchedCategory: string or null (the name of the category that was matched, or null if no category matched)
+
+IMPORTANT INSTRUCTIONS:
+1. Only include fields in the JSON that the user explicitly wants to change.
+2. For category changes, use fuzzy matching: "transporte" matches "Transport", "comida" matches "Food", etc.
+3. For period changes, recognize these keywords:
+   - "monthly", "mensal", "mensual" → "monthly"
+   - "yearly", "anual", "anual" → "yearly"
+4. The matchedCategory field should contain the name of the category that was matched (for reference)
+
+Examples:
+${examples}
+
+Response must be valid JSON only, no markdown, no explanation.`;
+
+    const response = await fetch(`${this.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a financial budget update parser. Extract only the fields that need to be changed from voice commands and return valid JSON only.',
+          },
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        temperature: 0.1,
+        max_tokens: 500,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Parsing failed: ${error}`);
+    }
+
+    const data = await response.json() as {
+      choices: Array<{
+        message: {
+          content: string;
+        };
+      }>;
+    };
+
+    const content = data.choices[0]?.message?.content || '';
+    
+    const jsonMatch = content.match(/```json\s*([\s\S]*?)```/) ||
+                      content.match(/```\s*([\s\S]*?)```/) ||
+                      [null, content];
+    
+    const jsonString = jsonMatch[1]?.trim() || content.trim();
+    
+    try {
+      const parsed = JSON.parse(jsonString) as Partial<Budget> & { matchedCategory?: string | null };
+      
+      // Validate and clean up the updates
+      const updates: Partial<Budget> & { matchedCategory?: string | null } = {};
+      
+      if (parsed.categoryId !== undefined && typeof parsed.categoryId === 'string') {
+        updates.categoryId = parsed.categoryId;
+      }
+      
+      if (parsed.amount !== undefined && typeof parsed.amount === 'number' && parsed.amount > 0) {
+        updates.amount = parsed.amount;
+      }
+      
+      if (parsed.period !== undefined && ['monthly', 'yearly'].includes(parsed.period)) {
+        updates.period = parsed.period as 'monthly' | 'yearly';
+      }
+      
+      if (parsed.startDate !== undefined && typeof parsed.startDate === 'string') {
+        updates.startDate = parsed.startDate;
+      }
+      
+      if (parsed.matchedCategory !== undefined) {
+        updates.matchedCategory = parsed.matchedCategory;
+      }
+      
+      return updates;
+    } catch (error) {
+      throw new Error(`Failed to parse budget updates: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 

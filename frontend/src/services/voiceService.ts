@@ -237,6 +237,11 @@ export async function sendVoiceBudgetUpdate(
     formData.append('currentBudget', JSON.stringify(currentBudget));
     formData.append('isEditing', isEditing.toString());
     
+    // Add budgetId when editing
+    if (isEditing && currentBudget.id) {
+      formData.append('budgetId', currentBudget.id);
+    }
+    
     // Add categories for budget parsing
     if (categories && categories.length > 0) {
       formData.append('categories', JSON.stringify(categories));

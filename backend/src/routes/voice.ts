@@ -344,21 +344,29 @@ app.post('/categories', async (c) => {
 
 /**
  * POST /api/voice/budgets
- * Create a budget from voice input
+ * Create or update a budget from voice input
  * Expects multipart/form-data with:
  * - audio: audio file (webm/opus)
  * - language: language code (e.g., 'pt', 'en', 'es')
  * - categories: JSON string of available categories
+ * - isEditing: boolean indicating if this is an update
+ * - currentBudget: JSON string of current budget data (for updates)
+ * - budgetId: string (required when isEditing is true)
  */
 app.post('/budgets', async (c) => {
+  let language = 'en';
+  
   try {
     const userId = c.get('userId');
     
     // Parse multipart form data
     const formData = await c.req.formData();
     const audioFile = formData.get('audio') as File | null;
-    const language = (formData.get('language') as string) || 'en';
+    language = (formData.get('language') as string) || 'en';
     const categoriesStr = formData.get('categories') as string;
+    const isEditing = formData.get('isEditing') === 'true';
+    const currentBudgetStr = formData.get('currentBudget') as string;
+    const budgetId = formData.get('budgetId') as string;
 
     if (!audioFile) {
       return c.json(
@@ -379,6 +387,12 @@ app.post('/budgets', async (c) => {
 
     // Parse categories if provided
     const categories = categoriesStr ? JSON.parse(categoriesStr) as Category[] : [];
+    
+    // Parse current budget if editing
+    let currentBudget: Partial<Budget> | null = null;
+    if (isEditing && currentBudgetStr) {
+      currentBudget = JSON.parse(currentBudgetStr) as Partial<Budget>;
+    }
 
     // Initialize services
     const openai = new OpenAIService(c.env);
@@ -402,66 +416,79 @@ app.post('/budgets', async (c) => {
       );
     }
 
-    // Step 2: Parse transcription into budget data
-    let parsedBudget: {
-      categoryId: string;
-      amount: number;
-      period: 'monthly' | 'yearly';
-      startDate: string;
-      matchedCategory: string | null;
-    };
+    // Step 2: Parse transcription based on mode (create or update)
+    let parsedBudget: Partial<Budget> & { matchedCategory?: string | null };
     
-    try {
-      parsedBudget = await openai.parseBudget(transcription, categories, language);
-    } catch (error) {
-      console.error('Parsing error:', error);
-      return c.json(
-        {
-          success: false,
-          error: getErrorTranslation(language, 'parsingFailed'),
-          transcription
-        },
-        400
-      );
-    }
-
-    // Step 3: Validate that a category was matched
-    if (!parsedBudget.categoryId || parsedBudget.categoryId === '') {
-      return c.json(
-        {
-          success: false,
-          error: getErrorTranslation(language, 'categoryNotFound'),
+    if (isEditing && currentBudget) {
+      // Update mode: Parse as partial update
+      try {
+        parsedBudget = await openai.parseBudgetUpdate(
           transcription,
-          data: {
-            amount: parsedBudget.amount,
-            period: parsedBudget.period,
-            startDate: parsedBudget.startDate,
-            matchedCategory: parsedBudget.matchedCategory,
-          }
-        },
-        400
-      );
+          currentBudget,
+          categories,
+          language
+        );
+      } catch (error) {
+        console.error('Parsing error:', error);
+        return c.json(
+          {
+            success: false,
+            error: getErrorTranslation(language, 'parsingFailed'),
+            transcription
+          },
+          400
+        );
+      }
+    } else {
+      // Create mode: Parse as new budget
+      try {
+        const result = await openai.parseBudget(transcription, categories, language);
+        parsedBudget = result;
+        
+        // Validate that a category was matched for new budgets
+        if (!parsedBudget.categoryId || parsedBudget.categoryId === '') {
+          return c.json(
+            {
+              success: false,
+              error: getErrorTranslation(language, 'categoryNotFound'),
+              transcription,
+              data: {
+                amount: parsedBudget.amount,
+                period: parsedBudget.period,
+                startDate: parsedBudget.startDate,
+                matchedCategory: parsedBudget.matchedCategory,
+              }
+            },
+            400
+          );
+        }
+      } catch (error) {
+        console.error('Parsing error:', error);
+        return c.json(
+          {
+            success: false,
+            error: getErrorTranslation(language, 'parsingFailed'),
+            transcription
+          },
+          400
+        );
+      }
     }
 
-    // Step 4: Return parsed budget data without creating it
+    // Step 3: Return parsed budget data
     return c.json({
       success: true,
       data: parsedBudget,
       transcription,
-      message: getSuccessTranslation(language, 'budgetCreated'),
+      message: isEditing 
+        ? getSuccessTranslation(language, 'budgetUpdated') 
+        : getSuccessTranslation(language, 'budgetCreated'),
     }, 200);
 
   } catch (error) {
     console.error('Voice budget error:', error);
-    let errorLanguage = 'en';
-    try {
-      const formData = await c.req.formData();
-      errorLanguage = (formData.get('language') as string) || 'en';
-    } catch {
-      // If we can't get the form data, use default language
-    }
     return c.json(
-      { success: false, error: getErrorTranslation(errorLanguage, 'processingFailed') },
+      { success: false, error: getErrorTranslation(language, 'processingFailed') },
       500
     );
   }

@@ -89,6 +89,7 @@ export function BudgetModal({
             {
               ...formData,
               amount: formData.amount ? parseFloat(formData.amount) : undefined,
+              id: budget?.id, // Pass budgetId when editing
             },
             isEditing,
             expenseCategories // Pass categories for budget parsing

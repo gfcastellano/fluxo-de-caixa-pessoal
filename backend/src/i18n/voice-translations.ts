@@ -18,6 +18,7 @@ export interface VoiceTranslations {
     transactionUpdated: string;
     categoryCreated: string;
     budgetCreated: string;
+    budgetUpdated: string;
     accountCreated: string;
   };
   defaults: {
@@ -41,6 +42,7 @@ export const voiceTranslations: Record<string, VoiceTranslations> = {
       transactionUpdated: 'Transaction updated successfully',
       categoryCreated: 'Category parsed successfully',
       budgetCreated: 'Budget parsed successfully',
+      budgetUpdated: 'Budget updated successfully',
       accountCreated: 'Account parsed successfully',
     },
     defaults: {
@@ -62,6 +64,7 @@ export const voiceTranslations: Record<string, VoiceTranslations> = {
       transactionUpdated: 'Transação atualizada com sucesso',
       categoryCreated: 'Categoria processada com sucesso',
       budgetCreated: 'Orçamento processado com sucesso',
+      budgetUpdated: 'Orçamento atualizado com sucesso',
       accountCreated: 'Conta processada com sucesso',
     },
     defaults: {
@@ -83,6 +86,7 @@ export const voiceTranslations: Record<string, VoiceTranslations> = {
       transactionUpdated: 'Transacción actualizada exitosamente',
       categoryCreated: 'Categoría procesada exitosamente',
       budgetCreated: 'Presupuesto procesado exitosamente',
+      budgetUpdated: 'Presupuesto actualizado exitosamente',
       accountCreated: 'Cuenta procesada exitosamente',
     },
     defaults: {
