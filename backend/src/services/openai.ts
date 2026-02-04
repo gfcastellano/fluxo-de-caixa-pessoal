@@ -337,4 +337,314 @@ Response must be valid JSON only, no markdown, no explanation.`;
       throw new Error(`Failed to parse transaction updates: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
+
+  /**
+   * Parse transcription into category data using GPT-4
+   */
+  async parseCategory(
+    transcription: string,
+    language: string = 'en'
+  ): Promise<{ name: string; type: 'income' | 'expense'; color: string }> {
+    const languageInstructions: Record<string, string> = {
+      en: 'Return the name in English',
+      pt: 'Return the name in Portuguese (Português)',
+      es: 'Return the name in Spanish (Español)',
+    };
+    
+    const langInstruction = languageInstructions[language] || languageInstructions.en;
+
+    const prompt = `Parse the following voice command into a category object.
+
+Voice command: "${transcription}"
+
+Extract and return ONLY a JSON object with these exact fields:
+- name: string (the category name, ${langInstruction})
+- type: "income" or "expense" (determine from context - words like "salary", "income" indicate income; "expense", "cost", "spent" indicate expense)
+- color: string (a hex color code like "#FF5733", choose an appropriate color for the category type - use warm colors for expenses, cool colors for income)
+
+Examples:
+- "Create a groceries category for expenses" → {"name": "Groceries", "type": "expense", "color": "#FF6B6B"}
+- "Nova categoria salário" → {"name": "Salário", "type": "income", "color": "#4ECDC4"}
+- "Nueva categoría entretenimiento" → {"name": "Entretenimiento", "type": "expense", "color": "#FFE66D"}
+
+Response must be valid JSON only, no markdown, no explanation.`;
+
+    const response = await fetch(`${this.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a financial category parser. Extract category details from voice commands and return valid JSON only.',
+          },
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        temperature: 0.1,
+        max_tokens: 500,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Parsing failed: ${error}`);
+    }
+
+    const data = await response.json() as {
+      choices: Array<{
+        message: {
+          content: string;
+        };
+      }>;
+    };
+
+    const content = data.choices[0]?.message?.content || '';
+    
+    const jsonMatch = content.match(/```json\s*([\s\S]*?)```/) ||
+                      content.match(/```\s*([\s\S]*?)```/) ||
+                      [null, content];
+    
+    const jsonString = jsonMatch[1]?.trim() || content.trim();
+    
+    try {
+      const parsed = JSON.parse(jsonString) as Partial<{ name: string; type: string; color: string }>;
+      
+      // Validate required fields
+      if (!parsed.name || typeof parsed.name !== 'string') {
+        throw new Error('Invalid or missing name');
+      }
+      
+      if (!parsed.type || !['income', 'expense'].includes(parsed.type)) {
+        throw new Error('Invalid or missing type');
+      }
+      
+      if (!parsed.color || typeof parsed.color !== 'string') {
+        parsed.color = parsed.type === 'income' ? '#4ECDC4' : '#FF6B6B';
+      }
+
+      return {
+        name: parsed.name,
+        type: parsed.type as 'income' | 'expense',
+        color: parsed.color,
+      };
+    } catch (error) {
+      throw new Error(`Failed to parse category: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Parse transcription into budget data using GPT-4
+   */
+  async parseBudget(
+    transcription: string,
+    categories: Category[],
+    language: string = 'en'
+  ): Promise<{ categoryId: string; amount: number; period: 'monthly' | 'yearly'; startDate: string }> {
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    
+    const categoryList = categories
+      .map(c => `"${c.name}" (ID: ${c.id}, Type: ${c.type})`)
+      .join('\n');
+
+    const prompt = `Parse the following voice command into a budget object.
+
+CURRENT DATE: ${today}
+
+Available categories:
+${categoryList}
+
+Voice command: "${transcription}"
+
+Extract and return ONLY a JSON object with these exact fields:
+- categoryId: string (match to most appropriate category ID from the available categories list, or empty string if uncertain)
+- amount: number (the budget amount, always positive)
+- period: "monthly" or "yearly" (default to "monthly" if not specified)
+- startDate: string in YYYY-MM-DD format (default to "${today}" if not specified)
+
+Examples:
+- "Set a budget of 500 for groceries" → {"categoryId": "...", "amount": 500, "period": "monthly", "startDate": "${today}"}
+- "Orçamento mensal de 1000 reais para transporte" → {"categoryId": "...", "amount": 1000, "period": "monthly", "startDate": "${today}"}
+- "Presupuesto anual de 5000 para vacaciones" → {"categoryId": "...", "amount": 5000, "period": "yearly", "startDate": "${today}"}
+
+Response must be valid JSON only, no markdown, no explanation.`;
+
+    const response = await fetch(`${this.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a financial budget parser. Extract budget details from voice commands and return valid JSON only.',
+          },
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        temperature: 0.1,
+        max_tokens: 500,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Parsing failed: ${error}`);
+    }
+
+    const data = await response.json() as {
+      choices: Array<{
+        message: {
+          content: string;
+        };
+      }>;
+    };
+
+    const content = data.choices[0]?.message?.content || '';
+    
+    const jsonMatch = content.match(/```json\s*([\s\S]*?)```/) ||
+                      content.match(/```\s*([\s\S]*?)```/) ||
+                      [null, content];
+    
+    const jsonString = jsonMatch[1]?.trim() || content.trim();
+    
+    try {
+      const parsed = JSON.parse(jsonString) as Partial<{ categoryId: string; amount: number; period: string; startDate: string }>;
+      
+      // Validate required fields
+      if (typeof parsed.amount !== 'number' || parsed.amount <= 0) {
+        throw new Error('Invalid or missing amount');
+      }
+      
+      if (!parsed.period || !['monthly', 'yearly'].includes(parsed.period)) {
+        parsed.period = 'monthly';
+      }
+
+      return {
+        categoryId: parsed.categoryId || '',
+        amount: parsed.amount,
+        period: parsed.period as 'monthly' | 'yearly',
+        startDate: parsed.startDate || today,
+      };
+    } catch (error) {
+      throw new Error(`Failed to parse budget: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Parse transcription into account data using GPT-4
+   */
+  async parseAccount(
+    transcription: string,
+    language: string = 'en'
+  ): Promise<{ name: string; currency: string; balance: number; initialBalance: number; isDefault: boolean }> {
+    const languageInstructions: Record<string, string> = {
+      en: 'Return the name in English',
+      pt: 'Return the name in Portuguese (Português)',
+      es: 'Return the name in Spanish (Español)',
+    };
+    
+    const langInstruction = languageInstructions[language] || languageInstructions.en;
+
+    const prompt = `Parse the following voice command into an account object.
+
+Voice command: "${transcription}"
+
+Extract and return ONLY a JSON object with these exact fields:
+- name: string (the account name like "Bank Account", "Credit Card", "Cash", "Savings", ${langInstruction})
+- currency: string (3-letter currency code like "USD", "EUR", "BRL", "GBP". Default to "USD" if not specified)
+- balance: number (the current balance, default to 0 if not specified)
+- initialBalance: number (same as balance, default to 0 if not specified)
+- isDefault: boolean (whether this should be the default account, default to false)
+
+Examples:
+- "Create a new bank account with 1000 dollars" → {"name": "Bank Account", "currency": "USD", "balance": 1000, "initialBalance": 1000, "isDefault": false}
+- "Nova conta corrente com 500 reais" → {"name": "Conta Corrente", "currency": "BRL", "balance": 500, "initialBalance": 500, "isDefault": false}
+- "Nueva cuenta de ahorros en euros" → {"name": "Cuenta de Ahorros", "currency": "EUR", "balance": 0, "initialBalance": 0, "isDefault": false}
+
+Response must be valid JSON only, no markdown, no explanation.`;
+
+    const response = await fetch(`${this.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a financial account parser. Extract account details from voice commands and return valid JSON only.',
+          },
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        temperature: 0.1,
+        max_tokens: 500,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Parsing failed: ${error}`);
+    }
+
+    const data = await response.json() as {
+      choices: Array<{
+        message: {
+          content: string;
+        };
+      }>;
+    };
+
+    const content = data.choices[0]?.message?.content || '';
+    
+    const jsonMatch = content.match(/```json\s*([\s\S]*?)```/) ||
+                      content.match(/```\s*([\s\S]*?)```/) ||
+                      [null, content];
+    
+    const jsonString = jsonMatch[1]?.trim() || content.trim();
+    
+    try {
+      const parsed = JSON.parse(jsonString) as Partial<{ name: string; currency: string; balance: number; initialBalance: number; isDefault: boolean }>;
+      
+      // Validate required fields
+      if (!parsed.name || typeof parsed.name !== 'string') {
+        throw new Error('Invalid or missing name');
+      }
+      
+      if (!parsed.currency || typeof parsed.currency !== 'string') {
+        parsed.currency = 'USD';
+      }
+      
+      if (typeof parsed.balance !== 'number') {
+        parsed.balance = 0;
+      }
+
+      return {
+        name: parsed.name,
+        currency: parsed.currency.toUpperCase(),
+        balance: parsed.balance,
+        initialBalance: parsed.initialBalance ?? parsed.balance,
+        isDefault: parsed.isDefault ?? false,
+      };
+    } catch (error) {
+      throw new Error(`Failed to parse account: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
 }

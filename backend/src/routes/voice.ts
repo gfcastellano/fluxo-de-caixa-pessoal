@@ -242,4 +242,312 @@ app.post('/transactions', async (c) => {
   }
 });
 
+/**
+ * POST /api/voice/categories
+ * Create a category from voice input
+ * Expects multipart/form-data with:
+ * - audio: audio file (webm/opus)
+ * - language: language code (e.g., 'pt', 'en', 'es')
+ */
+app.post('/categories', async (c) => {
+  try {
+    const userId = c.get('userId');
+    
+    // Parse multipart form data
+    const formData = await c.req.formData();
+    const audioFile = formData.get('audio') as File | null;
+    const language = (formData.get('language') as string) || 'en';
+
+    if (!audioFile) {
+      return c.json(
+        { success: false, error: getErrorTranslation(language, 'noAudioFile') },
+        400
+      );
+    }
+
+    // Convert file to array buffer
+    const audioBuffer = await audioFile.arrayBuffer();
+
+    if (audioBuffer.byteLength === 0) {
+      return c.json(
+        { success: false, error: getErrorTranslation(language, 'emptyAudio') },
+        400
+      );
+    }
+
+    // Initialize services
+    const openai = new OpenAIService(c.env);
+
+    // Step 1: Transcribe audio
+    let transcription: string;
+    try {
+      transcription = await openai.transcribeAudio(audioBuffer, language);
+    } catch (error) {
+      console.error('Transcription error:', error);
+      return c.json(
+        { success: false, error: getErrorTranslation(language, 'transcriptionFailed') },
+        500
+      );
+    }
+
+    if (!transcription || transcription.trim().length === 0) {
+      return c.json(
+        { success: false, error: getErrorTranslation(language, 'noSpeechDetected') },
+        400
+      );
+    }
+
+    // Step 2: Parse transcription into category data
+    let parsedCategory: {
+      name: string;
+      type: 'income' | 'expense';
+      color: string;
+    };
+    
+    try {
+      parsedCategory = await openai.parseCategory(transcription, language);
+    } catch (error) {
+      console.error('Parsing error:', error);
+      return c.json(
+        {
+          success: false,
+          error: getErrorTranslation(language, 'parsingFailed'),
+          transcription
+        },
+        400
+      );
+    }
+
+    // Step 3: Return parsed category data without creating it
+    return c.json({
+      success: true,
+      data: parsedCategory,
+      transcription,
+      message: getSuccessTranslation(language, 'categoryCreated'),
+    }, 200);
+
+  } catch (error) {
+    console.error('Voice category error:', error);
+    let errorLanguage = 'en';
+    try {
+      const formData = await c.req.formData();
+      errorLanguage = (formData.get('language') as string) || 'en';
+    } catch {
+      // If we can't get the form data, use default language
+    }
+    return c.json(
+      { success: false, error: getErrorTranslation(errorLanguage, 'processingFailed') },
+      500
+    );
+  }
+});
+
+/**
+ * POST /api/voice/budgets
+ * Create a budget from voice input
+ * Expects multipart/form-data with:
+ * - audio: audio file (webm/opus)
+ * - language: language code (e.g., 'pt', 'en', 'es')
+ * - categories: JSON string of available categories
+ */
+app.post('/budgets', async (c) => {
+  try {
+    const userId = c.get('userId');
+    
+    // Parse multipart form data
+    const formData = await c.req.formData();
+    const audioFile = formData.get('audio') as File | null;
+    const language = (formData.get('language') as string) || 'en';
+    const categoriesStr = formData.get('categories') as string;
+
+    if (!audioFile) {
+      return c.json(
+        { success: false, error: getErrorTranslation(language, 'noAudioFile') },
+        400
+      );
+    }
+
+    // Convert file to array buffer
+    const audioBuffer = await audioFile.arrayBuffer();
+
+    if (audioBuffer.byteLength === 0) {
+      return c.json(
+        { success: false, error: getErrorTranslation(language, 'emptyAudio') },
+        400
+      );
+    }
+
+    // Parse categories if provided
+    const categories = categoriesStr ? JSON.parse(categoriesStr) as Category[] : [];
+
+    // Initialize services
+    const openai = new OpenAIService(c.env);
+
+    // Step 1: Transcribe audio
+    let transcription: string;
+    try {
+      transcription = await openai.transcribeAudio(audioBuffer, language);
+    } catch (error) {
+      console.error('Transcription error:', error);
+      return c.json(
+        { success: false, error: getErrorTranslation(language, 'transcriptionFailed') },
+        500
+      );
+    }
+
+    if (!transcription || transcription.trim().length === 0) {
+      return c.json(
+        { success: false, error: getErrorTranslation(language, 'noSpeechDetected') },
+        400
+      );
+    }
+
+    // Step 2: Parse transcription into budget data
+    let parsedBudget: {
+      categoryId: string;
+      amount: number;
+      period: 'monthly' | 'yearly';
+      startDate: string;
+    };
+    
+    try {
+      parsedBudget = await openai.parseBudget(transcription, categories, language);
+    } catch (error) {
+      console.error('Parsing error:', error);
+      return c.json(
+        {
+          success: false,
+          error: getErrorTranslation(language, 'parsingFailed'),
+          transcription
+        },
+        400
+      );
+    }
+
+    // Step 3: Return parsed budget data without creating it
+    return c.json({
+      success: true,
+      data: parsedBudget,
+      transcription,
+      message: getSuccessTranslation(language, 'budgetCreated'),
+    }, 200);
+
+  } catch (error) {
+    console.error('Voice budget error:', error);
+    let errorLanguage = 'en';
+    try {
+      const formData = await c.req.formData();
+      errorLanguage = (formData.get('language') as string) || 'en';
+    } catch {
+      // If we can't get the form data, use default language
+    }
+    return c.json(
+      { success: false, error: getErrorTranslation(errorLanguage, 'processingFailed') },
+      500
+    );
+  }
+});
+
+/**
+ * POST /api/voice/accounts
+ * Create an account from voice input
+ * Expects multipart/form-data with:
+ * - audio: audio file (webm/opus)
+ * - language: language code (e.g., 'pt', 'en', 'es')
+ */
+app.post('/accounts', async (c) => {
+  try {
+    const userId = c.get('userId');
+    
+    // Parse multipart form data
+    const formData = await c.req.formData();
+    const audioFile = formData.get('audio') as File | null;
+    const language = (formData.get('language') as string) || 'en';
+
+    if (!audioFile) {
+      return c.json(
+        { success: false, error: getErrorTranslation(language, 'noAudioFile') },
+        400
+      );
+    }
+
+    // Convert file to array buffer
+    const audioBuffer = await audioFile.arrayBuffer();
+
+    if (audioBuffer.byteLength === 0) {
+      return c.json(
+        { success: false, error: getErrorTranslation(language, 'emptyAudio') },
+        400
+      );
+    }
+
+    // Initialize services
+    const openai = new OpenAIService(c.env);
+
+    // Step 1: Transcribe audio
+    let transcription: string;
+    try {
+      transcription = await openai.transcribeAudio(audioBuffer, language);
+    } catch (error) {
+      console.error('Transcription error:', error);
+      return c.json(
+        { success: false, error: getErrorTranslation(language, 'transcriptionFailed') },
+        500
+      );
+    }
+
+    if (!transcription || transcription.trim().length === 0) {
+      return c.json(
+        { success: false, error: getErrorTranslation(language, 'noSpeechDetected') },
+        400
+      );
+    }
+
+    // Step 2: Parse transcription into account data
+    let parsedAccount: {
+      name: string;
+      currency: string;
+      balance: number;
+      initialBalance: number;
+      isDefault: boolean;
+    };
+    
+    try {
+      parsedAccount = await openai.parseAccount(transcription, language);
+    } catch (error) {
+      console.error('Parsing error:', error);
+      return c.json(
+        {
+          success: false,
+          error: getErrorTranslation(language, 'parsingFailed'),
+          transcription
+        },
+        400
+      );
+    }
+
+    // Step 3: Return parsed account data without creating it
+    return c.json({
+      success: true,
+      data: parsedAccount,
+      transcription,
+      message: getSuccessTranslation(language, 'accountCreated'),
+    }, 200);
+
+  } catch (error) {
+    console.error('Voice account error:', error);
+    let errorLanguage = 'en';
+    try {
+      const formData = await c.req.formData();
+      errorLanguage = (formData.get('language') as string) || 'en';
+    } catch {
+      // If we can't get the form data, use default language
+    }
+    return c.json(
+      { success: false, error: getErrorTranslation(errorLanguage, 'processingFailed') },
+      500
+    );
+  }
+});
+
 export default app;
