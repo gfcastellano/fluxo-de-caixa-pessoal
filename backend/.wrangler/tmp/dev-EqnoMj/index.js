@@ -6456,10 +6456,20 @@ var OpenAIService = class {
   }
   /**
    * Parse transcription into transaction data using GPT-4
+   * @param transcription - The transcribed text from the audio
+   * @param categories - Available categories for matching
+   * @param language - The language code for the response (e.g., 'en', 'pt', 'es')
+   * @param defaultDescription - Default description to use if parsing fails
    */
-  async parseTransaction(transcription, categories) {
+  async parseTransaction(transcription, categories, language = "en", defaultDescription = "Voice transaction") {
     const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
     const categoryList = categories.map((c) => `"${c.name}" (ID: ${c.id}, Type: ${c.type})`).join("\n");
+    const languageInstructions = {
+      en: "Return the description in English",
+      pt: "Return the description in Portuguese (Portugu\xEAs)",
+      es: "Return the description in Spanish (Espa\xF1ol)"
+    };
+    const langInstruction = languageInstructions[language] || languageInstructions.en;
     const prompt = `Parse the following voice command into a transaction object.
 
 Available categories:
@@ -6470,14 +6480,16 @@ Voice command: "${transcription}"
 Extract and return ONLY a JSON object with these exact fields:
 - amount: number (always positive, extract the numeric value)
 - type: "income" or "expense" (determine from context - words like "spent", "paid", "bought" indicate expense; "received", "earned", "got" indicate income)
-- description: string (what the transaction is for, keep it concise)
+- description: string (what the transaction is for, keep it concise, ${langInstruction})
 - categoryId: string (match to most appropriate category ID based on description, or empty string if uncertain)
 - date: string in YYYY-MM-DD format (default to "${today}" if not specified)
 
+IMPORTANT: The description field MUST be returned in the specified language (${language}).
+
 Examples:
-- "I spent 50 euros on groceries" \u2192 {"amount": 50, "type": "expense", "description": "Groceries", "categoryId": "...", "date": "${today}"}
-- "Received 1000 salary" \u2192 {"amount": 1000, "type": "income", "description": "Salary", "categoryId": "...", "date": "${today}"}
-- "Paid 25 for lunch yesterday" \u2192 {"amount": 25, "type": "expense", "description": "Lunch", "categoryId": "...", "date": "YYYY-MM-DD for yesterday"}
+- "I spent 50 euros on groceries" (en) \u2192 {"amount": 50, "type": "expense", "description": "Groceries", "categoryId": "...", "date": "${today}"}
+- "Gastei 50 euros em supermercado" (pt) \u2192 {"amount": 50, "type": "expense", "description": "Supermercado", "categoryId": "...", "date": "${today}"}
+- "Gast\xE9 50 euros en supermercado" (es) \u2192 {"amount": 50, "type": "expense", "description": "Supermercado", "categoryId": "...", "date": "${today}"}
 
 Response must be valid JSON only, no markdown, no explanation.`;
     const response = await fetch(`${this.baseUrl}/chat/completions`, {

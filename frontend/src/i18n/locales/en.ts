@@ -6,6 +6,7 @@ export const enTranslations = {
     categories: 'Categories',
     budgets: 'Budgets',
     reports: 'Reports',
+    accounts: 'Accounts',
     logout: 'Logout',
   },
 
@@ -27,6 +28,7 @@ export const enTranslations = {
     back: 'Back',
     next: 'Next',
     submit: 'Submit',
+    default: 'Default',
     create: 'Create',
     update: 'Update',
     remove: 'Remove',
@@ -60,6 +62,14 @@ export const enTranslations = {
     loggingIn: 'Logging in...',
     loginError: 'Failed to login. Please try again.',
     logoutError: 'Failed to logout. Please try again.',
+    register: {
+      title: 'Create Account',
+      subtitle: 'Sign up with Google to get started',
+      initialBalance: 'Initial Account Balance',
+      initialBalancePlaceholder: '0.00',
+      signingUp: 'Signing up...',
+      signUpWithGoogle: 'Sign up with Google',
+    },
   },
 
   // Dashboard
@@ -74,6 +84,10 @@ export const enTranslations = {
     noTransactions: 'No transactions found',
     noBudgets: 'No budgets set',
     viewAll: 'View All',
+    myAccounts: 'My Accounts',
+    viewAllAccounts: 'View All Accounts',
+    noAccounts: 'No accounts found',
+    addFirstAccount: 'Add your first account',
   },
 
   // Transactions
@@ -102,8 +116,10 @@ export const enTranslations = {
       date: 'Date',
       type: 'Type',
       category: 'Category',
+      account: 'Account',
       description: 'Description (Optional)',
       selectCategory: 'Select a category',
+      selectAccount: 'Select an account',
       income: 'Income',
       expense: 'Expense',
     },
@@ -175,6 +191,30 @@ export const enTranslations = {
       deleteFailed: 'Failed to delete budget',
       invalidAmount: 'Please enter a valid amount',
       required: 'This field is required',
+    },
+  },
+
+  // Accounts
+  accounts: {
+    title: 'Accounts',
+    addNew: 'Add Account',
+    editAccount: 'Edit Account',
+    deleteConfirm: 'Are you sure you want to delete this account?',
+    setDefault: 'Set as Default',
+    default: 'Default',
+    currentBalance: 'Current Balance',
+    noAccounts: 'No accounts found',
+    form: {
+      name: 'Account Name',
+      currency: 'Currency',
+      initialBalance: 'Initial Balance',
+      setAsDefault: 'Set as default account',
+    },
+    errors: {
+      loadFailed: 'Failed to load accounts',
+      saveFailed: 'Failed to save account',
+      deleteFailed: 'Failed to delete account',
+      required: 'Account name is required',
     },
   },
 

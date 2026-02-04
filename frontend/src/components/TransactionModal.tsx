@@ -7,8 +7,9 @@ import { Input } from './Input';
 import { useVoiceRecorder } from '../hooks/useVoiceRecorder';
 import { sendVoiceTransactionUpdate } from '../services/voiceService';
 import { getCategories } from '../services/categoryService';
+import { getAccounts } from '../services/accountService';
 import { getTranslatedCategoryName } from '../utils/categoryTranslations';
-import type { Transaction, Category } from '../types';
+import type { Transaction, Category, Account } from '../types';
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -40,10 +41,40 @@ export function TransactionModal({
     date: new Date().toISOString().split('T')[0],
   });
 
+  // Accounts state
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [selectedAccountId, setSelectedAccountId] = useState<string>('');
+
   // Voice update state
   const { state: voiceState, error: voiceError, startRecording, stopRecording, reset: resetVoice } = useVoiceRecorder();
   const [voiceFeedback, setVoiceFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [isProcessingVoice, setIsProcessingVoice] = useState(false);
+
+  // Fetch accounts when modal opens
+  useEffect(() => {
+    if (isOpen && userId) {
+      const fetchAccounts = async () => {
+        try {
+          const userAccounts = await getAccounts(userId);
+          setAccounts(userAccounts);
+          
+          // If editing, use the transaction's accountId
+          if (transaction?.accountId) {
+            setSelectedAccountId(transaction.accountId);
+          } else {
+            // Otherwise, use the default account
+            const defaultAccount = userAccounts.find(acc => acc.isDefault);
+            if (defaultAccount) {
+              setSelectedAccountId(defaultAccount.id);
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching accounts:', error);
+        }
+      };
+      fetchAccounts();
+    }
+  }, [isOpen, userId, transaction]);
 
   useEffect(() => {
     if (transaction) {
@@ -71,6 +102,7 @@ export function TransactionModal({
     onSave({
       ...formData,
       amount: parseFloat(formData.amount),
+      accountId: selectedAccountId || undefined,
     });
   };
 
@@ -239,6 +271,23 @@ export function TransactionModal({
                   {filteredCategories.map((category) => (
                     <option key={category.id} value={category.id}>
                       {t(getTranslatedCategoryName(category.name))}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {t('transactions.form.account')}
+                </label>
+                <select
+                  value={selectedAccountId}
+                  onChange={(e) => setSelectedAccountId(e.target.value)}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="">{t('transactions.form.selectAccount')}</option>
+                  {accounts.map((account) => (
+                    <option key={account.id} value={account.id}>
+                      {account.name} {account.isDefault ? `(${t('common.default')})` : ''}
                     </option>
                   ))}
                 </select>

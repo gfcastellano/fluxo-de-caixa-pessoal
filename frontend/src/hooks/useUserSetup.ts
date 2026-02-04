@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { getCategories, createCategory } from '../services/categoryService';
+import { createAccount, getAccounts } from '../services/accountService';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
@@ -23,9 +24,15 @@ const DEFAULT_CATEGORIES = [
   { name: 'Other Expense', type: 'expense' as const, color: '#6b7280', icon: 'more-horizontal' },
 ];
 
-export function useUserSetup() {
+export function useUserSetup(initialBalance: number = 0) {
   const { user } = useAuth();
   const hasRun = useRef(false);
+  const initialBalanceRef = useRef(initialBalance);
+
+  // Update ref when initialBalance changes
+  useEffect(() => {
+    initialBalanceRef.current = initialBalance;
+  }, [initialBalance]);
 
   useEffect(() => {
     if (!user || hasRun.current) return;
@@ -60,8 +67,23 @@ export function useUserSetup() {
           for (const category of DEFAULT_CATEGORIES) {
             await createCategory(user.uid, category);
           }
+          console.log('✅ Default categories created');
+
+          // Create default account with initial balance
+          const existingAccounts = await getAccounts(user.uid);
+          if (existingAccounts.length === 0) {
+            await createAccount({
+              userId: user.uid,
+              name: 'Minha Conta',
+              currency: 'BRL',
+              balance: initialBalanceRef.current,
+              initialBalance: initialBalanceRef.current,
+              isDefault: true,
+            });
+            console.log('✅ Default account created with initial balance:', initialBalanceRef.current);
+          }
           
-          console.log('✅ User setup complete: Profile created with 14 default categories');
+          console.log('✅ User setup complete: Profile created with 14 default categories and 1 default account');
         } else {
           console.log('User already exists, skipping setup');
         }

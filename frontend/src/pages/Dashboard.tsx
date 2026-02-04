@@ -8,8 +8,9 @@ import { formatCurrency, formatMonthYear, getCurrentMonth } from '../utils/forma
 import { getTranslatedCategoryName } from '../utils/categoryTranslations';
 import { getMonthlySummary } from '../services/reportService';
 import { getTransactions } from '../services/transactionService';
-import type { MonthlySummary, Transaction } from '../types';
-import { TrendingUp, TrendingDown, Wallet, Plus } from 'lucide-react';
+import { getAccounts } from '../services/accountService';
+import type { MonthlySummary, Transaction, Account } from '../types';
+import { TrendingUp, TrendingDown, Wallet, Plus, CreditCard, ArrowRight, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export function Dashboard() {
@@ -18,6 +19,7 @@ export function Dashboard() {
   const { t } = useTranslation();
   const [summary, setSummary] = useState<MonthlySummary | null>(null);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -30,12 +32,14 @@ export function Dashboard() {
     setLoading(true);
     try {
       const { year, month } = getCurrentMonth();
-      const [summaryData, transactions] = await Promise.all([
+      const [summaryData, transactions, accountsData] = await Promise.all([
         getMonthlySummary(user!.uid, year, month),
         getTransactions(user!.uid, {}),
+        getAccounts(user!.uid),
       ]);
       setSummary(summaryData);
       setRecentTransactions(transactions.slice(0, 5));
+      setAccounts(accountsData);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
@@ -115,6 +119,60 @@ export function Dashboard() {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Accounts Section */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-900">{t('dashboard.myAccounts')}</h2>
+          <Link to="/accounts" className="text-sm text-primary-600 hover:text-primary-700 flex items-center">
+            {t('dashboard.viewAllAccounts')}
+            <ArrowRight className="ml-1 h-4 w-4" />
+          </Link>
+        </div>
+        
+        {accounts.length === 0 ? (
+          <Card>
+            <CardContent className="py-8 text-center">
+              <p className="text-gray-500">{t('dashboard.noAccounts')}</p>
+              <Link to="/accounts" className="text-primary-600 hover:underline mt-2 inline-block">
+                {t('dashboard.addFirstAccount')}
+              </Link>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {accounts.map((account) => (
+              <Card
+                key={account.id}
+                className={`relative ${account.isDefault ? 'ring-2 ring-primary-500' : ''}`}
+              >
+                {account.isDefault && (
+                  <div className="absolute -top-2 -right-2 bg-primary-500 text-white rounded-full p-1">
+                    <Star className="h-3 w-3 fill-current" />
+                  </div>
+                )}
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-600 flex items-center">
+                    <CreditCard className="h-4 w-4 mr-2" />
+                    {account.name}
+                    {account.isDefault && (
+                      <span className="ml-2 text-xs bg-primary-100 text-primary-700 px-2 py-0.5 rounded">
+                        {t('common.default')}
+                      </span>
+                    )}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-gray-900">
+                    {formatCurrency(account.balance)}
+                  </div>
+                  <p className="text-sm text-gray-500 mt-1">{account.currency}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Recent Transactions */}

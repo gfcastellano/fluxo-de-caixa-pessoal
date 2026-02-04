@@ -6,6 +6,7 @@ export const esTranslations = {
     categories: 'Categorías',
     budgets: 'Presupuestos',
     reports: 'Informes',
+    accounts: 'Cuentas',
     logout: 'Cerrar Sesión',
   },
 
@@ -27,6 +28,7 @@ export const esTranslations = {
     back: 'Atrás',
     next: 'Siguiente',
     submit: 'Enviar',
+    default: 'Predeterminada',
     create: 'Crear',
     update: 'Actualizar',
     remove: 'Eliminar',
@@ -60,6 +62,14 @@ export const esTranslations = {
     loggingIn: 'Iniciando sesión...',
     loginError: 'Error al iniciar sesión. Inténtalo de nuevo.',
     logoutError: 'Error al cerrar sesión. Inténtalo de nuevo.',
+    register: {
+      title: 'Crear Cuenta',
+      subtitle: 'Regístrate con Google para comenzar',
+      initialBalance: 'Saldo Inicial de la Cuenta',
+      initialBalancePlaceholder: '0,00',
+      signingUp: 'Registrando...',
+      signUpWithGoogle: 'Registrarse con Google',
+    },
   },
 
   // Dashboard
@@ -74,6 +84,10 @@ export const esTranslations = {
     noTransactions: 'No se encontraron transacciones',
     noBudgets: 'No hay presupuestos definidos',
     viewAll: 'Ver Todos',
+    myAccounts: 'Mis Cuentas',
+    viewAllAccounts: 'Ver Todas las Cuentas',
+    noAccounts: 'No se encontraron cuentas',
+    addFirstAccount: 'Añade tu primera cuenta',
   },
 
   // Transactions
@@ -102,8 +116,10 @@ export const esTranslations = {
       date: 'Fecha',
       type: 'Tipo',
       category: 'Categoría',
+      account: 'Cuenta',
       description: 'Descripción (Opcional)',
       selectCategory: 'Selecciona una categoría',
+      selectAccount: 'Selecciona una cuenta',
       income: 'Ingreso',
       expense: 'Gasto',
     },
@@ -175,6 +191,30 @@ export const esTranslations = {
       deleteFailed: 'Error al eliminar presupuesto',
       invalidAmount: 'Por favor, introduce una cantidad válida',
       required: 'Este campo es obligatorio',
+    },
+  },
+
+  // Accounts
+  accounts: {
+    title: 'Cuentas',
+    addNew: 'Añadir Cuenta',
+    editAccount: 'Editar Cuenta',
+    deleteConfirm: '¿Estás seguro de que quieres eliminar esta cuenta?',
+    setDefault: 'Establecer como Predeterminada',
+    default: 'Predeterminada',
+    currentBalance: 'Saldo Actual',
+    noAccounts: 'No se encontraron cuentas',
+    form: {
+      name: 'Nombre de la Cuenta',
+      currency: 'Moneda',
+      initialBalance: 'Saldo Inicial',
+      setAsDefault: 'Establecer como cuenta predeterminada',
+    },
+    errors: {
+      loadFailed: 'Error al cargar cuentas',
+      saveFailed: 'Error al guardar cuenta',
+      deleteFailed: 'Error al eliminar cuenta',
+      required: 'El nombre de la cuenta es obligatorio',
     },
   },
 

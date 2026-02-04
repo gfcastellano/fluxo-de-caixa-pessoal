@@ -19,10 +19,12 @@ export interface Category {
 export interface Transaction {
   id: string;
   userId: string;
+  accountId?: string;
   type: 'income' | 'expense';
   amount: number;
   categoryId: string;
   category?: Category;
+  account?: Account;
   description: string;
   date: string;
   createdAt: string;
@@ -39,6 +41,20 @@ export interface Budget {
   startDate: string;
   createdAt: string;
 }
+
+export interface Account {
+  id: string;
+  userId: string;
+  name: string;
+  currency: string;
+  balance: number;
+  initialBalance: number;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type AccountInput = Omit<Account, 'id' | 'createdAt' | 'updatedAt'>;
 
 export interface MonthlySummary {
   income: number;

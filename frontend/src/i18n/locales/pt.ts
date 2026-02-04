@@ -6,6 +6,7 @@ export const ptTranslations = {
     categories: 'Categorias',
     budgets: 'Orçamentos',
     reports: 'Relatórios',
+    accounts: 'Contas',
     logout: 'Sair',
   },
 
@@ -27,6 +28,7 @@ export const ptTranslations = {
     back: 'Voltar',
     next: 'Próximo',
     submit: 'Enviar',
+    default: 'Padrão',
     create: 'Criar',
     update: 'Atualizar',
     remove: 'Remover',
@@ -60,6 +62,14 @@ export const ptTranslations = {
     loggingIn: 'Entrando...',
     loginError: 'Falha ao entrar. Tente novamente.',
     logoutError: 'Falha ao sair. Tente novamente.',
+    register: {
+      title: 'Criar Conta',
+      subtitle: 'Cadastre-se com Google para começar',
+      initialBalance: 'Saldo Inicial da Conta',
+      initialBalancePlaceholder: '0,00',
+      signingUp: 'Cadastrando...',
+      signUpWithGoogle: 'Cadastrar com Google',
+    },
   },
 
   // Dashboard
@@ -74,6 +84,10 @@ export const ptTranslations = {
     noTransactions: 'Nenhuma transação encontrada',
     noBudgets: 'Nenhum orçamento definido',
     viewAll: 'Ver Todos',
+    myAccounts: 'Minhas Contas',
+    viewAllAccounts: 'Ver Todas as Contas',
+    noAccounts: 'Nenhuma conta encontrada',
+    addFirstAccount: 'Adicione sua primeira conta',
   },
 
   // Transactions
@@ -102,8 +116,10 @@ export const ptTranslations = {
       date: 'Data',
       type: 'Tipo',
       category: 'Categoria',
+      account: 'Conta',
       description: 'Descrição (Opcional)',
       selectCategory: 'Selecione uma categoria',
+      selectAccount: 'Selecione uma conta',
       income: 'Receita',
       expense: 'Despesa',
     },
@@ -175,6 +191,30 @@ export const ptTranslations = {
       deleteFailed: 'Falha ao excluir orçamento',
       invalidAmount: 'Por favor, insira um valor válido',
       required: 'Este campo é obrigatório',
+    },
+  },
+
+  // Accounts
+  accounts: {
+    title: 'Contas',
+    addNew: 'Adicionar Conta',
+    editAccount: 'Editar Conta',
+    deleteConfirm: 'Tem certeza que deseja excluir esta conta?',
+    setDefault: 'Definir como Padrão',
+    default: 'Padrão',
+    currentBalance: 'Saldo Atual',
+    noAccounts: 'Nenhuma conta encontrada',
+    form: {
+      name: 'Nome da Conta',
+      currency: 'Moeda',
+      initialBalance: 'Saldo Inicial',
+      setAsDefault: 'Definir como conta padrão',
+    },
+    errors: {
+      loadFailed: 'Falha ao carregar contas',
+      saveFailed: 'Falha ao salvar conta',
+      deleteFailed: 'Falha ao excluir conta',
+      required: 'O nome da conta é obrigatório',
     },
   },
 

@@ -12,8 +12,9 @@ import {
   deleteTransaction,
 } from '../services/transactionService';
 import { getCategories } from '../services/categoryService';
+import { getAccounts } from '../services/accountService';
 import { getTranslatedCategoryName } from '../utils/categoryTranslations';
-import type { Transaction, Category } from '../types';
+import type { Transaction, Category, Account } from '../types';
 import { formatCurrency, formatDate } from '../utils/format';
 import { Plus, Edit2, Trash2, Search } from 'lucide-react';
 
@@ -22,6 +23,7 @@ export function Transactions() {
   const { t } = useTranslation();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
@@ -37,22 +39,26 @@ export function Transactions() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [transactionsData, categoriesData] = await Promise.all([
+      const [transactionsData, categoriesData, accountsData] = await Promise.all([
         getTransactions(user!.uid, {}),
         getCategories(user!.uid),
+        getAccounts(user!.uid),
       ]);
 
-      // Join transactions with their categories
+      // Join transactions with their categories and accounts
       const transactionsWithCategories = transactionsData.map((transaction) => {
         const category = categoriesData.find((c) => c.id === transaction.categoryId);
+        const account = accountsData.find((a) => a.id === transaction.accountId);
         return {
           ...transaction,
           category,
+          account,
         };
       });
 
       setTransactions(transactionsWithCategories);
       setCategories(categoriesData);
+      setAccounts(accountsData);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -69,19 +75,24 @@ export function Transactions() {
         // Update the local state immediately for better UX
         setTransactions(prev => prev.map(t => {
           if (t.id === editingTransaction.id) {
-            const updatedCategory = data.categoryId 
-              ? categories.find(c => c.id === data.categoryId) 
+            const updatedCategory = data.categoryId
+              ? categories.find(c => c.id === data.categoryId)
               : t.category;
-            return { 
-              ...t, 
-              ...data, 
+            const updatedAccount = data.accountId
+              ? accounts.find(a => a.id === data.accountId)
+              : t.account;
+            return {
+              ...t,
+              ...data,
               category: updatedCategory,
+              account: updatedAccount,
               // Ensure these fields are properly typed
               amount: data.amount ?? t.amount,
               description: data.description ?? t.description,
               type: data.type ?? t.type,
               date: data.date ?? t.date,
               categoryId: data.categoryId ?? t.categoryId,
+              accountId: data.accountId ?? t.accountId,
             };
           }
           return t;
@@ -134,15 +145,19 @@ export function Transactions() {
         console.log('Previous transactions count:', prev.length);
         const newTransactions = prev.map(t => {
           if (t.id === editingTransaction.id) {
-            const updatedCategory = updates.categoryId 
-              ? categories.find(c => c.id === updates.categoryId) 
+            const updatedCategory = updates.categoryId
+              ? categories.find(c => c.id === updates.categoryId)
               : t.category;
+            const updatedAccount = updates.accountId
+              ? accounts.find(a => a.id === updates.accountId)
+              : t.account;
             console.log('Found transaction to update:', t.id);
             console.log('Updated category:', updatedCategory?.name || 'unchanged');
-            const updatedTransaction = { 
-              ...t, 
-              ...updates, 
+            const updatedTransaction = {
+              ...t,
+              ...updates,
               category: updatedCategory,
+              account: updatedAccount,
             };
             console.log('Updated transaction:', updatedTransaction);
             return updatedTransaction;
@@ -247,6 +262,9 @@ export function Transactions() {
                     <th className="text-left py-3 px-4 font-medium text-gray-700">
                       {t('common.category')}
                     </th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-700">
+                      {t('transactions.form.account')}
+                    </th>
                     <th className="text-right py-3 px-4 font-medium text-gray-700">
                       {t('common.amount')}
                     </th>
@@ -275,6 +293,9 @@ export function Transactions() {
                         >
                           {transaction.category ? t(getTranslatedCategoryName(transaction.category.name)) : t('common.category')}
                         </span>
+                      </td>
+                      <td className="py-3 px-4 text-sm text-gray-600">
+                        {transaction.account?.name || '-'}
                       </td>
                       <td
                         className={`py-3 px-4 text-right font-medium ${
