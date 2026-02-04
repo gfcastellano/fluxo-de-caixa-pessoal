@@ -9,6 +9,8 @@ import {
   getTrendData,
 } from '../services/reportService';
 import { getAccounts } from '../services/accountService';
+import { getTransactions } from '../services/transactionService';
+import { getCategories } from '../services/categoryService';
 import type { MonthlySummary, CategoryBreakdown, Account } from '../types';
 import { formatCurrency, formatMonthYear, getCurrentMonth } from '../utils/format';
 import { getCategoryTranslationKey } from '../utils/categoryTranslations';
@@ -130,14 +132,69 @@ export function Reports() {
 
       // Filter breakdown data by currency if a currency is selected and no specific account
       if (selectedCurrency && !selectedAccountId) {
-        // Filter expense breakdown to only include transactions from accounts with selected currency
+        // When currency is selected but no specific account, we need to fetch transactions
+        // for all accounts with that currency and calculate category breakdowns client-side
         const accountIdsInCurrency = new Set(filteredAccountIds);
-        
-        // For category breakdowns, we need to filter based on account
-        // Since the API doesn't support currency filtering directly, we'll filter client-side
-        // Note: This is a simplification - ideally the backend would filter by currency
-        setExpenseBreakdown(expenseData);
-        setIncomeBreakdown(incomeData);
+        const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+        const endDate = `${year}-${String(month).padStart(2, '0')}-31`;
+
+        // Fetch transactions and categories for all accounts with the selected currency
+        const [allTransactions, categories] = await Promise.all([
+          Promise.all(
+            Array.from(accountIdsInCurrency).map(accountId =>
+              getTransactions(user!.uid, { startDate, endDate, accountId })
+            )
+          ).then(results => results.flat()),
+          getCategories(user!.uid),
+        ]);
+
+        // Create category map for lookup
+        const categoryMap = new Map(categories.map(c => [c.id, c]));
+
+        // Calculate expense breakdown from filtered transactions
+        const expenseTransactions = allTransactions.filter(t => t.type === 'expense');
+        const expenseCategoryTotals = new Map<string, number>();
+        expenseTransactions.forEach(t => {
+          const current = expenseCategoryTotals.get(t.categoryId) || 0;
+          expenseCategoryTotals.set(t.categoryId, current + t.amount);
+        });
+        const totalExpenses = Array.from(expenseCategoryTotals.values()).reduce((sum, amount) => sum + amount, 0);
+        const filteredExpenseBreakdown: CategoryBreakdown[] = Array.from(expenseCategoryTotals.entries())
+          .map(([categoryId, amount]) => {
+            const category = categoryMap.get(categoryId);
+            return {
+              categoryId,
+              categoryName: category?.name || 'Unknown',
+              categoryColor: category?.color || '#999999',
+              amount,
+              percentage: totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0,
+            };
+          })
+          .sort((a, b) => b.amount - a.amount);
+
+        // Calculate income breakdown from filtered transactions
+        const incomeTransactions = allTransactions.filter(t => t.type === 'income');
+        const incomeCategoryTotals = new Map<string, number>();
+        incomeTransactions.forEach(t => {
+          const current = incomeCategoryTotals.get(t.categoryId) || 0;
+          incomeCategoryTotals.set(t.categoryId, current + t.amount);
+        });
+        const totalIncome = Array.from(incomeCategoryTotals.values()).reduce((sum, amount) => sum + amount, 0);
+        const filteredIncomeBreakdown: CategoryBreakdown[] = Array.from(incomeCategoryTotals.entries())
+          .map(([categoryId, amount]) => {
+            const category = categoryMap.get(categoryId);
+            return {
+              categoryId,
+              categoryName: category?.name || 'Unknown',
+              categoryColor: category?.color || '#999999',
+              amount,
+              percentage: totalIncome > 0 ? (amount / totalIncome) * 100 : 0,
+            };
+          })
+          .sort((a, b) => b.amount - a.amount);
+
+        setExpenseBreakdown(filteredExpenseBreakdown);
+        setIncomeBreakdown(filteredIncomeBreakdown);
       } else {
         setExpenseBreakdown(expenseData);
         setIncomeBreakdown(incomeData);
