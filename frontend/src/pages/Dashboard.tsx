@@ -26,6 +26,7 @@ export function Dashboard() {
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [accountBalances, setAccountBalances] = useState<Record<string, number>>({});
+  const [accountCurrencyMap, setAccountCurrencyMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -77,6 +78,9 @@ export function Dashboard() {
       setCurrencySummaries(summaries);
       setRecentTransactions(transactions.slice(0, 5));
       setAccounts(accountsData);
+
+      // Store accountCurrencyMap in state for use in render
+      setAccountCurrencyMap(accountCurrencyMap);
 
       // Calculate balances for all accounts
       const balances: Record<string, number> = {};
@@ -265,7 +269,7 @@ export function Dashboard() {
                       }`}
                     >
                       {transaction.type === 'income' ? '+' : '-'}
-                      {formatCurrency(transaction.amount)}
+                      {formatCurrency(transaction.amount, accountCurrencyMap[transaction.accountId || ''] || 'BRL')}
                     </p>
                     <p className="text-sm text-neutral-400">
                       {new Date(transaction.date).toLocaleDateString('pt-BR')}
