@@ -121,18 +121,11 @@ export function Reports() {
       // Otherwise, if a currency is selected, we need to aggregate data from all accounts with that currency
       const accountId = selectedAccountId || undefined;
       
-      const [summaryData, expenseData, incomeData, trend] = await Promise.all([
+      // Fetch summary and breakdown data
+      const [summaryData, expenseData, incomeData] = await Promise.all([
         getMonthlySummary(user!.uid, year, month, accountId),
         getCategoryBreakdown(user!.uid, year, month, 'expense', accountId),
         getCategoryBreakdown(user!.uid, year, month, 'income', accountId),
-        getTrendData(
-          user!.uid,
-          year,
-          1,
-          year,
-          12,
-          accountId
-        ),
       ]);
 
       // Filter breakdown data by currency if a currency is selected and no specific account
@@ -151,6 +144,59 @@ export function Reports() {
       }
       
       setSummary(summaryData);
+      
+      // Fetch trend data - handle currency filtering by aggregating multiple account trends
+      let trend: { month: string; income: number; expenses: number }[] = [];
+      
+      if (selectedCurrency && !selectedAccountId) {
+        // When currency is selected but no specific account, fetch trend for each account with that currency
+        // and aggregate the results
+        const accountsWithCurrency = accounts.filter(a => a.currency === selectedCurrency);
+        
+        if (accountsWithCurrency.length > 0) {
+          // Fetch trend data for each account
+          const trendPromises = accountsWithCurrency.map(account =>
+            getTrendData(user!.uid, year, 1, year, 12, account.id)
+          );
+          
+          const trendsPerAccount = await Promise.all(trendPromises);
+          
+          // Aggregate trends by month
+          const monthlyData = new Map<string, { income: number; expenses: number }>();
+          
+          trendsPerAccount.forEach(accountTrend => {
+            accountTrend.forEach(monthData => {
+              const existing = monthlyData.get(monthData.month) || { income: 0, expenses: 0 };
+              monthlyData.set(monthData.month, {
+                income: existing.income + monthData.income,
+                expenses: existing.expenses + monthData.expenses,
+              });
+            });
+          });
+          
+          // Convert map to array and sort by month
+          trend = Array.from(monthlyData.entries())
+            .map(([month, data]) => ({
+              month,
+              income: data.income,
+              expenses: data.expenses,
+            }))
+            .sort((a, b) => a.month.localeCompare(b.month));
+        } else {
+          // No accounts with selected currency, return empty trend
+          trend = [];
+        }
+      } else {
+        // Use the standard trend data fetch (either all accounts or specific account)
+        trend = await getTrendData(
+          user!.uid,
+          year,
+          1,
+          year,
+          12,
+          accountId
+        );
+      }
       
       // Calculate projected balance for each month
       // Get stored balance for the filtered accounts
