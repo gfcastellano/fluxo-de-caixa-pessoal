@@ -6,18 +6,23 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../co
 import { Button } from '../components/Button';
 import { formatCurrency, formatMonthYear, getCurrentMonth } from '../utils/format';
 import { getTranslatedCategoryName } from '../utils/categoryTranslations';
-import { getMonthlySummary } from '../services/reportService';
 import { getTransactions } from '../services/transactionService';
 import { getAccounts, calculateAccountBalance } from '../services/accountService';
-import type { MonthlySummary, Transaction, Account } from '../types';
+import type { Transaction, Account } from '../types';
 import { TrendingUp, TrendingDown, Wallet, Plus, CreditCard, ArrowRight, Star, Calendar } from 'lucide-react';
 import { Link } from 'react-router-dom';
+
+interface CurrencySummary {
+  income: number;
+  expenses: number;
+  balance: number;
+}
 
 export function Dashboard() {
   const { user } = useAuth();
   useUserSetup();
   const { t } = useTranslation();
-  const [summary, setSummary] = useState<MonthlySummary | null>(null);
+  const [currencySummaries, setCurrencySummaries] = useState<Record<string, CurrencySummary>>({});
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [accountBalances, setAccountBalances] = useState<Record<string, number>>({});
@@ -33,15 +38,46 @@ export function Dashboard() {
     setLoading(true);
     try {
       const { year, month } = getCurrentMonth();
-      const [summaryData, transactions, accountsData] = await Promise.all([
-        getMonthlySummary(user!.uid, year, month),
-        getTransactions(user!.uid, {}),
+      const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+      const endDate = `${year}-${String(month).padStart(2, '0')}-31`;
+
+      const [transactions, accountsData] = await Promise.all([
+        getTransactions(user!.uid, { startDate, endDate }),
         getAccounts(user!.uid),
       ]);
-      setSummary(summaryData);
+
+      // Create a map of accountId to currency
+      const accountCurrencyMap: Record<string, string> = {};
+      accountsData.forEach((account) => {
+        accountCurrencyMap[account.id] = account.currency;
+      });
+
+      // Calculate summaries per currency
+      const summaries: Record<string, CurrencySummary> = {};
+
+      transactions.forEach((transaction) => {
+        const currency = accountCurrencyMap[transaction.accountId || ''] || 'BRL';
+
+        if (!summaries[currency]) {
+          summaries[currency] = { income: 0, expenses: 0, balance: 0 };
+        }
+
+        if (transaction.type === 'income') {
+          summaries[currency].income += transaction.amount;
+        } else {
+          summaries[currency].expenses += transaction.amount;
+        }
+      });
+
+      // Calculate balance for each currency
+      Object.keys(summaries).forEach((currency) => {
+        summaries[currency].balance = summaries[currency].income - summaries[currency].expenses;
+      });
+
+      setCurrencySummaries(summaries);
       setRecentTransactions(transactions.slice(0, 5));
       setAccounts(accountsData);
-      
+
       // Calculate balances for all accounts
       const balances: Record<string, number> = {};
       for (const account of accountsData) {
@@ -96,8 +132,18 @@ export function Dashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-success-600 tabular-nums">
-              {formatCurrency(summary?.income || 0)}
+            <div className="space-y-1">
+              {Object.keys(currencySummaries).length === 0 ? (
+                <div className="text-2xl font-bold text-success-600 tabular-nums">
+                  {formatCurrency(0)}
+                </div>
+              ) : (
+                Object.entries(currencySummaries).map(([currency, summary]) => (
+                  <div key={currency} className="text-2xl font-bold text-success-600 tabular-nums">
+                    {formatCurrency(summary.income, currency)}
+                  </div>
+                ))
+              )}
             </div>
             <CardDescription className="mt-1">Monthly income</CardDescription>
           </CardContent>
@@ -113,8 +159,18 @@ export function Dashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-danger-600 tabular-nums">
-              {formatCurrency(summary?.expenses || 0)}
+            <div className="space-y-1">
+              {Object.keys(currencySummaries).length === 0 ? (
+                <div className="text-2xl font-bold text-danger-600 tabular-nums">
+                  {formatCurrency(0)}
+                </div>
+              ) : (
+                Object.entries(currencySummaries).map(([currency, summary]) => (
+                  <div key={currency} className="text-2xl font-bold text-danger-600 tabular-nums">
+                    {formatCurrency(summary.expenses, currency)}
+                  </div>
+                ))
+              )}
             </div>
             <CardDescription className="mt-1">Monthly expenses</CardDescription>
           </CardContent>
@@ -130,12 +186,23 @@ export function Dashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            <div
-              className={`text-2xl font-bold tabular-nums ${
-                (summary?.balance || 0) >= 0 ? 'text-success-600' : 'text-danger-600'
-              }`}
-            >
-              {formatCurrency(summary?.balance || 0)}
+            <div className="space-y-1">
+              {Object.keys(currencySummaries).length === 0 ? (
+                <div className="text-2xl font-bold text-success-600 tabular-nums">
+                  {formatCurrency(0)}
+                </div>
+              ) : (
+                Object.entries(currencySummaries).map(([currency, summary]) => (
+                  <div
+                    key={currency}
+                    className={`text-2xl font-bold tabular-nums ${
+                      summary.balance >= 0 ? 'text-success-600' : 'text-danger-600'
+                    }`}
+                  >
+                    {formatCurrency(summary.balance, currency)}
+                  </div>
+                ))
+              )}
             </div>
             <CardDescription className="mt-1">Net balance</CardDescription>
           </CardContent>
