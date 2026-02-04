@@ -278,6 +278,20 @@ export function TransactionModal({
               setSelectedAccountId(parsedTransaction.accountId);
             }
 
+            // Update recurring transaction fields if parsed
+            if (parsedTransaction.isRecurring) {
+              setIsRecurring(true);
+              if (parsedTransaction.recurrencePattern) {
+                setRecurrencePattern(parsedTransaction.recurrencePattern);
+              }
+              if (parsedTransaction.recurrenceDay !== undefined && parsedTransaction.recurrenceDay !== null) {
+                setRecurrenceDay(parsedTransaction.recurrenceDay);
+              }
+              if (parsedTransaction.recurrenceEndDate) {
+                setRecurrenceEndDate(parsedTransaction.recurrenceEndDate);
+              }
+            }
+
             // Mark that we have voice data - this will change the button text
             setHasVoiceData(true);
 

@@ -220,6 +220,7 @@ export const enTranslations = {
     setDefault: 'Set as Default',
     default: 'Default',
     currentBalance: 'Current Balance',
+    initialBalanceDate: 'Initial Balance Date',
     noAccounts: 'No accounts found',
     form: {
       name: 'Account Name',

@@ -220,6 +220,7 @@ export const ptTranslations = {
     setDefault: 'Definir como Padrão',
     default: 'Padrão',
     currentBalance: 'Saldo Atual',
+    initialBalanceDate: 'Data do Saldo Inicial',
     noAccounts: 'Nenhuma conta encontrada',
     form: {
       name: 'Nome da Conta',

@@ -6550,7 +6550,7 @@ var OpenAIService = class {
    * @param language - The language code for the response (e.g., 'en', 'pt', 'es')
    * @param defaultDescription - Default description to use if parsing fails
    */
-  async parseTransaction(transcription, categories, language = "en", defaultDescription = "Voice transaction") {
+  async parseTransaction(transcription, categories, language = "en", defaultDescription = "Voice transaction", accounts = []) {
     const now = /* @__PURE__ */ new Date();
     const today = now.toISOString().split("T")[0];
     const currentDateTime = now.toISOString();
@@ -6558,6 +6558,7 @@ var OpenAIService = class {
     const currentMonth = now.getMonth() + 1;
     const currentDay = now.getDate();
     const categoryList = categories.map((c) => `"${c.name}" (ID: ${c.id}, Type: ${c.type})`).join("\n");
+    const accountList = accounts.map((a) => `"${a.name}" (ID: ${a.id})`).join("\n") || "No accounts available";
     const languageInstructions = {
       en: "Return the description in English",
       pt: "Return the description in Portuguese (Portugu\xEAs)",
@@ -6576,6 +6577,9 @@ CURRENT DATE INFORMATION (use this as reference for any relative dates):
 Available categories:
 ${categoryList}
 
+Available accounts:
+${accountList}
+
 Voice command: "${transcription}"
 
 Extract and return ONLY a JSON object with these exact fields:
@@ -6584,16 +6588,24 @@ Extract and return ONLY a JSON object with these exact fields:
 - description: string (what the transaction is for, keep it concise, ${langInstruction})
 - categoryId: string (match to most appropriate category ID based on description, or empty string if uncertain)
 - date: string in YYYY-MM-DD format (default to "${today}" if not specified)
+- accountId: string (match to account ID if user mentions an account name like "from account X", "na conta Y", "en la cuenta Z", or empty string if not specified)
+- isRecurring: boolean (true if user mentions recurring patterns like "every month", "monthly", "semanal", "cada mes", "todo mes", false otherwise)
+- recurrencePattern: "monthly", "weekly", "yearly", or null (extract from context - "every month"/"cada mes"/"mensal" = monthly, "every week"/"cada semana"/"semanal" = weekly, "every year"/"cada ano"/"anual" = yearly)
+- recurrenceDay: number or null (day of month for monthly, day of week 1-7 for weekly, day of year for yearly - extract if mentioned, otherwise null)
+- recurrenceEndDate: string in YYYY-MM-DD format or null (end date if mentioned, otherwise null)
 
 IMPORTANT INSTRUCTIONS:
 1. The description field MUST be returned in the specified language (${language}).
 2. Use the CURRENT DATE (${today}) as the default date - GPT's training data cutoff does not matter, use the current date provided above.
 3. For relative dates like "yesterday", "last week", "next month", calculate based on the current date (${today}).
+4. For recurring transactions, look for keywords like: "every month", "monthly", "cada mes", "todo mes", "mensal" (monthly); "every week", "weekly", "cada semana", "semanal" (weekly); "every year", "yearly", "cada ano", "anual" (yearly).
+5. For account selection, match the account name mentioned by the user to the available accounts list.
 
 Examples:
-- "I spent 50 euros on groceries" (en) \u2192 {"amount": 50, "type": "expense", "description": "Groceries", "categoryId": "...", "date": "${today}"}
-- "Gastei 50 euros em supermercado" (pt) \u2192 {"amount": 50, "type": "expense", "description": "Supermercado", "categoryId": "...", "date": "${today}"}
-- "Gast\xE9 50 euros en supermercado" (es) \u2192 {"amount": 50, "type": "expense", "description": "Supermercado", "categoryId": "...", "date": "${today}"}
+- "I spent 50 euros on groceries" (en) \u2192 {"amount": 50, "type": "expense", "description": "Groceries", "categoryId": "...", "date": "${today}", "accountId": "", "isRecurring": false, "recurrencePattern": null, "recurrenceDay": null, "recurrenceEndDate": null}
+- "Gastei 50 euros em supermercado na conta Sabadell" (pt) \u2192 {"amount": 50, "type": "expense", "description": "Supermercado", "categoryId": "...", "date": "${today}", "accountId": "sabadell-id", "isRecurring": false, "recurrencePattern": null, "recurrenceDay": null, "recurrenceEndDate": null}
+- "Paguei 100 euros de aluguel todo mes" (pt) \u2192 {"amount": 100, "type": "expense", "description": "Aluguel", "categoryId": "...", "date": "${today}", "accountId": "", "isRecurring": true, "recurrencePattern": "monthly", "recurrenceDay": null, "recurrenceEndDate": null}
+- "Gast\xE9 50 euros en supermercado" (es) \u2192 {"amount": 50, "type": "expense", "description": "Supermercado", "categoryId": "...", "date": "${today}", "accountId": "", "isRecurring": false, "recurrencePattern": null, "recurrenceDay": null, "recurrenceEndDate": null}
 
 Response must be valid JSON only, no markdown, no explanation.`;
     const response = await fetch(`${this.baseUrl}/chat/completions`, {
@@ -6641,8 +6653,13 @@ Response must be valid JSON only, no markdown, no explanation.`;
         amount: parsed.amount,
         type: parsed.type,
         description: parsed.description,
-        categoryId: parsed.categoryId || "",
-        date: parsed.date || today
+        categoryId: parsed.categoryId ?? "",
+        date: parsed.date ?? today,
+        accountId: parsed.accountId ?? "",
+        isRecurring: parsed.isRecurring ?? false,
+        recurrencePattern: parsed.recurrencePattern ?? null,
+        recurrenceDay: parsed.recurrenceDay ?? null,
+        recurrenceEndDate: parsed.recurrenceEndDate ?? null
       };
     } catch (error) {
       throw new Error(`Failed to parse transaction: ${error instanceof Error ? error.message : "Unknown error"}`);
@@ -6652,13 +6669,14 @@ Response must be valid JSON only, no markdown, no explanation.`;
    * Parse voice command for updating an existing transaction
    * Returns only the fields that should be updated
    */
-  async parseTransactionUpdate(transcription, currentTransaction, categories, language = "en") {
+  async parseTransactionUpdate(transcription, currentTransaction, categories, language = "en", accounts = []) {
     const now = /* @__PURE__ */ new Date();
     const today = now.toISOString().split("T")[0];
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth() + 1;
     const currentDay = now.getDate();
     const categoryList = categories.map((c) => `"${c.name}" (ID: ${c.id}, Type: ${c.type})`).join("\n");
+    const accountList = accounts.map((a) => `"${a.name}" (ID: ${a.id})`).join("\n") || "No accounts available";
     const languageInstructions = {
       en: "Return the description in English",
       pt: "Return the description in Portuguese (Portugu\xEAs)",
@@ -6673,6 +6691,9 @@ CURRENT TRANSACTION:
 - Type: ${currentTransaction.type}
 - Category ID: ${currentTransaction.categoryId}
 - Date: ${currentTransaction.date}
+- Account ID: ${currentTransaction.accountId || "Not set"}
+- Is Recurring: ${currentTransaction.isRecurring || false}
+- Recurrence Pattern: ${currentTransaction.recurrencePattern || "Not set"}
 
 CURRENT DATE INFORMATION (use this as reference for any relative dates):
 - Current date: ${today}
@@ -6682,6 +6703,9 @@ CURRENT DATE INFORMATION (use this as reference for any relative dates):
 
 Available categories:
 ${categoryList}
+
+Available accounts:
+${accountList}
 
 Voice command: "${transcription}"
 
@@ -6694,18 +6718,27 @@ Possible fields to update:
 - description: string (if the user wants to change the description, ${langInstruction})
 - categoryId: string (if the user mentions a different category, match to most appropriate category ID)
 - date: string in YYYY-MM-DD format (if the user mentions a different date - use current date ${today} as reference for relative dates like "yesterday", "next week", etc.)
+- accountId: string (if the user mentions a different account, match to account ID from available accounts)
+- isRecurring: boolean (if the user wants to set or unset recurring status)
+- recurrencePattern: "monthly", "weekly", "yearly", or null (if the user mentions recurring pattern changes)
+- recurrenceDay: number or null (if the user mentions a specific day for recurrence)
+- recurrenceEndDate: string in YYYY-MM-DD format or null (if the user mentions an end date for recurrence)
 
 IMPORTANT INSTRUCTIONS:
 1. Only include fields in the JSON that the user explicitly wants to change.
 2. For date changes, calculate the exact date based on the current date (${today}).
 3. For category changes, return the categoryId from the available categories list.
-4. The description field MUST be returned in the specified language (${language}).
+4. For account changes, return the accountId from the available accounts list.
+5. The description field MUST be returned in the specified language (${language}).
+6. For recurring transactions, look for keywords like: "every month", "monthly", "cada mes", "todo mes", "mensal" (monthly); "every week", "weekly", "cada semana", "semanal" (weekly); "every year", "yearly", "cada ano", "anual" (yearly).
 
 Examples:
 - Current: {amount: 50, description: "Groceries", date: "${today}"}, Command: "change the amount to 100" \u2192 {"amount": 100}
 - Current: {date: "${today}"}, Command: "move it to yesterday" \u2192 {"date": "YYYY-MM-DD for yesterday"}
 - Current: {description: "Lunch"}, Command: "change it to dinner" \u2192 {"description": "Dinner"}
 - Current: {categoryId: "abc"}, Command: "this should be entertainment" \u2192 {"categoryId": "xyz"} (where xyz is the entertainment category ID)
+- Current: {accountId: "abc"}, Command: "change to account Sabadell" \u2192 {"accountId": "sabadell-id"} (where sabadell-id is the Sabadell account ID)
+- Current: {isRecurring: false}, Command: "make it recurring every month" \u2192 {"isRecurring": true, "recurrencePattern": "monthly"}
 
 Response must be valid JSON only, no markdown, no explanation.`;
     const response = await fetch(`${this.baseUrl}/chat/completions`, {
@@ -7253,13 +7286,20 @@ app5.post("/transactions/update", async (c) => {
         400
       );
     }
+    let accounts = [];
+    try {
+      const accountsData = await firebase.getDocuments("accounts", currentTransaction.userId);
+      accounts = accountsData.map((acc) => ({ id: acc.id, name: acc.name }));
+    } catch (error) {
+    }
     let updates;
     try {
       updates = await openai.parseTransactionUpdate(
         transcription,
         currentTransaction,
         categories,
-        language
+        language,
+        accounts
       );
     } catch (error) {
       console.error("Parsing error:", error);
@@ -7330,15 +7370,21 @@ app5.post("/transactions", async (c) => {
       );
     }
     let categories = [];
+    let accounts = [];
     try {
       const categoriesData = await firebase.getDocuments("categories", userId);
       categories = categoriesData;
     } catch (error) {
     }
+    try {
+      const accountsData = await firebase.getDocuments("accounts", userId);
+      accounts = accountsData.map((acc) => ({ id: acc.id, name: acc.name }));
+    } catch (error) {
+    }
     let parsedTransaction;
     try {
       const defaultDescription = getDefaultTranslation(language, "description");
-      parsedTransaction = await openai.parseTransaction(transcription, categories, language, defaultDescription);
+      parsedTransaction = await openai.parseTransaction(transcription, categories, language, defaultDescription, accounts);
     } catch (error) {
       console.error("Parsing error:", error);
       return c.json(

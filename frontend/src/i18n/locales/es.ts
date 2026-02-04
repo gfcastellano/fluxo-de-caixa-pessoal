@@ -220,6 +220,7 @@ export const esTranslations = {
     setDefault: 'Establecer como Predeterminada',
     default: 'Predeterminada',
     currentBalance: 'Saldo Actual',
+    initialBalanceDate: 'Fecha del Saldo Inicial',
     noAccounts: 'No se encontraron cuentas',
     form: {
       name: 'Nombre de la Cuenta',

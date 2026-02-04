@@ -31,8 +31,8 @@ export function Layout({ children }: LayoutProps) {
     { name: t('nav.transactions'), href: '/transactions', icon: Wallet },
     { name: t('nav.categories'), href: '/categories', icon: Tags },
     { name: t('nav.budgets'), href: '/budgets', icon: PiggyBank },
-    { name: t('nav.reports'), href: '/reports', icon: BarChart3 },
     { name: t('nav.accounts'), href: '/accounts', icon: Landmark },
+    { name: t('nav.reports'), href: '/reports', icon: BarChart3 },
   ];
 
   const handleLogout = async () => {

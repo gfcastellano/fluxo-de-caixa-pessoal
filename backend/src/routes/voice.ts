@@ -3,7 +3,7 @@ import type { Env, Variables } from '../types/context';
 import { FirebaseService } from '../services/firebase';
 import { OpenAIService } from '../services/openai';
 import { authMiddleware } from '../middleware/auth';
-import type { Transaction, Category } from '../types';
+import type { Transaction, Category, Budget } from '../types';
 import { getErrorTranslation, getSuccessTranslation, getDefaultTranslation } from '../i18n/voice-translations';
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
@@ -81,14 +81,24 @@ app.post('/transactions/update', async (c) => {
       );
     }
     
-    // Step 2: Parse the voice command for updates
+    // Step 2: Get user's accounts for parsing
+    let accounts: { id: string; name: string }[] = [];
+    try {
+      const accountsData = await firebase.getDocuments('accounts', currentTransaction.userId);
+      accounts = (accountsData as { id: string; name: string }[]).map(acc => ({ id: acc.id, name: acc.name }));
+    } catch (error) {
+      // Continue without accounts - GPT will return empty accountId
+    }
+    
+    // Step 3: Parse the voice command for updates
     let updates: Partial<Transaction>;
     try {
       updates = await openai.parseTransactionUpdate(
         transcription,
         currentTransaction,
         categories,
-        language
+        language,
+        accounts
       );
     } catch (error) {
       console.error('Parsing error:', error);
@@ -183,13 +193,20 @@ app.post('/transactions', async (c) => {
       );
     }
 
-    // Step 3: Get user's categories for parsing
+    // Step 3: Get user's categories and accounts for parsing
     let categories: Category[] = [];
+    let accounts: { id: string; name: string }[] = [];
     try {
       const categoriesData = await firebase.getDocuments('categories', userId);
       categories = categoriesData as Category[];
     } catch (error) {
       // Continue without categories - GPT will return empty categoryId
+    }
+    try {
+      const accountsData = await firebase.getDocuments('accounts', userId);
+      accounts = (accountsData as { id: string; name: string }[]).map(acc => ({ id: acc.id, name: acc.name }));
+    } catch (error) {
+      // Continue without accounts - GPT will return empty accountId
     }
 
     // Step 4: Parse transcription into transaction data
@@ -199,11 +216,16 @@ app.post('/transactions', async (c) => {
       description: string;
       categoryId: string;
       date: string;
+      accountId?: string;
+      isRecurring?: boolean;
+      recurrencePattern?: 'monthly' | 'weekly' | 'yearly' | null;
+      recurrenceDay?: number | null;
+      recurrenceEndDate?: string | null;
     };
     
     try {
       const defaultDescription = getDefaultTranslation(language, 'description');
-      parsedTransaction = await openai.parseTransaction(transcription, categories, language, defaultDescription);
+      parsedTransaction = await openai.parseTransaction(transcription, categories, language, defaultDescription, accounts);
     } catch (error) {
       console.error('Parsing error:', error);
       return c.json(

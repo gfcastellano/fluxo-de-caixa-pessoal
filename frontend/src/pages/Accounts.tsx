@@ -12,6 +12,7 @@ import {
   setDefaultAccount,
   calculateAccountBalance,
 } from '../services/accountService';
+import { formatDate } from '../utils/format';
 import type { Account } from '../types';
 import { Plus, Edit2, Trash2, Star, Wallet } from 'lucide-react';
 
@@ -182,6 +183,12 @@ export function Accounts() {
                   <p className="text-sm text-neutral-500">{t('accounts.currentBalance')}</p>
                   <p className={`text-2xl font-bold ${(accountBalances[account.id] ?? account.balance) >= 0 ? 'text-neutral-900' : 'text-red-600'}`}>
                     {formatCurrency(accountBalances[account.id] ?? account.balance, account.currency)}
+                  </p>
+                </div>
+                <div className="mb-4">
+                  <p className="text-sm text-neutral-500">{t('accounts.initialBalanceDate')}</p>
+                  <p className="text-sm font-medium text-neutral-700">
+                    {account.balanceDate ? formatDate(account.balanceDate) : '-'}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
