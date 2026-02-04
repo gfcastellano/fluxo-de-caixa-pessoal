@@ -106,6 +106,9 @@
   --color-expense: #ef4444;
   --color-expense-light: #fca5a5;
   --color-expense-dark: #b91c1c;
+  --color-projected-balance: #f59e0b;
+  --color-projected-balance-light: #fcd34d;
+  --color-projected-balance-dark: #d97706;
 
   /* ------------------------------------------
      Typography

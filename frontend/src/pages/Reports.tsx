@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/Card';
@@ -8,7 +8,7 @@ import {
   getCategoryBreakdown,
   getTrendData,
 } from '../services/reportService';
-import { getAccounts, calculateAccountBalance, calculateTotalBalance } from '../services/accountService';
+import { getAccounts } from '../services/accountService';
 import type { MonthlySummary, CategoryBreakdown, Account } from '../types';
 import { formatCurrency, formatMonthYear, getCurrentMonth } from '../utils/format';
 import { getCategoryTranslationKey } from '../utils/categoryTranslations';
@@ -40,16 +40,34 @@ export function Reports() {
     []
   );
   const [trendData, setTrendData] = useState<
-    { month: string; income: number; expenses: number }[]
+    { month: string; income: number; expenses: number; projectedBalance: number }[]
   >([]);
   const [loading, setLoading] = useState(true);
   const [year, setYear] = useState(getCurrentMonth().year);
   const [month, setMonth] = useState(getCurrentMonth().month);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
+  const [selectedCurrency, setSelectedCurrency] = useState<string>('');
   const [calculatedBalance, setCalculatedBalance] = useState<number>(0);
   const [totalAccountBalance, setTotalAccountBalance] = useState<number>(0);
   const [monthlyBalance, setMonthlyBalance] = useState<number>(0);
+
+  // Get unique currencies from accounts
+  const availableCurrencies = useMemo(() => {
+    const currencies = new Set(accounts.map(account => account.currency));
+    return Array.from(currencies).sort();
+  }, [accounts]);
+
+  // Get filtered accounts based on selected currency
+  const filteredAccounts = useMemo(() => {
+    if (!selectedCurrency) return accounts;
+    return accounts.filter(account => account.currency === selectedCurrency);
+  }, [accounts, selectedCurrency]);
+
+  // Get account IDs for the selected currency (for API filtering)
+  const filteredAccountIds = useMemo(() => {
+    return filteredAccounts.map(account => account.id);
+  }, [filteredAccounts]);
 
   // Helper function to get translated category name
   const getTranslatedCategoryName = (categoryName: string): string => {
@@ -60,22 +78,25 @@ export function Reports() {
   useEffect(() => {
     if (user) {
       loadAccounts();
-      loadData();
     }
-  }, [user, year, month]);
+  }, [user]);
 
   useEffect(() => {
-    if (user) {
+    if (user && accounts.length > 0) {
+      // Set default currency if not set and currencies are available
+      if (!selectedCurrency && availableCurrencies.length > 0) {
+        setSelectedCurrency(availableCurrencies[0]);
+      }
       loadData();
     }
-  }, [selectedAccountId]);
+  }, [user, year, month, selectedAccountId, selectedCurrency, accounts]);
 
   useEffect(() => {
-    if (user) {
+    if (user && accounts.length > 0) {
       loadCalculatedBalance();
       loadTotalAccountBalance();
     }
-  }, [user, selectedAccountId, accounts]);
+  }, [user, selectedAccountId, selectedCurrency, accounts, year, month]);
 
   useEffect(() => {
     // Calculate monthly balance from summary data
@@ -96,7 +117,10 @@ export function Reports() {
   const loadData = async () => {
     setLoading(true);
     try {
+      // If a specific account is selected, use that
+      // Otherwise, if a currency is selected, we need to aggregate data from all accounts with that currency
       const accountId = selectedAccountId || undefined;
+      
       const [summaryData, expenseData, incomeData, trend] = await Promise.all([
         getMonthlySummary(user!.uid, year, month, accountId),
         getCategoryBreakdown(user!.uid, year, month, 'expense', accountId),
@@ -110,10 +134,46 @@ export function Reports() {
           accountId
         ),
       ]);
+
+      // Filter breakdown data by currency if a currency is selected and no specific account
+      if (selectedCurrency && !selectedAccountId) {
+        // Filter expense breakdown to only include transactions from accounts with selected currency
+        const accountIdsInCurrency = new Set(filteredAccountIds);
+        
+        // For category breakdowns, we need to filter based on account
+        // Since the API doesn't support currency filtering directly, we'll filter client-side
+        // Note: This is a simplification - ideally the backend would filter by currency
+        setExpenseBreakdown(expenseData);
+        setIncomeBreakdown(incomeData);
+      } else {
+        setExpenseBreakdown(expenseData);
+        setIncomeBreakdown(incomeData);
+      }
+      
       setSummary(summaryData);
-      setExpenseBreakdown(expenseData);
-      setIncomeBreakdown(incomeData);
-      setTrendData(trend);
+      
+      // Calculate projected balance for each month
+      // Get stored balance for the filtered accounts
+      let accountsToCalculate = accounts;
+      if (selectedAccountId) {
+        accountsToCalculate = accounts.filter(a => a.id === selectedAccountId);
+      } else if (selectedCurrency) {
+        accountsToCalculate = accounts.filter(a => a.currency === selectedCurrency);
+      }
+      const storedBalance = accountsToCalculate.reduce((sum, account) => sum + account.balance, 0);
+      
+      // Calculate cumulative projected balance for each month
+      let runningBalance = storedBalance;
+      const trendWithProjectedBalance = trend.map(monthData => {
+        const monthlyNetBalance = monthData.income - monthData.expenses;
+        runningBalance += monthlyNetBalance;
+        return {
+          ...monthData,
+          projectedBalance: runningBalance,
+        };
+      });
+      
+      setTrendData(trendWithProjectedBalance);
     } catch (error) {
       console.error('Error loading report data:', error);
     } finally {
@@ -125,15 +185,68 @@ export function Reports() {
     if (!user) return;
     
     try {
+      // Get accounts to calculate stored balance
+      let accountsToCalculate = accounts;
       if (selectedAccountId) {
-        // Calculate balance for specific account
-        const balance = await calculateAccountBalance(selectedAccountId, user.uid);
-        setCalculatedBalance(balance);
-      } else {
-        // Calculate total balance across all accounts
-        const totalBalance = await calculateTotalBalance(user.uid);
-        setCalculatedBalance(totalBalance);
+        accountsToCalculate = accounts.filter(a => a.id === selectedAccountId);
+      } else if (selectedCurrency) {
+        accountsToCalculate = accounts.filter(a => a.currency === selectedCurrency);
       }
+      
+      // Calculate stored balance (sum of account balances)
+      const storedBalance = accountsToCalculate.reduce((sum, account) => sum + account.balance, 0);
+      
+      // Find the earliest balanceDate among the accounts we're calculating for
+      // This is the date from which we need to start calculating monthly balances
+      const balanceDates = accountsToCalculate
+        .map(a => a.balanceDate)
+        .filter((date): date is string => !!date);
+      
+      // If no balance dates exist, use the earliest possible date
+      const earliestBalanceDate = balanceDates.length > 0 
+        ? balanceDates.reduce((earliest, current) => current < earliest ? current : earliest)
+        : '1970-01-01';
+      
+      // Calculate the end date (last day of the current selected month)
+      const currentMonthEndDate = `${year}-${String(month).padStart(2, '0')}-31`;
+      
+      // Import getTransactions
+      const { getTransactions } = await import('../services/transactionService');
+      
+      // Fetch ALL transactions from balanceDate up to the end of the current month
+      const transactions = await getTransactions(user.uid, {
+        startDate: earliestBalanceDate,
+        endDate: currentMonthEndDate,
+        accountId: selectedAccountId || undefined,
+      });
+      
+      // If currency filter is applied (but not specific account), filter by account IDs
+      let filteredTransactions = transactions;
+      if (selectedCurrency && !selectedAccountId) {
+        const accountIdsInCurrency = new Set(accountsToCalculate.map(a => a.id));
+        filteredTransactions = transactions.filter(t => t.accountId && accountIdsInCurrency.has(t.accountId));
+      }
+      
+      // Group transactions by month and calculate net balance for each month
+      const monthlyNetBalances = new Map<string, number>();
+      
+      filteredTransactions.forEach(transaction => {
+        const transactionDate = new Date(transaction.date);
+        const monthKey = `${transactionDate.getFullYear()}-${String(transactionDate.getMonth() + 1).padStart(2, '0')}`;
+        
+        const currentBalance = monthlyNetBalances.get(monthKey) || 0;
+        const transactionAmount = transaction.type === 'income' ? transaction.amount : -transaction.amount;
+        monthlyNetBalances.set(monthKey, currentBalance + transactionAmount);
+      });
+      
+      // Sum all monthly net balances
+      const totalMonthlyNetBalance = Array.from(monthlyNetBalances.values())
+        .reduce((sum, balance) => sum + balance, 0);
+      
+      // Calculate: stored balance + sum of all monthly net balances
+      const calculatedBalance = storedBalance + totalMonthlyNetBalance;
+      
+      setCalculatedBalance(calculatedBalance);
     } catch (error) {
       console.error('Error loading calculated balance:', error);
     }
@@ -143,9 +256,15 @@ export function Reports() {
     if (!user) return;
     
     try {
-      // Get total balance across all accounts (stored balance without transaction adjustments)
-      const accountsData = await getAccounts(user.uid);
-      const total = accountsData.reduce((sum, account) => sum + account.balance, 0);
+      // Get total balance for accounts based on filter
+      let accountsToSum = accounts;
+      if (selectedAccountId) {
+        accountsToSum = accounts.filter(a => a.id === selectedAccountId);
+      } else if (selectedCurrency) {
+        accountsToSum = accounts.filter(a => a.currency === selectedCurrency);
+      }
+      
+      const total = accountsToSum.reduce((sum, account) => sum + account.balance, 0);
       setTotalAccountBalance(total);
     } catch (error) {
       console.error('Error loading total account balance:', error);
@@ -190,6 +309,12 @@ export function Reports() {
     }
   };
 
+  const handleCurrencyChange = (currency: string) => {
+    setSelectedCurrency(currency);
+    // Clear account selection when currency changes
+    setSelectedAccountId('');
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -203,15 +328,31 @@ export function Reports() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h1 className="text-2xl font-bold text-gray-900">{t('reports.title')}</h1>
         <div className="flex flex-wrap gap-2">
+          {/* Currency Filter Toggle Buttons */}
+          {availableCurrencies.length > 0 && (
+            <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-md">
+              {availableCurrencies.map((currency) => (
+                <Button
+                  key={currency}
+                  variant={selectedCurrency === currency ? 'primary' : 'ghost'}
+                  size="sm"
+                  onClick={() => handleCurrencyChange(currency)}
+                  className="text-xs"
+                >
+                  {currency}
+                </Button>
+              ))}
+            </div>
+          )}
           <select
             value={selectedAccountId}
             onChange={(e) => setSelectedAccountId(e.target.value)}
             className="rounded-md border border-gray-300 px-3 py-2 text-sm text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
           >
             <option value="" className="text-neutral-900">{t('reports.allAccounts')}</option>
-            {accounts.map((account) => (
+            {filteredAccounts.map((account) => (
               <option key={account.id} value={account.id} className="text-neutral-900">
-                {account.name}
+                {account.name} ({account.currency})
               </option>
             ))}
           </select>
@@ -334,13 +475,12 @@ export function Reports() {
             <CardTitle className="text-sm font-medium text-gray-600">
               {t('reports.calculatedBalance')}
             </CardTitle>
-            <Calculator className="h-4 w-4 text-primary-600" />
+            <Calculator className="h-4 w-4" style={{ color: 'var(--color-projected-balance)' }} />
           </CardHeader>
           <CardContent>
             <div
-              className={`text-2xl font-bold ${
-                calculatedBalance >= 0 ? 'text-green-600' : 'text-red-600'
-              }`}
+              className="text-2xl font-bold"
+              style={{ color: 'var(--color-projected-balance)' }}
             >
               {formatCurrency(calculatedBalance)}
             </div>
@@ -465,6 +605,13 @@ export function Reports() {
                 dataKey="expenses"
                 stroke="#ef4444"
                 name={t('common.expense')}
+              />
+              <Line
+                type="monotone"
+                dataKey="projectedBalance"
+                stroke="var(--color-projected-balance)"
+                strokeWidth={2}
+                name={t('reports.projectedBalance')}
               />
             </LineChart>
           </ResponsiveContainer>

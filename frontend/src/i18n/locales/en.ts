@@ -245,7 +245,8 @@ export const enTranslations = {
     monthlyTrend: 'Monthly Trend',
     monthlyBalance: 'Monthly Balance',
     totalBalance: 'Total Balance',
-    calculatedBalance: 'Calculated Balance',
+    calculatedBalance: 'Calculated balance next month',
+    projectedBalance: 'Projected Balance',
     noData: 'No data available for the selected period',
     selectPeriod: 'Select Period',
     thisMonth: 'This Month',
@@ -257,6 +258,8 @@ export const enTranslations = {
     allAccounts: 'All Accounts',
     previousMonth: 'Previous Month',
     nextMonth: 'Next Month',
+    currencyFilter: 'Currency',
+    allCurrencies: 'All Currencies',
   },
 
   // Default Categories

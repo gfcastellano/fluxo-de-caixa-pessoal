@@ -245,7 +245,8 @@ export const ptTranslations = {
     monthlyTrend: 'Tendência Mensal',
     monthlyBalance: 'Saldo Atual do Mês',
     totalBalance: 'Saldo Total',
-    calculatedBalance: 'Saldo Calculado',
+    calculatedBalance: 'Saldo calculado mês seguinte',
+    projectedBalance: 'Saldo Projetado',
     noData: 'Nenhum dado disponível para o período selecionado',
     selectPeriod: 'Selecione o Período',
     thisMonth: 'Este Mês',
@@ -257,6 +258,8 @@ export const ptTranslations = {
     allAccounts: 'Todas as Contas',
     previousMonth: 'Mês Anterior',
     nextMonth: 'Próximo Mês',
+    currencyFilter: 'Moeda',
+    allCurrencies: 'Todas as Moedas',
   },
 
   // Default Categories
