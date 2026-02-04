@@ -268,6 +268,9 @@ export const esTranslations = {
     updateHint: 'Di lo que quieres cambiar, por ejemplo: "cambiar el valor a 100" o "moverlo a ayer"',
     updateSuccess: 'Transacción actualizada con éxito',
     accountHint: 'Di algo como: "Crear cuenta Nubank con saldo inicial de 1000 euros"',
+    transactionHint: 'Di algo como: "Gasté 50 euros en Alimentación en Nubank hoy" o "Recibí salario de 3000 euros"',
+    budgetHint: 'Di algo como: "Crear presupuesto de 500 euros para Alimentación mensual"',
+    categoryHint: 'Di algo como: "Crear categoría Alimentación de tipo gasto con color verde"',
     backendIntegrationNeeded: 'Se necesita integración con backend para el procesamiento de voz',
   },
 

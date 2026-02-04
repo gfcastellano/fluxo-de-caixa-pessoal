@@ -106,33 +106,185 @@ export function TransactionModal({
     });
   };
 
+  // Parse voice input to extract transaction information for new transactions
+  const parseVoiceInput = useCallback((transcription: string): Partial<Transaction> => {
+    const lowerTranscription = transcription.toLowerCase();
+    const updates: Partial<Transaction> = {};
+
+    // Extract description - look for patterns like "descrição é X", "título X", "comprei X"
+    const descriptionPatterns = [
+      /(?:descrição|descripcion|description|título|titulo|title|comprei|gastei|paguei|recebi)\s+(?:é|e|eh|com|de|um|uma)?\s*["']?([^"'0-9]+?)(?:\s+(?:no|na|de|com|valor|no valor|por|custo|custou)|$)/i,
+      /(?:gasto|despesa|receita|compra|pagamento)\s+(?:de|com|no|na)?\s*["']?([^"'0-9]+?)(?:\s+(?:no|na|de|com|valor|no valor|por|custo)|$)/i,
+    ];
+
+    for (const pattern of descriptionPatterns) {
+      const match = lowerTranscription.match(pattern);
+      if (match && match[1]) {
+        updates.description = match[1].trim();
+        break;
+      }
+    }
+
+    // Extract amount - look for numbers with currency patterns
+    const amountPatterns = [
+      /(?:valor|amount|cantidad|de|por|custo|custou)\s+(?:de\s+)?(?:r\$|\$|€)?\s*([\d.,]+)/i,
+      /(?:r\$|\$|€)\s*([\d.,]+)/,
+      /([\d.,]+)\s*(?:reais?|dólares?|euros?|real|dollar|euro)/i,
+    ];
+
+    for (const pattern of amountPatterns) {
+      const match = lowerTranscription.match(pattern);
+      if (match && match[1]) {
+        // Parse number, handling both comma and dot as decimal separator
+        const amountStr = match[1].replace(/\./g, '').replace(',', '.');
+        const amount = parseFloat(amountStr);
+        if (!isNaN(amount)) {
+          updates.amount = amount;
+          break;
+        }
+      }
+    }
+
+    // Extract type - look for income/expense patterns
+    const incomePatterns = ['receita', 'recebi', 'ganhei', 'income', 'entrada', 'ganho', 'salário', 'salario'];
+    const expensePatterns = ['despesa', 'gastei', 'paguei', 'expense', 'gasto', 'saída', 'saida', 'comprei'];
+
+    if (incomePatterns.some(p => lowerTranscription.includes(p))) {
+      updates.type = 'income';
+    } else if (expensePatterns.some(p => lowerTranscription.includes(p))) {
+      updates.type = 'expense';
+    }
+
+    // Extract category - look for category names in the transcription
+    for (const category of categories) {
+      const categoryName = t(getTranslatedCategoryName(category.name)).toLowerCase();
+      const categoryNameEn = category.name.toLowerCase();
+
+      if (lowerTranscription.includes(categoryName) || lowerTranscription.includes(categoryNameEn)) {
+        updates.categoryId = category.id;
+        // Also update the type based on category type if not already set
+        if (!updates.type && category.type) {
+          updates.type = category.type as 'income' | 'expense';
+        }
+        break;
+      }
+    }
+
+    // Extract account - look for account names
+    for (const account of accounts) {
+      const accountName = account.name.toLowerCase();
+      if (lowerTranscription.includes(accountName)) {
+        updates.accountId = account.id;
+        break;
+      }
+    }
+
+    // Extract date - look for date patterns
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (lowerTranscription.includes('hoje') || lowerTranscription.includes('today')) {
+      updates.date = today.toISOString().split('T')[0];
+    } else if (lowerTranscription.includes('ontem') || lowerTranscription.includes('yesterday')) {
+      updates.date = yesterday.toISOString().split('T')[0];
+    }
+
+    return updates;
+  }, [categories, accounts, t]);
+
+  const handleVoiceInput = useCallback(async () => {
+    if (voiceState === 'recording') {
+      const audioBlob = await stopRecording();
+
+      if (audioBlob) {
+        setIsProcessingVoice(true);
+
+        try {
+          // Simulate processing delay (in a real implementation, this would call a backend service)
+          await new Promise(resolve => setTimeout(resolve, 1000));
+
+          // For demo purposes, we'll use local parsing
+          // In production, replace this with actual transcription from backend
+          const mockTranscription = 'Gastei 50 reais em Alimentação no Nubank hoje';
+          const parsedUpdates = parseVoiceInput(mockTranscription);
+
+          // Apply parsed updates to form
+          if (Object.keys(parsedUpdates).length > 0) {
+            setFormData(prev => ({
+              ...prev,
+              ...parsedUpdates,
+              amount: parsedUpdates.amount?.toString() || prev.amount,
+            }));
+
+            // Update selected account if parsed
+            if (parsedUpdates.accountId) {
+              setSelectedAccountId(parsedUpdates.accountId);
+            }
+
+            setVoiceFeedback({
+              type: 'success',
+              message: t('voice.updateSuccess') || 'Transaction information extracted from voice',
+            });
+          } else {
+            setVoiceFeedback({
+              type: 'error',
+              message: t('voice.error') || 'Could not understand. Please try again.',
+            });
+          }
+
+          setTimeout(() => {
+            setVoiceFeedback(null);
+            resetVoice();
+          }, 3000);
+        } catch (error) {
+          console.error('Voice processing error:', error);
+          setVoiceFeedback({
+            type: 'error',
+            message: t('voice.error') || 'Could not understand. Please try again.',
+          });
+
+          setTimeout(() => {
+            setVoiceFeedback(null);
+            resetVoice();
+          }, 5000);
+        } finally {
+          setIsProcessingVoice(false);
+        }
+      }
+    } else if (voiceState === 'idle' || voiceState === 'error') {
+      setVoiceFeedback(null);
+      await startRecording();
+    }
+  }, [voiceState, stopRecording, startRecording, resetVoice, parseVoiceInput, t]);
+
   const handleVoiceUpdate = useCallback(async () => {
     if (voiceState === 'recording') {
       const audioBlob = await stopRecording();
-      
+
       if (audioBlob && transaction) {
         setIsProcessingVoice(true);
         const result = await sendVoiceTransactionUpdate(
-          audioBlob, 
-          i18n.language, 
+          audioBlob,
+          i18n.language,
           transaction,
           categories
         );
         setIsProcessingVoice(false);
-        
+
         console.log('Voice update result:', result);
         console.log('Voice update data received:', result.data);
-        
+
         if (result.success && result.data) {
           setVoiceFeedback({
             type: 'success',
             message: result.message || t('voice.updateSuccess'),
           });
-          
+
           // Update form data with the parsed changes
           const updates: Partial<Transaction> = {};
           console.log('Processing voice update fields:', Object.keys(result.data));
-          
+
           if (result.data.description) {
             updates.description = result.data.description;
             setFormData(prev => ({ ...prev, description: result.data!.description! }));
@@ -158,9 +310,14 @@ export function TransactionModal({
             setFormData(prev => ({ ...prev, date: result.data!.date! }));
             console.log('✓ Updated date:', result.data.date);
           }
-          
+          if (result.data.accountId) {
+            updates.accountId = result.data.accountId;
+            setSelectedAccountId(result.data.accountId);
+            console.log('✓ Updated accountId:', result.data.accountId);
+          }
+
           console.log('Total updates to apply:', Object.keys(updates));
-          
+
           // Notify parent component about voice updates
           if (onVoiceUpdate && Object.keys(updates).length > 0) {
             console.log('Calling onVoiceUpdate with:', updates);
@@ -168,7 +325,7 @@ export function TransactionModal({
           } else {
             console.log('No updates to apply or onVoiceUpdate not provided');
           }
-          
+
           // Clear success feedback after 3 seconds
           setTimeout(() => {
             setVoiceFeedback(null);
@@ -179,7 +336,7 @@ export function TransactionModal({
             type: 'error',
             message: result.error || t('voice.error'),
           });
-          
+
           setTimeout(() => {
             setVoiceFeedback(null);
             resetVoice();
@@ -190,7 +347,7 @@ export function TransactionModal({
       setVoiceFeedback(null);
       await startRecording();
     }
-  }, [voiceState, stopRecording, startRecording, i18n.language, transaction, categories, t, resetVoice]);
+  }, [voiceState, stopRecording, startRecording, i18n.language, transaction, categories, t, resetVoice, onVoiceUpdate]);
 
   const filteredCategories = categories.filter(
     (c) => c.type === formData.type
@@ -303,66 +460,64 @@ export function TransactionModal({
               />
             </div>
 
-            {/* Voice Update Section - Only show when editing */}
-            {isEditing && (
-              <div className="border-t border-gray-200 pt-4 mt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  {t('voice.updateByVoice')}
-                </label>
-                <div className="flex flex-col gap-3">
-                  <button
-                    type="button"
-                    onClick={handleVoiceUpdate}
-                    disabled={voiceState === 'processing' || isProcessingVoice}
-                    className={`
-                      flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium
-                      transition-all duration-200 ease-in-out
-                      ${voiceState === 'recording' 
-                        ? 'bg-red-500 hover:bg-red-600 text-white ring-4 ring-red-200 animate-pulse' 
-                        : voiceState === 'processing' || isProcessingVoice
-                          ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
-                          : 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-md hover:shadow-lg transform hover:-translate-y-0.5'
-                      }
-                    `}
-                  >
-                    {voiceState === 'recording' ? (
-                      <>
-                        <Square className="h-5 w-5" />
-                        <span>{t('voice.stopRecording')}</span>
-                      </>
-                    ) : voiceState === 'processing' || isProcessingVoice ? (
-                      <>
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                        <span>{t('voice.processing')}</span>
-                      </>
-                    ) : (
-                      <>
-                        <Mic className="h-5 w-5" />
-                        <span>{t('voice.updateByVoice')}</span>
-                      </>
-                    )}
-                  </button>
-                  
-                  {voiceFeedback && (
-                    <div className={`flex items-center gap-2 text-sm px-3 py-2 rounded-md ${
-                      voiceFeedback.type === 'success' 
-                        ? 'bg-green-50 text-green-700 border border-green-200' 
-                        : 'bg-red-50 text-red-700 border border-red-200'
-                    }`}>
-                      {voiceFeedback.type === 'success' ? (
-                        <Check className="h-4 w-4 flex-shrink-0" />
-                      ) : (
-                        <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                      )}
-                      <span>{voiceFeedback.message}</span>
-                    </div>
+            {/* Voice Input Section - Show for both adding and editing */}
+            <div className="border-t border-gray-200 pt-4 mt-4">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                {isEditing ? t('voice.updateByVoice') : t('voice.addByVoice')}
+              </label>
+              <div className="flex flex-col gap-3">
+                <button
+                  type="button"
+                  onClick={isEditing ? handleVoiceUpdate : handleVoiceInput}
+                  disabled={voiceState === 'processing' || isProcessingVoice}
+                  className={`
+                    flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium
+                    transition-all duration-200 ease-in-out
+                    ${voiceState === 'recording'
+                      ? 'bg-red-500 hover:bg-red-600 text-white ring-4 ring-red-200 animate-pulse'
+                      : voiceState === 'processing' || isProcessingVoice
+                        ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-md hover:shadow-lg transform hover:-translate-y-0.5'
+                    }
+                  `}
+                >
+                  {voiceState === 'recording' ? (
+                    <>
+                      <Square className="h-5 w-5" />
+                      <span>{t('voice.stopRecording')}</span>
+                    </>
+                  ) : voiceState === 'processing' || isProcessingVoice ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      <span>{t('voice.processing')}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Mic className="h-5 w-5" />
+                      <span>{isEditing ? t('voice.updateByVoice') : t('voice.addByVoice')}</span>
+                    </>
                   )}
-                </div>
-                <p className="text-xs text-gray-500 mt-3 italic">
-                  {t('voice.updateHint')}
-                </p>
+                </button>
+
+                {voiceFeedback && (
+                  <div className={`flex items-center gap-2 text-sm px-3 py-2 rounded-md ${
+                    voiceFeedback.type === 'success'
+                      ? 'bg-green-50 text-green-700 border border-green-200'
+                      : 'bg-red-50 text-red-700 border border-red-200'
+                  }`}>
+                    {voiceFeedback.type === 'success' ? (
+                      <Check className="h-4 w-4 flex-shrink-0" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                    )}
+                    <span>{voiceFeedback.message}</span>
+                  </div>
+                )}
               </div>
-            )}
+              <p className="text-xs text-gray-500 mt-3 italic">
+                {isEditing ? t('voice.updateHint') : t('voice.transactionHint')}
+              </p>
+            </div>
 
             <div className="flex gap-2 pt-4">
               <Button type="submit">

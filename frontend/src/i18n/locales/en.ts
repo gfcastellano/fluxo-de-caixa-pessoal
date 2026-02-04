@@ -268,6 +268,9 @@ export const enTranslations = {
     updateHint: 'Say what you want to change, for example: "change the amount to 100" or "move it to yesterday"',
     updateSuccess: 'Transaction updated successfully',
     accountHint: 'Say something like: "Create Nubank account with initial balance of 1000 dollars"',
+    transactionHint: 'Say something like: "Spent 50 dollars on Food at Nubank today" or "Received salary of 3000 dollars"',
+    budgetHint: 'Say something like: "Create budget of 500 dollars for Food monthly"',
+    categoryHint: 'Say something like: "Create category Food of type expense with green color"',
     backendIntegrationNeeded: 'Backend integration needed for voice processing',
   },
 
