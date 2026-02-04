@@ -78,6 +78,7 @@ export function useUserSetup(initialBalance: number = 0) {
               currency: 'BRL',
               balance: initialBalanceRef.current,
               initialBalance: initialBalanceRef.current,
+              balanceDate: new Date().toISOString().split('T')[0],
               isDefault: true,
             });
             console.log('✅ Default account created with initial balance:', initialBalanceRef.current);

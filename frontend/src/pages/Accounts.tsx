@@ -10,6 +10,7 @@ import {
   updateAccount,
   deleteAccount,
   setDefaultAccount,
+  calculateAccountBalance,
 } from '../services/accountService';
 import type { Account } from '../types';
 import { Plus, Edit2, Trash2, Star, Wallet } from 'lucide-react';
@@ -18,6 +19,7 @@ export function Accounts() {
   const { user } = useAuth();
   const { t } = useTranslation();
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [accountBalances, setAccountBalances] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
@@ -33,6 +35,14 @@ export function Accounts() {
     try {
       const data = await getAccounts(user!.uid);
       setAccounts(data);
+      
+      // Calculate balances for all accounts
+      const balances: Record<string, number> = {};
+      for (const account of data) {
+        const calculatedBalance = await calculateAccountBalance(account.id, user!.uid);
+        balances[account.id] = calculatedBalance;
+      }
+      setAccountBalances(balances);
     } catch (error) {
       console.error('Error loading accounts:', error);
     } finally {
@@ -48,6 +58,8 @@ export function Accounts() {
         await updateAccount(editingAccount.id, {
           name: accountData.name,
           currency: accountData.currency,
+          balance: accountData.balance,
+          balanceDate: new Date().toISOString().split('T')[0],
         });
       } else {
         await createAccount({
@@ -56,6 +68,7 @@ export function Accounts() {
           currency: accountData.currency!,
           balance: accountData.initialBalance || 0,
           initialBalance: accountData.initialBalance || 0,
+          balanceDate: new Date().toISOString().split('T')[0],
           isDefault: accountData.isDefault || false,
         });
       }
@@ -115,10 +128,9 @@ export function Accounts() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">{t('accounts.title')}</h1>
-        <Button onClick={() => handleOpenModal()}>
-          <Plus className="mr-2 h-4 w-4" />
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <h1 className="text-2xl font-bold text-neutral-900">{t('accounts.title')}</h1>
+        <Button onClick={() => handleOpenModal()} className="w-full sm:w-auto whitespace-nowrap" leftIcon={<Plus className="h-4 w-4 flex-shrink-0" />}>
           {t('accounts.addNew')}
         </Button>
       </div>
@@ -137,8 +149,8 @@ export function Accounts() {
             <Card>
               <CardContent className="py-12">
                 <div className="text-center">
-                  <Wallet className="mx-auto h-12 w-12 text-gray-400" />
-                  <p className="mt-4 text-gray-500">{t('accounts.noAccounts')}</p>
+                  <Wallet className="mx-auto h-12 w-12 text-neutral-400" />
+                  <p className="mt-4 text-neutral-500">{t('accounts.noAccounts')}</p>
                 </div>
               </CardContent>
             </Card>
@@ -153,8 +165,8 @@ export function Accounts() {
                       <Wallet className="h-5 w-5 text-primary-600" />
                     </div>
                     <div>
-                      <CardTitle className="text-base">{account.name}</CardTitle>
-                      <p className="text-sm text-gray-500">{account.currency}</p>
+                      <CardTitle className="text-base text-neutral-900">{account.name}</CardTitle>
+                      <p className="text-sm text-neutral-500">{account.currency}</p>
                     </div>
                   </div>
                   {account.isDefault && (
@@ -167,20 +179,20 @@ export function Accounts() {
               </CardHeader>
               <CardContent>
                 <div className="mb-4">
-                  <p className="text-sm text-gray-500">{t('accounts.currentBalance')}</p>
-                  <p className={`text-2xl font-bold ${account.balance >= 0 ? 'text-gray-900' : 'text-red-600'}`}>
-                    {formatCurrency(account.balance, account.currency)}
+                  <p className="text-sm text-neutral-500">{t('accounts.currentBalance')}</p>
+                  <p className={`text-2xl font-bold ${(accountBalances[account.id] ?? account.balance) >= 0 ? 'text-neutral-900' : 'text-red-600'}`}>
+                    {formatCurrency(accountBalances[account.id] ?? account.balance, account.currency)}
                   </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   {!account.isDefault && (
                     <Button
                       type="button"
                       variant="secondary"
                       size="sm"
                       onClick={() => handleSetDefault(account.id)}
+                      leftIcon={<Star className="h-3 w-3 flex-shrink-0" />}
                     >
-                      <Star className="mr-1 h-3 w-3" />
                       {t('accounts.setDefault')}
                     </Button>
                   )}
@@ -189,8 +201,8 @@ export function Accounts() {
                     variant="ghost"
                     size="sm"
                     onClick={() => handleOpenModal(account)}
+                    leftIcon={<Edit2 className="h-3 w-3 flex-shrink-0" />}
                   >
-                    <Edit2 className="mr-1 h-3 w-3" />
                     {t('common.edit')}
                   </Button>
                   <Button
@@ -199,8 +211,8 @@ export function Accounts() {
                     size="sm"
                     onClick={() => handleDelete(account.id)}
                     className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    leftIcon={<Trash2 className="h-3 w-3 flex-shrink-0" />}
                   >
-                    <Trash2 className="mr-1 h-3 w-3" />
                     {t('common.delete')}
                   </Button>
                 </div>

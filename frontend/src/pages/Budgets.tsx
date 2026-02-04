@@ -123,10 +123,9 @@ export function Budgets() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">{t('budgets.title')}</h1>
-        <Button onClick={() => handleOpenModal()}>
-          <Plus className="mr-2 h-4 w-4" />
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <h1 className="text-2xl font-bold text-neutral-900">{t('budgets.title')}</h1>
+        <Button onClick={() => handleOpenModal()} className="w-full sm:w-auto whitespace-nowrap" leftIcon={<Plus className="h-4 w-4 flex-shrink-0" />}>
           {t('budgets.addNew')}
         </Button>
       </div>
@@ -135,9 +134,8 @@ export function Budgets() {
         {budgets.length === 0 ? (
           <Card className="md:col-span-2">
             <CardContent className="text-center py-8">
-              <p className="text-gray-500">{t('budgets.noBudgets')}</p>
-              <Button onClick={() => handleOpenModal()} className="mt-4">
-                <Plus className="mr-2 h-4 w-4" />
+              <p className="text-neutral-500">{t('budgets.noBudgets')}</p>
+              <Button onClick={() => handleOpenModal()} className="mt-4 w-full sm:w-auto whitespace-nowrap" leftIcon={<Plus className="h-4 w-4 flex-shrink-0" />}>
                 {t('budgets.addNew')}
               </Button>
             </CardContent>
@@ -160,10 +158,10 @@ export function Budgets() {
                       {getCategoryName(budget.categoryId)}
                     </CardTitle>
                   </div>
-                  <div className="flex gap-1">
+                  <div className="flex flex-wrap gap-1">
                     <button
                       onClick={() => handleOpenModal(budget)}
-                      className="p-2 text-gray-600 hover:bg-gray-200 rounded-md"
+                      className="p-2 text-neutral-600 hover:bg-neutral-200 rounded-md"
                     >
                       <Edit2 className="h-4 w-4" />
                     </button>
@@ -178,14 +176,14 @@ export function Budgets() {
                 <CardContent>
                   <div className="space-y-4">
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">
+                      <span className="text-neutral-600">
                         {t('budgets.spent')}: {formatCurrency(status?.spent || 0)}
                       </span>
-                      <span className="text-gray-600">
+                      <span className="text-neutral-600">
                         {t('budgets.form.amount')}: {formatCurrency(budget.amount)}
                       </span>
                     </div>
-                    <div className="relative h-4 bg-gray-200 rounded-full overflow-hidden">
+                    <div className="relative h-4 bg-neutral-200 rounded-full overflow-hidden">
                       <div
                         className={`absolute top-0 left-0 h-full transition-all ${
                           isOverBudget ? 'bg-red-500' : 'bg-green-500'
@@ -194,14 +192,13 @@ export function Budgets() {
                       />
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span
-                        className={`font-medium ${
+                                            <span className={`font-medium ${
                           isOverBudget ? 'text-red-600' : 'text-green-600'
                         }`}
                       >
                         {percentage.toFixed(1)}% {t('budgets.spent').toLowerCase()}
                       </span>
-                      <span className="text-gray-600">
+                      <span className="text-neutral-600">
                         {t('budgets.remaining')}: {formatCurrency(status?.remaining || 0)}
                       </span>
                     </div>

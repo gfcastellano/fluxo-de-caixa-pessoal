@@ -172,10 +172,10 @@ export function AccountModal({
                 onChange={(e) =>
                   setFormData({ ...formData, currency: e.target.value })
                 }
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
                 {CURRENCIES.map((currency) => (
-                  <option key={currency.code} value={currency.code}>
+                  <option key={currency.code} value={currency.code} className="text-neutral-900">
                     {currency.code} - {currency.name}
                   </option>
                 ))}
@@ -281,13 +281,11 @@ export function AccountModal({
               </p>
             </div>
 
-            <div className="flex gap-2 pt-4">
-              <Button type="submit">
-                <Check className="mr-2 h-4 w-4" />
+            <div className="flex flex-row gap-2 pt-4">
+              <Button type="submit" className="flex-1 sm:flex-none whitespace-nowrap" leftIcon={<Check className="h-4 w-4 flex-shrink-0" />}>
                 {hasVoiceData ? t('common.update') : (isEditing ? t('common.update') : t('common.create'))}
               </Button>
-              <Button type="button" variant="secondary" onClick={onClose}>
-                <X className="mr-2 h-4 w-4" />
+              <Button type="button" variant="secondary" onClick={onClose} className="flex-1 sm:flex-none whitespace-nowrap" leftIcon={<X className="h-4 w-4 flex-shrink-0" />}>
                 {t('common.cancel')}
               </Button>
             </div>

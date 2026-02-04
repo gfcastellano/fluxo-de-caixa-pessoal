@@ -8,7 +8,7 @@ import {
   getCategoryBreakdown,
   getTrendData,
 } from '../services/reportService';
-import { getAccounts } from '../services/accountService';
+import { getAccounts, calculateAccountBalance, calculateTotalBalance } from '../services/accountService';
 import type { MonthlySummary, CategoryBreakdown, Account } from '../types';
 import { formatCurrency, formatMonthYear, getCurrentMonth } from '../utils/format';
 import { getCategoryTranslationKey } from '../utils/categoryTranslations';
@@ -27,7 +27,7 @@ import {
   LineChart,
   Line,
 } from 'recharts';
-import { Download, TrendingUp, TrendingDown, Wallet } from 'lucide-react';
+import { Download, TrendingUp, TrendingDown, Calendar, PiggyBank, Calculator, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export function Reports() {
   const { user } = useAuth();
@@ -47,6 +47,9 @@ export function Reports() {
   const [month, setMonth] = useState(getCurrentMonth().month);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
+  const [calculatedBalance, setCalculatedBalance] = useState<number>(0);
+  const [totalAccountBalance, setTotalAccountBalance] = useState<number>(0);
+  const [monthlyBalance, setMonthlyBalance] = useState<number>(0);
 
   // Helper function to get translated category name
   const getTranslatedCategoryName = (categoryName: string): string => {
@@ -66,6 +69,20 @@ export function Reports() {
       loadData();
     }
   }, [selectedAccountId]);
+
+  useEffect(() => {
+    if (user) {
+      loadCalculatedBalance();
+      loadTotalAccountBalance();
+    }
+  }, [user, selectedAccountId, accounts]);
+
+  useEffect(() => {
+    // Calculate monthly balance from summary data
+    if (summary) {
+      setMonthlyBalance(summary.income - summary.expenses);
+    }
+  }, [summary]);
 
   const loadAccounts = async () => {
     try {
@@ -104,6 +121,37 @@ export function Reports() {
     }
   };
 
+  const loadCalculatedBalance = async () => {
+    if (!user) return;
+    
+    try {
+      if (selectedAccountId) {
+        // Calculate balance for specific account
+        const balance = await calculateAccountBalance(selectedAccountId, user.uid);
+        setCalculatedBalance(balance);
+      } else {
+        // Calculate total balance across all accounts
+        const totalBalance = await calculateTotalBalance(user.uid);
+        setCalculatedBalance(totalBalance);
+      }
+    } catch (error) {
+      console.error('Error loading calculated balance:', error);
+    }
+  };
+
+  const loadTotalAccountBalance = async () => {
+    if (!user) return;
+    
+    try {
+      // Get total balance across all accounts (stored balance without transaction adjustments)
+      const accountsData = await getAccounts(user.uid);
+      const total = accountsData.reduce((sum, account) => sum + account.balance, 0);
+      setTotalAccountBalance(total);
+    } catch (error) {
+      console.error('Error loading total account balance:', error);
+    }
+  };
+
   const handleExport = () => {
     const data = {
       month: formatMonthYear(year, month),
@@ -124,6 +172,24 @@ export function Reports() {
     URL.revokeObjectURL(url);
   };
 
+  const handlePreviousMonth = () => {
+    if (month === 1) {
+      setMonth(12);
+      setYear(year - 1);
+    } else {
+      setMonth(month - 1);
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (month === 12) {
+      setMonth(1);
+      setYear(year + 1);
+    } else {
+      setMonth(month + 1);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -134,17 +200,17 @@ export function Reports() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h1 className="text-2xl font-bold text-gray-900">{t('reports.title')}</h1>
         <div className="flex flex-wrap gap-2">
           <select
             value={selectedAccountId}
             onChange={(e) => setSelectedAccountId(e.target.value)}
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="rounded-md border border-gray-300 px-3 py-2 text-sm text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
           >
-            <option value="">{t('reports.allAccounts')}</option>
+            <option value="" className="text-neutral-900">{t('reports.allAccounts')}</option>
             {accounts.map((account) => (
-              <option key={account.id} value={account.id}>
+              <option key={account.id} value={account.id} className="text-neutral-900">
                 {account.name}
               </option>
             ))}
@@ -152,36 +218,53 @@ export function Reports() {
           <select
             value={year}
             onChange={(e) => setYear(parseInt(e.target.value))}
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="rounded-md border border-gray-300 px-3 py-2 text-sm text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
           >
             {[2023, 2024, 2025, 2026].map((y) => (
-              <option key={y} value={y}>
+              <option key={y} value={y} className="text-neutral-900">
                 {y}
               </option>
             ))}
           </select>
-          <select
-            value={month}
-            onChange={(e) => setMonth(parseInt(e.target.value))}
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-          >
-            {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-              <option key={m} value={m}>
-                {new Date(2000, m - 1).toLocaleString('default', {
-                  month: 'long',
-                })}
-              </option>
-            ))}
-          </select>
-          <Button variant="secondary" onClick={handleExport}>
-            <Download className="mr-2 h-4 w-4" />
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={handlePreviousMonth}
+              aria-label={t('reports.previousMonth')}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <select
+              value={month}
+              onChange={(e) => setMonth(parseInt(e.target.value))}
+              className="rounded-md border border-gray-300 px-3 py-2 text-sm text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+            >
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                <option key={m} value={m} className="text-neutral-900">
+                  {new Date(2000, m - 1).toLocaleString('default', {
+                    month: 'long',
+                  })}
+                </option>
+              ))}
+            </select>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={handleNextMonth}
+              aria-label={t('reports.nextMonth')}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+          <Button variant="secondary" onClick={handleExport} leftIcon={<Download className="h-4 w-4 flex-shrink-0" />}>
             {t('common.save')}
           </Button>
         </div>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">
@@ -213,17 +296,53 @@ export function Reports() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">
-              {t('dashboard.currentBalance')}
+              {t('reports.monthlyBalance')}
             </CardTitle>
-            <Wallet className="h-4 w-4 text-primary-600" />
+            <Calendar className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div
               className={`text-2xl font-bold ${
-                (summary?.balance || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                monthlyBalance >= 0 ? 'text-green-600' : 'text-red-600'
               }`}
             >
-              {formatCurrency(summary?.balance || 0)}
+              {formatCurrency(monthlyBalance)}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">
+              {t('reports.totalBalance')}
+            </CardTitle>
+            <PiggyBank className="h-4 w-4 text-purple-600" />
+          </CardHeader>
+          <CardContent>
+            <div
+              className={`text-2xl font-bold ${
+                totalAccountBalance >= 0 ? 'text-green-600' : 'text-red-600'
+              }`}
+            >
+              {formatCurrency(totalAccountBalance)}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">
+              {t('reports.calculatedBalance')}
+            </CardTitle>
+            <Calculator className="h-4 w-4 text-primary-600" />
+          </CardHeader>
+          <CardContent>
+            <div
+              className={`text-2xl font-bold ${
+                calculatedBalance >= 0 ? 'text-green-600' : 'text-red-600'
+              }`}
+            >
+              {formatCurrency(calculatedBalance)}
             </div>
           </CardContent>
         </Card>
@@ -271,10 +390,10 @@ export function Reports() {
           </CardContent>
         </Card>
 
-        {/* Income Breakdown */}
+        {/* Income Composition */}
         <Card>
           <CardHeader>
-            <CardTitle>{t('reports.incomeVsExpenses')}</CardTitle>
+            <CardTitle>{t('reports.incomeComposition')}</CardTitle>
           </CardHeader>
           <CardContent>
             {incomeBreakdown.length === 0 ? (

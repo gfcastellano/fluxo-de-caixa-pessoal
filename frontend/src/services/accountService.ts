@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import type { Account, AccountInput } from '../types';
+import { getTransactions } from './transactionService';
 
 const COLLECTION_NAME = 'accounts';
 
@@ -118,4 +119,93 @@ export async function setDefaultAccount(accountId: string, userId: string): Prom
     isDefault: true,
     updatedAt: serverTimestamp(),
   });
+}
+
+/**
+ * Calculate the real-time balance for an account by adjusting the stored balance
+ * with all transactions that occurred after the balance date.
+ * 
+ * Formula: storedBalance + sum(income transactions after balanceDate) - sum(expense transactions after balanceDate)
+ * 
+ * @param accountId - The account ID
+ * @param userId - The user ID (required to fetch transactions)
+ * @param upToDate - Optional date to calculate balance up to (defaults to current date)
+ * @returns The calculated balance
+ */
+export async function calculateAccountBalance(
+  accountId: string,
+  userId: string,
+  upToDate?: string
+): Promise<number> {
+  try {
+    // Fetch the account to get stored balance and balanceDate
+    const account = await getAccount(accountId);
+    
+    if (!account) {
+      throw new Error('Account not found');
+    }
+
+    // If no balanceDate is set, return the stored balance
+    if (!account.balanceDate) {
+      return account.balance;
+    }
+
+    // Determine the end date (defaults to today)
+    const endDate = upToDate || new Date().toISOString().split('T')[0];
+
+    // Fetch all transactions for this account after the balanceDate and up to the specified date
+    const transactions = await getTransactions(userId, {
+      accountId: accountId,
+      startDate: account.balanceDate,
+      endDate: endDate,
+    });
+
+    // Calculate the adjustment: income adds to balance, expenses subtract from balance
+    let adjustment = 0;
+    for (const transaction of transactions) {
+      // Skip transactions exactly on the balance date (they're already included in the stored balance)
+      if (transaction.date === account.balanceDate) {
+        continue;
+      }
+      
+      if (transaction.type === 'income') {
+        adjustment += transaction.amount;
+      } else if (transaction.type === 'expense') {
+        adjustment -= transaction.amount;
+      }
+    }
+
+    // Return the calculated balance
+    return account.balance + adjustment;
+  } catch (error) {
+    console.error('Error calculating account balance:', error);
+    throw error;
+  }
+}
+
+/**
+ * Calculate the total balance across all accounts for a user.
+ * 
+ * @param userId - The user ID
+ * @param upToDate - Optional date to calculate balance up to (defaults to current date)
+ * @returns The total calculated balance
+ */
+export async function calculateTotalBalance(
+  userId: string,
+  upToDate?: string
+): Promise<number> {
+  try {
+    const accounts = await getAccounts(userId);
+    
+    let totalBalance = 0;
+    for (const account of accounts) {
+      const balance = await calculateAccountBalance(account.id, userId, upToDate);
+      totalBalance += balance;
+    }
+    
+    return totalBalance;
+  } catch (error) {
+    console.error('Error calculating total balance:', error);
+    throw error;
+  }
 }

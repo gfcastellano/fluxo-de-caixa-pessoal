@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Mic, Square, Loader2, Check, AlertCircle } from 'lucide-react';
+import { X, Mic, Square, Loader2, Check, AlertCircle, Repeat } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from './Card';
 import { Button } from './Button';
 import { Input } from './Input';
@@ -40,6 +40,12 @@ export function TransactionModal({
     categoryId: '',
     date: new Date().toISOString().split('T')[0],
   });
+
+  // Recurring transaction state
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurrencePattern, setRecurrencePattern] = useState<'monthly' | 'weekly' | 'yearly'>('monthly');
+  const [recurrenceDay, setRecurrenceDay] = useState<number | ''>('');
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState<string>('');
 
   // Accounts state
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -86,6 +92,11 @@ export function TransactionModal({
         categoryId: transaction.categoryId || '',
         date: transaction.date || new Date().toISOString().split('T')[0],
       });
+      // Set recurring fields when editing
+      setIsRecurring(transaction.isRecurring || false);
+      setRecurrencePattern(transaction.recurrencePattern || 'monthly');
+      setRecurrenceDay(transaction.recurrenceDay ?? '');
+      setRecurrenceEndDate(transaction.recurrenceEndDate || '');
     } else {
       setFormData({
         description: '',
@@ -94,6 +105,11 @@ export function TransactionModal({
         categoryId: '',
         date: new Date().toISOString().split('T')[0],
       });
+      // Reset recurring fields for new transaction
+      setIsRecurring(false);
+      setRecurrencePattern('monthly');
+      setRecurrenceDay('');
+      setRecurrenceEndDate('');
     }
     setVoiceFeedback(null);
     setHasVoiceData(false);
@@ -101,11 +117,50 @@ export function TransactionModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({
+    
+    const transactionData: Partial<Transaction> = {
       ...formData,
       amount: parseFloat(formData.amount),
       accountId: selectedAccountId || undefined,
-    });
+    };
+
+    // Add recurring fields if enabled
+    if (isRecurring && !isEditing) {
+      transactionData.isRecurring = true;
+      transactionData.recurrencePattern = recurrencePattern;
+      transactionData.recurrenceDay = recurrenceDay !== '' ? recurrenceDay : null;
+      transactionData.recurrenceEndDate = recurrenceEndDate || null;
+    }
+
+    onSave(transactionData);
+  };
+
+  // Get max day based on pattern
+  const getMaxDay = () => {
+    switch (recurrencePattern) {
+      case 'weekly':
+        return 7; // Days of week (1-7)
+      case 'monthly':
+        return 31; // Days of month (1-31)
+      case 'yearly':
+        return 366; // Days of year (1-366)
+      default:
+        return 31;
+    }
+  };
+
+  // Get day label based on pattern
+  const getDayLabel = () => {
+    switch (recurrencePattern) {
+      case 'weekly':
+        return t('transactions.form.recurrenceDayWeekly') || 'Day of Week (1-7)';
+      case 'monthly':
+        return t('transactions.form.recurrenceDayMonthly') || 'Day of Month (1-31)';
+      case 'yearly':
+        return t('transactions.form.recurrenceDayYearly') || 'Day of Year (1-366)';
+      default:
+        return t('transactions.form.recurrenceDay') || 'Day';
+    }
   };
 
   // Parse voice input to extract transaction information for new transactions
@@ -410,10 +465,10 @@ export function TransactionModal({
                       categoryId: '',
                     })
                   }
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
-                  <option value="expense">{t('common.expense')}</option>
-                  <option value="income">{t('common.income')}</option>
+                  <option value="expense" className="text-neutral-900">{t('common.expense')}</option>
+                  <option value="income" className="text-neutral-900">{t('common.income')}</option>
                 </select>
               </div>
               <div>
@@ -425,12 +480,12 @@ export function TransactionModal({
                   onChange={(e) =>
                     setFormData({ ...formData, categoryId: e.target.value })
                   }
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                   required
                 >
-                  <option value="">{t('transactions.form.selectCategory')}</option>
+                  <option value="" className="text-neutral-900">{t('transactions.form.selectCategory')}</option>
                   {filteredCategories.map((category) => (
-                    <option key={category.id} value={category.id}>
+                    <option key={category.id} value={category.id} className="text-neutral-900">
                       {t(getTranslatedCategoryName(category.name))}
                     </option>
                   ))}
@@ -443,11 +498,11 @@ export function TransactionModal({
                 <select
                   value={selectedAccountId}
                   onChange={(e) => setSelectedAccountId(e.target.value)}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
-                  <option value="">{t('transactions.form.selectAccount')}</option>
+                  <option value="" className="text-neutral-900">{t('transactions.form.selectAccount')}</option>
                   {accounts.map((account) => (
-                    <option key={account.id} value={account.id}>
+                    <option key={account.id} value={account.id} className="text-neutral-900">
                       {account.name} {account.isDefault ? `(${t('common.default')})` : ''}
                     </option>
                   ))}
@@ -463,6 +518,81 @@ export function TransactionModal({
                 required
               />
             </div>
+
+            {/* Recurring Transaction Section - Only show when adding new transaction */}
+            {!isEditing && (
+              <div className="border-t border-gray-200 pt-4 mt-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <input
+                    type="checkbox"
+                    id="isRecurring"
+                    checked={isRecurring}
+                    onChange={(e) => setIsRecurring(e.target.checked)}
+                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="isRecurring" className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer">
+                    <Repeat className="h-4 w-4" />
+                    {t('transactions.form.isRecurring') || 'Recurring Transaction'}
+                  </label>
+                </div>
+
+                {isRecurring && (
+                  <div className="space-y-4 pl-6 border-l-2 border-primary-200">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          {t('transactions.form.recurrencePattern') || 'Frequency'}
+                        </label>
+                        <select
+                          value={recurrencePattern}
+                          onChange={(e) => {
+                            setRecurrencePattern(e.target.value as 'monthly' | 'weekly' | 'yearly');
+                            setRecurrenceDay(''); // Reset day when pattern changes
+                          }}
+                          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        >
+                          <option value="monthly" className="text-neutral-900">{t('common.monthly') || 'Monthly'}</option>
+                          <option value="weekly" className="text-neutral-900">{t('common.weekly') || 'Weekly'}</option>
+                          <option value="yearly" className="text-neutral-900">{t('common.yearly') || 'Yearly'}</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          {getDayLabel()}
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          max={getMaxDay()}
+                          value={recurrenceDay}
+                          onChange={(e) => setRecurrenceDay(e.target.value ? parseInt(e.target.value) : '')}
+                          placeholder={t('transactions.form.recurrenceDayPlaceholder') || 'Auto'}
+                          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          {t('transactions.form.recurrenceDayHint') || 'Leave empty to use the transaction date'}
+                        </p>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {t('transactions.form.recurrenceEndDate') || 'End Date (Optional)'}
+                      </label>
+                      <input
+                        type="date"
+                        value={recurrenceEndDate}
+                        onChange={(e) => setRecurrenceEndDate(e.target.value)}
+                        min={formData.date}
+                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        {t('transactions.form.recurrenceEndDateHint') || 'If not set, instances will be generated until end of year'}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Voice Input Section - Show for both adding and editing */}
             <div className="border-t border-gray-200 pt-4 mt-4">
@@ -523,13 +653,11 @@ export function TransactionModal({
               </p>
             </div>
 
-            <div className="flex gap-2 pt-4">
-              <Button type="submit">
-                <Check className="mr-2 h-4 w-4" />
+            <div className="flex flex-row gap-2 pt-4">
+              <Button type="submit" className="flex-1 sm:flex-none whitespace-nowrap" leftIcon={<Check className="h-4 w-4 flex-shrink-0" />}>
                 {isEditing ? t('common.update') : hasVoiceData ? t('common.update') : t('common.create')}
               </Button>
-              <Button type="button" variant="secondary" onClick={onClose}>
-                <X className="mr-2 h-4 w-4" />
+              <Button type="button" variant="secondary" onClick={onClose} className="flex-1 sm:flex-none whitespace-nowrap" leftIcon={<X className="h-4 w-4 flex-shrink-0" />}>
                 {t('common.cancel')}
               </Button>
             </div>

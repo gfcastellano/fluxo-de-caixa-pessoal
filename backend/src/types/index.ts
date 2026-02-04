@@ -27,6 +27,12 @@ export interface Transaction {
   date: string;
   createdAt: string;
   updatedAt: string;
+  // Recurring transaction fields
+  isRecurring?: boolean;
+  recurrencePattern?: 'monthly' | 'weekly' | 'yearly' | null;
+  recurrenceDay?: number | null;
+  recurrenceEndDate?: string | null;
+  parentTransactionId?: string | null;
 }
 
 export interface Budget {
@@ -46,6 +52,7 @@ export interface Account {
   currency: string;
   balance: number;
   initialBalance: number;
+  balanceDate: string;
   isDefault: boolean;
   createdAt: string;
   updatedAt: string;

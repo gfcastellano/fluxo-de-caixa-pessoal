@@ -168,12 +168,12 @@ export function BudgetModal({
                   onChange={(e) =>
                     setFormData({ ...formData, categoryId: e.target.value })
                   }
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                   required
                 >
-                  <option value="">{t('budgets.form.selectCategory')}</option>
+                  <option value="" className="text-neutral-900">{t('budgets.form.selectCategory')}</option>
                   {expenseCategories.map((category) => (
-                    <option key={category.id} value={category.id}>
+                    <option key={category.id} value={category.id} className="text-neutral-900">
                       {t(getTranslatedCategoryName(category.name))}
                     </option>
                   ))}
@@ -204,10 +204,10 @@ export function BudgetModal({
                       period: e.target.value as 'monthly' | 'yearly',
                     })
                   }
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
-                  <option value="monthly">{t('budgets.period.monthly')}</option>
-                  <option value="yearly">{t('budgets.period.yearly')}</option>
+                  <option value="monthly" className="text-neutral-900">{t('budgets.period.monthly')}</option>
+                  <option value="yearly" className="text-neutral-900">{t('budgets.period.yearly')}</option>
                 </select>
               </div>
               <Input
@@ -280,13 +280,11 @@ export function BudgetModal({
               </p>
             </div>
 
-            <div className="flex gap-2 pt-4">
-              <Button type="submit">
-                <Check className="mr-2 h-4 w-4" />
+            <div className="flex flex-row gap-2 pt-4">
+              <Button type="submit" className="flex-1 sm:flex-none whitespace-nowrap" leftIcon={<Check className="h-4 w-4 flex-shrink-0" />}>
                 {hasVoiceData ? t('common.update') : (isEditing ? t('common.update') : t('common.create'))}
               </Button>
-              <Button type="button" variant="secondary" onClick={onClose}>
-                <X className="mr-2 h-4 w-4" />
+              <Button type="button" variant="secondary" onClick={onClose} className="flex-1 sm:flex-none whitespace-nowrap" leftIcon={<X className="h-4 w-4 flex-shrink-0" />}>
                 {t('common.cancel')}
               </Button>
             </div>
