@@ -518,7 +518,7 @@ export function Reports() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {formatCurrency(summary?.income || 0)}
+               {formatCurrency(summary?.income || 0, selectedCurrency || 'BRL')}
             </div>
           </CardContent>
         </Card>
@@ -532,7 +532,7 @@ export function Reports() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              {formatCurrency(summary?.expenses || 0)}
+               {formatCurrency(summary?.expenses || 0, selectedCurrency || 'BRL')}
             </div>
           </CardContent>
         </Card>
@@ -550,7 +550,7 @@ export function Reports() {
                 monthlyBalance >= 0 ? 'text-green-600' : 'text-red-600'
               }`}
             >
-              {formatCurrency(monthlyBalance)}
+               {formatCurrency(monthlyBalance, selectedCurrency || 'BRL')}
             </div>
           </CardContent>
         </Card>
@@ -568,7 +568,7 @@ export function Reports() {
                 totalAccountBalance >= 0 ? 'text-green-600' : 'text-red-600'
               }`}
             >
-              {formatCurrency(totalAccountBalance)}
+               {formatCurrency(totalAccountBalance, selectedCurrency || 'BRL')}
             </div>
           </CardContent>
         </Card>
@@ -585,7 +585,7 @@ export function Reports() {
               className="text-2xl font-bold"
               style={{ color: 'var(--color-projected-balance)' }}
             >
-              {formatCurrency(calculatedBalance)}
+               {formatCurrency(calculatedBalance, selectedCurrency || 'BRL')}
             </div>
           </CardContent>
         </Card>
@@ -624,7 +624,7 @@ export function Reports() {
                     formatter={(value, name, props) => {
                       const categoryName = props?.payload?.categoryName || name;
                       const translatedName = getTranslatedCategoryName(categoryName);
-                      return [formatCurrency(Number(value)), translatedName];
+                      return [formatCurrency(Number(value), selectedCurrency || 'BRL'), translatedName];
                     }}
                   />
                 </PieChart>
@@ -664,7 +664,7 @@ export function Reports() {
                     formatter={(value, name, props) => {
                       const categoryName = props?.payload?.categoryName || name;
                       const translatedName = getTranslatedCategoryName(categoryName);
-                      return [formatCurrency(Number(value)), translatedName];
+                      return [formatCurrency(Number(value), selectedCurrency || 'BRL'), translatedName];
                     }}
                   />
                 </PieChart>
@@ -688,13 +688,13 @@ export function Reports() {
                 tickFormatter={(value) =>
                   new Intl.NumberFormat('pt-BR', {
                     style: 'currency',
-                    currency: 'BRL',
+                    currency: selectedCurrency || 'BRL',
                     notation: 'compact',
                   }).format(value)
                 }
               />
               <Tooltip
-                    formatter={(value) => formatCurrency(Number(value))}
+                    formatter={(value) => formatCurrency(Number(value), selectedCurrency || 'BRL')}
               />
               <Legend />
               <Line

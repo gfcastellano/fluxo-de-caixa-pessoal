@@ -192,7 +192,7 @@ export function Dashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-neutral-900 tabular-nums">
-                    {formatCurrency(accountBalances[account.id] ?? account.balance)}
+                    {formatCurrency(accountBalances[account.id] ?? account.balance, account.currency)}
                   </div>
                   <p className="text-sm text-neutral-500 mt-1">{account.currency}</p>
                 </CardContent>
