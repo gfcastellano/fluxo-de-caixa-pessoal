@@ -258,8 +258,8 @@ export function Dashboard() {
                       <p className="text-sm text-neutral-500">
                         {transaction.category ? t(getTranslatedCategoryName(transaction.category.name)) : t('common.category')}
                         {transaction.accountId && accounts.find(a => a.id === transaction.accountId)?.name && (
-                          <span className="ml-2 text-neutral-400">
-                            • {accounts.find(a => a.id === transaction.accountId)?.name}
+                          <span className="ml-2">
+                            • <span className="font-medium text-neutral-600">{accounts.find(a => a.id === transaction.accountId)?.name}</span>
                           </span>
                         )}
                       </p>
