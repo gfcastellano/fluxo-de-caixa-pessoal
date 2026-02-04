@@ -209,66 +209,6 @@ export function Dashboard() {
         </Card>
       </div>
 
-      {/* Accounts Section */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-neutral-900">{t('dashboard.myAccounts')}</h2>
-          <Link to="/accounts" className="text-sm text-primary-600 hover:text-primary-700 flex items-center font-medium">
-            {t('dashboard.viewAllAccounts')}
-            <ArrowRight className="ml-1 h-4 w-4" />
-          </Link>
-        </div>
-        
-        {accounts.length === 0 ? (
-          <Card className="border-dashed border-2">
-            <CardContent className="py-12 text-center">
-              <div className="mx-auto w-12 h-12 bg-neutral-100 rounded-full flex items-center justify-center mb-4">
-                <CreditCard className="h-6 w-6 text-neutral-400" />
-              </div>
-              <p className="text-neutral-500 mb-2">{t('dashboard.noAccounts')}</p>
-              <Link to="/accounts">
-                <Button variant="outline" size="sm">
-                  {t('dashboard.addFirstAccount')}
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {accounts.map((account) => (
-              <Card
-                key={account.id}
-                hoverable
-                className={`relative ${account.isDefault ? 'ring-2 ring-primary-500 ring-offset-2' : ''}`}
-              >
-                {account.isDefault && (
-                  <div className="absolute -top-2 -right-2 bg-primary-500 text-white rounded-full p-1.5 shadow-md">
-                    <Star className="h-3 w-3 fill-current" />
-                  </div>
-                )}
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-neutral-600 flex items-center">
-                    <CreditCard className="h-4 w-4 mr-2 text-neutral-400" />
-                    {account.name}
-                  </CardTitle>
-                  {account.isDefault && (
-                    <span className="text-xs bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full font-medium">
-                      {t('common.default')}
-                    </span>
-                  )}
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-neutral-900 tabular-nums">
-                    {formatCurrency(accountBalances[account.id] ?? account.balance, account.currency)}
-                  </div>
-                  <p className="text-sm text-neutral-500 mt-1">{account.currency}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
-
       {/* Recent Transactions */}
       <Card>
         <CardHeader>
