@@ -285,7 +285,7 @@ export const enTranslations = {
   voice: {
     addByVoice: 'Add by Voice',
     startRecording: 'Tap to record',
-    stopRecording: 'Tap to stop',
+    stopRecording: 'Send Audio',
     processing: 'Processing...',
     success: 'Transaction added successfully',
     error: 'Could not understand. Please try again.',

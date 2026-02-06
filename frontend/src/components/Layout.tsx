@@ -1,136 +1,247 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
+import { useVoice } from '../context/VoiceContext';
 import { cn } from '../utils/cn';
-import {
-  LayoutDashboard,
-  Wallet,
-  Tags,
-  PiggyBank,
-  BarChart3,
-  Landmark,
-  LogOut,
-  Menu,
-  X,
-} from 'lucide-react';
-import { useState } from 'react';
+import { VoiceDock } from './VoiceDock';
+import { VoiceHeroButton } from './VoiceHeroButton';
+import { LogOut, LayoutDashboard, ArrowLeftRight, Tags, Landmark, PiggyBank, BarChart3 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
+interface NavItem {
+  name: string;
+  href: string;
+  icon: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>;
+  voiceEnabled: boolean;
+}
+
+// Navigation items
+const navItems: NavItem[] = [
+  { name: 'nav.dashboard', href: '/', icon: LayoutDashboard, voiceEnabled: true },
+  { name: 'nav.transactions', href: '/transactions', icon: ArrowLeftRight, voiceEnabled: true },
+  { name: 'nav.categories', href: '/categories', icon: Tags, voiceEnabled: true },
+  { name: 'nav.accounts', href: '/accounts', icon: Landmark, voiceEnabled: true },
+  { name: 'nav.budgets', href: '/budgets', icon: PiggyBank, voiceEnabled: true },
+  { name: 'nav.reports', href: '/reports', icon: BarChart3, voiceEnabled: false },
+];
+
 export function Layout({ children }: LayoutProps) {
   const { user, logout } = useAuth();
-  const location = useLocation();
+  const { isVoiceEnabled } = useVoice();
   const navigate = useNavigate();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const location = useLocation();
   const { t } = useTranslation();
-
-  const navigation = [
-    { name: t('nav.dashboard'), href: '/', icon: LayoutDashboard },
-    { name: t('nav.transactions'), href: '/transactions', icon: Wallet },
-    { name: t('nav.categories'), href: '/categories', icon: Tags },
-    { name: t('nav.budgets'), href: '/budgets', icon: PiggyBank },
-    { name: t('nav.accounts'), href: '/accounts', icon: Landmark },
-    { name: t('nav.reports'), href: '/reports', icon: BarChart3 },
-  ];
 
   const handleLogout = async () => {
     await logout();
     navigate('/login');
   };
 
-  return (
-    <div className="min-h-screen bg-neutral-50">
-      {/* Mobile menu button */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-neutral-200 px-4 py-3 shadow-sm">
-        <div className="flex items-center justify-between">
-          <span className="text-xl font-bold text-primary-600">
-            Fluxo de Caixa
-          </span>
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 rounded-lg text-neutral-600 hover:bg-neutral-100 transition-colors"
-          >
-            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
-        </div>
-      </div>
+  // Render nav item for sidebar (tablet)
+  const renderSidebarNavItem = (item: NavItem) => {
+    const isActive = location.pathname === item.href;
+    const Icon = item.icon;
 
-      {/* Sidebar */}
-      <aside
+    return (
+      <Link
+        key={item.href}
+        to={item.href}
         className={cn(
-          'fixed top-0 left-0 z-40 w-64 h-screen transition-transform bg-white border-r border-neutral-200',
-          'lg:translate-x-0',
-          mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+          "relative flex items-center gap-3 px-4 py-3 rounded-xl mx-2 transition-all duration-200 group",
+          isActive
+            ? "bg-teal/10 text-teal font-medium"
+            : "text-slate hover:bg-white/50 hover:text-ink"
         )}
       >
-        <div className="h-full px-3 py-4 overflow-y-auto">
-          <div className="mb-8 px-3">
-            <h1 className="text-2xl font-bold text-primary-600">
-              Fluxo de Caixa
-            </h1>
-            <p className="text-sm text-neutral-500">Pessoal</p>
+        {/* Active indicator */}
+        {isActive && (
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-teal rounded-r-full" />
+        )}
+
+        <Icon
+          size={20}
+          strokeWidth={isActive ? 2.5 : 2}
+          className="transition-transform group-active:scale-95 flex-shrink-0"
+        />
+
+        <span className={cn(
+          "text-sm transition-all whitespace-nowrap",
+          isActive ? "opacity-100" : "opacity-80"
+        )}>
+          {t(item.name)}
+        </span>
+      </Link>
+    );
+  };
+
+  // Render nav item for top bar (desktop)
+  const renderTopNavItem = (item: NavItem) => {
+    const isActive = location.pathname === item.href;
+    const Icon = item.icon;
+
+    return (
+      <Link
+        key={item.href}
+        to={item.href}
+        className={cn(
+          "relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200",
+          isActive
+            ? "bg-teal/10 text-teal"
+            : "text-slate hover:bg-white/50 hover:text-ink"
+        )}
+      >
+        <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
+        <span>{t(item.name)}</span>
+
+        {/* Active indicator bar */}
+        {isActive && (
+          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[calc(50%+0.5rem)] w-8 h-1 bg-teal rounded-full" />
+        )}
+      </Link>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-mist text-ink font-sans">
+      {/* ============================================
+          MOBILE HEADER (sm-)
+          ============================================ */}
+      <header className="sm:hidden sticky top-0 z-sticky bg-mist/80 backdrop-blur-lg px-3 py-2.5 flex justify-between items-center border-b border-white/30" style={{ height: 'var(--header-height)' }}>
+        <div className="flex flex-col">
+          <h1 className="text-sm font-semibold text-ink tracking-tight">Assist</h1>
+        </div>
+
+        {/* Profile / Actions */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleLogout}
+            className="p-1.5 rounded-full text-slate hover:bg-slate/5 hover:text-ink transition-colors touch-target"
+            title={t('nav.logout')}
+          >
+            <LogOut size={16} />
+          </button>
+
+          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-teal/20 to-blue/20 flex items-center justify-center border border-white/50 text-[10px] font-bold text-teal">
+            {user?.displayName?.[0] || user?.email?.[0] || 'U'}
           </div>
+        </div>
+      </header>
 
-          <nav className="space-y-1">
-            {navigation.map((item) => {
-              const Icon = item.icon;
-              const isActive = location.pathname === item.href;
+      {/* ============================================
+          TABLET SIDEBAR (sm to lg)
+          ============================================ */}
+      <aside className="hidden sm:flex lg:hidden flex-col fixed left-0 top-0 h-full w-56 bg-white/70 backdrop-blur-xl border-r border-white/40 shadow-glass z-sticky animate-slide-in-left">
+        {/* Brand Header */}
+        <div className="px-5 py-5 border-b border-white/30">
+          <h1 className="text-lg font-bold text-ink tracking-tight">Assist</h1>
+          <p className="text-xs text-slate mt-0.5">{t('app.subtitle', 'Fluxo de Caixa Pessoal')}</p>
+        </div>
 
-              return (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={cn(
-                    'flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200',
-                    isActive
-                      ? 'bg-primary-50 text-primary-700 shadow-sm'
-                      : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900'
-                  )}
-                >
-                  <Icon className={cn(
-                    'mr-3 h-5 w-5 transition-colors',
-                    isActive ? 'text-primary-600' : 'text-neutral-400'
-                  )} />
-                  {item.name}
-                </Link>
-              );
-            })}
-          </nav>
+        {/* Navigation Links */}
+        <nav className="flex-1 py-4 space-y-1 overflow-y-auto">
+          {navItems.map(renderSidebarNavItem)}
+        </nav>
 
-          <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-neutral-200 bg-white">
-            <div className="flex items-center mb-3 px-3">
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-neutral-900 truncate">
-                  {user?.displayName || user?.email}
-                </p>
-              </div>
+
+
+        {/* User Section */}
+        <div className="px-3 py-4 border-t border-white/30">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-teal/20 to-blue/20 flex items-center justify-center border border-white/50 text-sm font-bold text-teal flex-shrink-0">
+              {user?.displayName?.[0] || user?.email?.[0] || 'U'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-ink truncate">
+                {user?.displayName || user?.email?.split('@')[0] || 'Usuário'}
+              </p>
             </div>
             <button
               onClick={handleLogout}
-              className="flex w-full items-center px-3 py-2 text-sm font-medium text-danger-600 rounded-lg hover:bg-danger-50 transition-colors"
+              className="p-2 rounded-full text-slate hover:bg-rose/10 hover:text-rose transition-colors flex-shrink-0"
+              title={t('nav.logout')}
             >
-              <LogOut className="mr-3 h-5 w-5" />
-              {t('nav.logout')}
+              <LogOut size={18} />
             </button>
           </div>
         </div>
       </aside>
 
-      {/* Main content */}
-      <main className="lg:ml-64 pt-16 lg:pt-0 min-h-screen">
-        <div className="p-4 lg:p-8">{children}</div>
+      {/* ============================================
+          DESKTOP TOP NAVIGATION (lg+)
+          ============================================ */}
+      <header className="hidden lg:block sticky top-0 z-sticky bg-white/70 backdrop-blur-xl border-b border-white/40 shadow-glass">
+        <div className="max-w-7xl mx-auto px-6 xl:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* Brand */}
+            <div className="flex items-center gap-8">
+              <Link to="/" className="flex items-center gap-2">
+                <h1 className="text-xl font-bold text-ink tracking-tight">Assist</h1>
+              </Link>
+
+              {/* Navigation Links */}
+              <nav className="flex items-center gap-1">
+                {navItems.map(renderTopNavItem)}
+              </nav>
+            </div>
+
+            {/* Right Side: Voice Hero + User */}
+            <div className="flex items-center gap-4">
+              {/* Voice Hero Button - Desktop Only - Far Right */}
+              {isVoiceEnabled && (
+                <div className="mr-2">
+                  <VoiceHeroButton />
+                </div>
+              )}
+
+              {/* User Menu */}
+              <div className="flex items-center gap-3 pl-4 border-l border-slate/10">
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl text-slate hover:bg-rose/10 hover:text-rose transition-colors text-sm"
+                  title={t('nav.logout')}
+                >
+                  <LogOut size={18} />
+                  <span className="hidden xl:inline">{t('nav.logout')}</span>
+                </button>
+
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal/20 to-blue/20 flex items-center justify-center border border-white/50 text-sm font-bold text-teal">
+                  {user?.displayName?.[0] || user?.email?.[0] || 'U'}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* ============================================
+          TABLET FLOATING HERO BUTTON (sm to lg)
+          ============================================ */}
+      {isVoiceEnabled && (
+        <div className="hidden sm:block lg:hidden fixed top-6 right-6 z-[100]">
+          <VoiceHeroButton />
+        </div>
+      )}
+
+      {/* ============================================
+          MAIN CONTENT AREA
+          ============================================ */}
+      <main className={cn(
+        "", // Mobile: no padding, page handles its own layout
+        "sm:pb-8 sm:pl-56", // Tablet: sidebar offset
+        "lg:pl-0" // Desktop: no sidebar offset
+      )}>
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-6 animate-fade-in h-full">
+          {children}
+        </div>
       </main>
 
-      {/* Mobile overlay */}
-      {mobileMenuOpen && (
-        <div
-          className="fixed inset-0 z-30 bg-neutral-900/50 backdrop-blur-sm lg:hidden animate-fade-in"
-          onClick={() => setMobileMenuOpen(false)}
-        />
-      )}
+      {/* ============================================
+          MOBILE BOTTOM DOCK (sm- only)
+          ============================================ */}
+      <VoiceDock />
     </div>
   );
 }

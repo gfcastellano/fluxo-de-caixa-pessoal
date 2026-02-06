@@ -3,822 +3,371 @@
 @tailwind utilities;
 
 /* ============================================
-   CSS CUSTOM PROPERTIES (Design Tokens)
+   RESPONSIVE CSS CUSTOM PROPERTIES
    ============================================ */
-
-:root {
-  /* ------------------------------------------
-     Color Palette - Primary (Blue)
-     ------------------------------------------ */
-  --color-primary-50: #eff6ff;
-  --color-primary-100: #dbeafe;
-  --color-primary-200: #bfdbfe;
-  --color-primary-300: #93c5fd;
-  --color-primary-400: #60a5fa;
-  --color-primary-500: #3b82f6;
-  --color-primary-600: #2563eb;
-  --color-primary-700: #1d4ed8;
-  --color-primary-800: #1e40af;
-  --color-primary-900: #1e3a8a;
-  --color-primary-950: #172554;
-
-  /* ------------------------------------------
-     Color Palette - Secondary (Indigo)
-     ------------------------------------------ */
-  --color-secondary-50: #eef2ff;
-  --color-secondary-100: #e0e7ff;
-  --color-secondary-200: #c7d2fe;
-  --color-secondary-300: #a5b4fc;
-  --color-secondary-400: #818cf8;
-  --color-secondary-500: #6366f1;
-  --color-secondary-600: #4f46e5;
-  --color-secondary-700: #4338ca;
-  --color-secondary-800: #3730a3;
-  --color-secondary-900: #312e81;
-  --color-secondary-950: #1e1b4b;
-
-  /* ------------------------------------------
-     Color Palette - Success (Emerald)
-     ------------------------------------------ */
-  --color-success-50: #ecfdf5;
-  --color-success-100: #d1fae5;
-  --color-success-200: #a7f3d0;
-  --color-success-300: #6ee7b7;
-  --color-success-400: #34d399;
-  --color-success-500: #10b981;
-  --color-success-600: #059669;
-  --color-success-700: #047857;
-  --color-success-800: #065f46;
-  --color-success-900: #064e3b;
-  --color-success-950: #022c22;
-
-  /* ------------------------------------------
-     Color Palette - Warning (Amber)
-     ------------------------------------------ */
-  --color-warning-50: #fffbeb;
-  --color-warning-100: #fef3c7;
-  --color-warning-200: #fde68a;
-  --color-warning-300: #fcd34d;
-  --color-warning-400: #fbbf24;
-  --color-warning-500: #f59e0b;
-  --color-warning-600: #d97706;
-  --color-warning-700: #b45309;
-  --color-warning-800: #92400e;
-  --color-warning-900: #78350f;
-  --color-warning-950: #451a03;
-
-  /* ------------------------------------------
-     Color Palette - Danger (Rose)
-     ------------------------------------------ */
-  --color-danger-50: #fff1f2;
-  --color-danger-100: #ffe4e6;
-  --color-danger-200: #fecdd3;
-  --color-danger-300: #fda4af;
-  --color-danger-400: #fb7185;
-  --color-danger-500: #f43f5e;
-  --color-danger-600: #e11d48;
-  --color-danger-700: #be123c;
-  --color-danger-800: #9f1239;
-  --color-danger-900: #881337;
-  --color-danger-950: #4c0519;
-
-  /* ------------------------------------------
-     Color Palette - Neutral (Slate)
-     ------------------------------------------ */
-  --color-neutral-50: #f8fafc;
-  --color-neutral-100: #f1f5f9;
-  --color-neutral-200: #e2e8f0;
-  --color-neutral-300: #cbd5e1;
-  --color-neutral-400: #94a3b8;
-  --color-neutral-500: #64748b;
-  --color-neutral-600: #475569;
-  --color-neutral-700: #334155;
-  --color-neutral-800: #1e293b;
-  --color-neutral-900: #0f172a;
-  --color-neutral-950: #020617;
-
-  /* ------------------------------------------
-     Finance-Specific Colors
-     ------------------------------------------ */
-  --color-income: #22c55e;
-  --color-income-light: #86efac;
-  --color-income-dark: #15803d;
-  --color-expense: #ef4444;
-  --color-expense-light: #fca5a5;
-  --color-expense-dark: #b91c1c;
-  --color-projected-balance: #f59e0b;
-  --color-projected-balance-light: #fcd34d;
-  --color-projected-balance-dark: #d97706;
-
-  /* ------------------------------------------
-     Typography
-     ------------------------------------------ */
-  --font-family-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-family-mono: 'JetBrains Mono', 'Fira Code', Consolas, Monaco, monospace;
-
-  --font-size-xs: 0.75rem;
-  --font-size-sm: 0.875rem;
-  --font-size-base: 1rem;
-  --font-size-lg: 1.125rem;
-  --font-size-xl: 1.25rem;
-  --font-size-2xl: 1.5rem;
-  --font-size-3xl: 1.875rem;
-  --font-size-4xl: 2.25rem;
-  --font-size-5xl: 3rem;
-  --font-size-6xl: 3.75rem;
-
-  --font-weight-thin: 100;
-  --font-weight-extralight: 200;
-  --font-weight-light: 300;
-  --font-weight-normal: 400;
-  --font-weight-medium: 500;
-  --font-weight-semibold: 600;
-  --font-weight-bold: 700;
-  --font-weight-extrabold: 800;
-  --font-weight-black: 900;
-
-  --line-height-none: 1;
-  --line-height-tight: 1.25;
-  --line-height-snug: 1.375;
-  --line-height-normal: 1.5;
-  --line-height-relaxed: 1.625;
-  --line-height-loose: 2;
-
-  /* ------------------------------------------
-     Spacing
-     ------------------------------------------ */
-  --spacing-0: 0;
-  --spacing-px: 1px;
-  --spacing-0-5: 0.125rem;
-  --spacing-1: 0.25rem;
-  --spacing-1-5: 0.375rem;
-  --spacing-2: 0.5rem;
-  --spacing-2-5: 0.625rem;
-  --spacing-3: 0.75rem;
-  --spacing-3-5: 0.875rem;
-  --spacing-4: 1rem;
-  --spacing-5: 1.25rem;
-  --spacing-6: 1.5rem;
-  --spacing-7: 1.75rem;
-  --spacing-8: 2rem;
-  --spacing-9: 2.25rem;
-  --spacing-10: 2.5rem;
-  --spacing-12: 3rem;
-  --spacing-14: 3.5rem;
-  --spacing-16: 4rem;
-  --spacing-20: 5rem;
-  --spacing-24: 6rem;
-  --spacing-32: 8rem;
-  --spacing-40: 10rem;
-  --spacing-48: 12rem;
-  --spacing-64: 16rem;
-
-  /* ------------------------------------------
-     Border Radius
-     ------------------------------------------ */
-  --radius-none: 0;
-  --radius-sm: 0.125rem;
-  --radius-default: 0.25rem;
-  --radius-md: 0.375rem;
-  --radius-lg: 0.5rem;
-  --radius-xl: 0.75rem;
-  --radius-2xl: 1rem;
-  --radius-3xl: 1.5rem;
-  --radius-full: 9999px;
-
-  /* ------------------------------------------
-     Shadows
-     ------------------------------------------ */
-  --shadow-none: none;
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-default: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
-  --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
-  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-  --shadow-card-hover: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --shadow-focus: 0 0 0 3px rgb(59 130 246 / 0.5);
-
-  /* ------------------------------------------
-     Transitions
-     ------------------------------------------ */
-  --transition-fast: 150ms;
-  --transition-normal: 200ms;
-  --transition-slow: 300ms;
-  --transition-slower: 500ms;
-
-  /* ------------------------------------------
-     Z-Index Scale
-     ------------------------------------------ */
-  --z-hide: -1;
-  --z-base: 0;
-  --z-docked: 10;
-  --z-dropdown: 1000;
-  --z-sticky: 1100;
-  --z-banner: 1200;
-  --z-overlay: 1300;
-  --z-modal: 1400;
-  --z-popover: 1500;
-  --z-skip-link: 1600;
-  --z-toast: 1700;
-  --z-tooltip: 1800;
-
-  /* ------------------------------------------
-     Base Theme Variables
-     ------------------------------------------ */
-  --color-background: var(--color-neutral-50);
-  --color-surface: #ffffff;
-  --color-surface-elevated: #ffffff;
-  --color-text-primary: var(--color-neutral-900);
-  --color-text-secondary: var(--color-neutral-600);
-  --color-text-muted: var(--color-neutral-500);
-  --color-border: var(--color-neutral-200);
-  --color-border-subtle: var(--color-neutral-100);
-}
-
-/* ============================================
-   DARK MODE SUPPORT (Future-proofing)
-   ============================================ */
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --color-background: var(--color-neutral-900);
-    --color-surface: var(--color-neutral-800);
-    --color-surface-elevated: var(--color-neutral-700);
-    --color-text-primary: var(--color-neutral-50);
-    --color-text-secondary: var(--color-neutral-400);
-    --color-text-muted: var(--color-neutral-500);
-    --color-border: var(--color-neutral-700);
-    --color-border-subtle: var(--color-neutral-800);
+    /* 
+      FLUID SPACING & TYPOGRAPHY SYSTEM
+      Uses clamp(min, preferred, max) to interpolate values smoothly 
+      between viewport widths of 320px (small mobile) and 1024px (desktop).
+    */
+
+    /* Spacing scale - Fluid */
+    --space-xs: clamp(0.125rem, 0.5vw, 0.25rem);
+    /* 2px -> 4px */
+    --space-sm: clamp(0.375rem, 1vw + 0.1rem, 0.5rem);
+    /* 6px -> 8px */
+    --space-md: clamp(0.625rem, 1.5vw + 0.2rem, 1rem);
+    /* 10px -> 16px */
+    --space-lg: clamp(1rem, 2vw + 0.5rem, 1.5rem);
+    /* 16px -> 24px */
+    --space-xl: clamp(1.5rem, 3vw + 0.5rem, 2.5rem);
+    /* 24px -> 40px */
+    --space-2xl: clamp(2rem, 4vw + 1rem, 4rem);
+    /* 32px -> 64px */
+
+    /* Typography scale - Fluid */
+    --text-xs: clamp(0.7rem, 0.8vw + 0.5rem, 0.8rem);
+    /* ~11px -> ~12.8px */
+    --text-sm: clamp(0.8rem, 0.9vw + 0.55rem, 0.925rem);
+    /* ~12.8px -> ~14.8px */
+    --text-base: clamp(0.9rem, 1vw + 0.6rem, 1rem);
+    /* ~14.4px -> ~16px */
+    --text-lg: clamp(1rem, 1.2vw + 0.7rem, 1.25rem);
+    /* ~16px -> ~20px */
+    --text-xl: clamp(1.25rem, 1.5vw + 0.8rem, 1.5rem);
+    /* ~20px -> ~24px */
+    --text-2xl: clamp(1.5rem, 2vw + 1rem, 1.875rem);
+    /* ~24px -> ~30px */
+    --text-3xl: clamp(1.75rem, 2.5vw + 1rem, 2.25rem);
+    /* ~28px -> ~36px */
+
+    /* Layout dimensions - Fluid */
+    --sidebar-width: 0px;
+    --header-height: clamp(3.5rem, 8vh, 4rem);
+    --dock-height: clamp(5rem, 12vh, 6rem);
+    --content-max-width: 100%;
+
+    /* Card Styling - Fluid */
+    --card-padding: clamp(0.75rem, 2vw + 0.25rem, 1.5rem);
+    --border-radius-card: clamp(0.75rem, 2vw, 1.5rem);
+  }
+
+  /* Desktop Adjustments (Fixed layout shifts) */
+  @media (min-width: 1024px) {
+    :root {
+      --sidebar-width: 16rem;
+      --header-height: 5rem;
+      --dock-height: 0px;
+      --content-max-width: 64rem;
+      --card-padding: 2rem;
+    }
+  }
+
+  /* Desktop (1024px+) */
+  @media (min-width: 1024px) {
+    :root {
+      --sidebar-width: 16rem;
+      --header-height: 5rem;
+      --dock-height: 0px;
+      --space-lg: 2rem;
+      --space-xl: 3rem;
+      --space-2xl: 4rem;
+      --text-lg: 1.25rem;
+      --text-xl: 1.5rem;
+      --text-2xl: 2rem;
+      --text-3xl: 2.5rem;
+      --content-max-width: 64rem;
+      --card-padding: 2rem;
+      --border-radius-card: 1.5rem;
+    }
+  }
+
+  /* Large Desktop (1280px+) */
+  @media (min-width: 1280px) {
+    :root {
+      --sidebar-width: 18rem;
+      --content-max-width: 80rem;
+    }
+  }
+
+  body {
+    @apply bg-mist text-ink antialiased;
+    /* Smooth scrolling & tap highlights */
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Hide scrollbar on mobile for cleaner look */
+  @media (max-width: 639px) {
+    body {
+      overflow-x: hidden;
+    }
   }
 }
 
 /* ============================================
-   BASE STYLES
+   RESPONSIVE COMPONENT UTILITIES
    ============================================ */
-
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-html {
-  font-family: var(--font-family-sans);
-  line-height: var(--line-height-normal);
-  font-weight: var(--font-weight-normal);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
-  scroll-behavior: smooth;
-}
-
-body {
-  margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
-  background-color: var(--color-background);
-  color: var(--color-text-primary);
-}
-
-#root {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-/* ============================================
-   TYPOGRAPHY
-   ============================================ */
-
-h1, h2, h3, h4, h5, h6 {
-  margin: 0;
-  font-weight: var(--font-weight-semibold);
-  line-height: var(--line-height-tight);
-  color: var(--color-text-primary);
-}
-
-h1 {
-  font-size: var(--font-size-4xl);
-  letter-spacing: -0.025em;
-}
-
-h2 {
-  font-size: var(--font-size-3xl);
-  letter-spacing: -0.025em;
-}
-
-h3 {
-  font-size: var(--font-size-2xl);
-}
-
-h4 {
-  font-size: var(--font-size-xl);
-}
-
-h5 {
-  font-size: var(--font-size-lg);
-}
-
-h6 {
-  font-size: var(--font-size-base);
-}
-
-p {
-  margin: 0;
-  color: var(--color-text-secondary);
-}
-
-a {
-  color: var(--color-primary-600);
-  text-decoration: none;
-  transition: color var(--transition-fast) ease;
-}
-
-a:hover {
-  color: var(--color-primary-700);
-  text-decoration: underline;
-}
-
-/* ============================================
-   FORM ELEMENTS
-   ============================================ */
-
-input,
-textarea,
-select,
-button {
-  font-family: inherit;
-  font-size: inherit;
-}
-
-/* Ensure all form elements have proper text color */
-input,
-textarea,
-select,
-option {
-  color: var(--color-neutral-900);
-}
-
-input::placeholder,
-textarea::placeholder {
-  color: var(--color-neutral-400);
-}
-
-/* Remove default focus styles - use Tailwind's focus utilities */
-input:focus,
-textarea:focus,
-select:focus,
-button:focus {
-  outline: none;
-}
-
-/* ============================================
-   SELECT/DROPDOWN STYLING - ENSURE READABLE TEXT
-   ============================================ */
-
-/* Force select elements to have dark text on light backgrounds */
-select,
-select option {
-  color: var(--color-neutral-900) !important;
-  background-color: #ffffff;
-}
-
-/* Ensure select elements in all contexts have proper contrast */
-select.form-select,
-.form-select,
-select[class*="select"],
-select.rounded-md {
-  color: var(--color-neutral-900) !important;
-  background-color: #ffffff;
-}
-
-/* Fix for browser-specific select styling issues */
-select:-webkit-autofill,
-select:-webkit-autofill:hover,
-select:-webkit-autofill:focus {
-  -webkit-text-fill-color: var(--color-neutral-900);
-}
-
-/* Ensure option elements are readable */
-option {
-  color: var(--color-neutral-900);
-  background-color: #ffffff;
-}
-
-/* Dark mode support for selects */
-@media (prefers-color-scheme: dark) {
-  select,
-  select option {
-    color: var(--color-neutral-900) !important;
-    background-color: #ffffff;
-  }
-}
-
-/* ============================================
-   SCROLLBAR STYLING
-   ============================================ */
-
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--color-neutral-100);
-  border-radius: var(--radius-full);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--color-neutral-300);
-  border-radius: var(--radius-full);
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-neutral-400);
-}
-
-/* Firefox */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-neutral-300) var(--color-neutral-100);
-}
-
-/* ============================================
-   SELECTION STYLING
-   ============================================ */
-
-::selection {
-  background-color: var(--color-primary-200);
-  color: var(--color-primary-900);
-}
-
-/* ============================================
-   FOCUS VISIBLE (Accessibility)
-   ============================================ */
-
-:focus-visible {
-  outline: 2px solid var(--color-primary-500);
-  outline-offset: 2px;
-}
-
-/* ============================================
-   UTILITY CLASSES
-   ============================================ */
-
-@layer utilities {
-  /* Text balance for better typography */
-  .text-balance {
-    text-wrap: balance;
-  }
-
-  /* Tabular numbers for financial data */
-  .tabular-nums {
-    font-variant-numeric: tabular-nums;
-  }
-
-  /* Prevent text selection */
-  .no-select {
-    user-select: none;
-  }
-
-  /* Smooth scroll */
-  .scroll-smooth {
-    scroll-behavior: smooth;
-  }
-
-  /* Hide scrollbar but keep functionality */
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
-  }
-
-  /* Gradient text */
-  .text-gradient-primary {
-    background: linear-gradient(135deg, var(--color-primary-600), var(--color-primary-800));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  /* Glass morphism */
-  .glass {
-    background: rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-  }
-
-  .glass-dark {
-    background: rgba(15, 23, 42, 0.8);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-  }
-
-  /* Aspect ratios */
-  .aspect-video {
-    aspect-ratio: 16 / 9;
-  }
-
-  .aspect-square {
-    aspect-ratio: 1 / 1;
-  }
-
-  /* Line clamp utilities */
-  .line-clamp-1 {
-    display: -webkit-box;
-    -webkit-line-clamp: 1;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  .line-clamp-2 {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  .line-clamp-3 {
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-}
-
-/* ============================================
-   COMPONENT LAYER
-   ============================================ */
-
 @layer components {
-  /* Button base styles */
-  .btn {
-    @apply inline-flex items-center justify-center rounded-md font-medium transition-all duration-200
-           focus:outline-none focus:ring-2 focus:ring-offset-2
-           disabled:opacity-50 disabled:pointer-events-none disabled:cursor-not-allowed
-           active:scale-[0.98];
+
+  /* Container with responsive max-width */
+  .container-responsive {
+    @apply w-full mx-auto px-4;
+    max-width: var(--content-max-width);
   }
 
+  @media (min-width: 640px) {
+    .container-responsive {
+      @apply px-6;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .container-responsive {
+      @apply px-8;
+    }
+  }
+
+  /* Glass card with responsive padding */
+  .card-glass {
+    @apply bg-white/55 backdrop-blur-glass border border-white/40 shadow-glass;
+    padding: var(--card-padding);
+    border-radius: var(--border-radius-card);
+  }
+
+  .card-glass-interactive {
+    @apply card-glass transition-all duration-300 hover:shadow-glass-hover hover:bg-white/65 active:scale-[0.98] cursor-pointer;
+  }
+
+  /* Responsive glass inputs */
+  .input-glass {
+    @apply bg-white/50 backdrop-blur-sm border border-slate/20 rounded-xl px-4 py-3 text-ink placeholder:text-slate/60 focus:outline-none focus:ring-2 focus:ring-teal/20 focus:border-teal transition-all;
+  }
+
+  @media (min-width: 1024px) {
+    .input-glass {
+      @apply px-5 py-3.5;
+    }
+  }
+
+  /* Responsive button sizes */
   .btn-primary {
-    @apply btn bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500 shadow-sm hover:shadow-md;
+    @apply bg-teal text-white font-medium px-6 py-3 rounded-xl shadow-lg shadow-teal/20 active:scale-95 transition-all hover:bg-teal-hover;
   }
 
-  .btn-secondary {
-    @apply btn bg-neutral-100 text-neutral-900 hover:bg-neutral-200 focus:ring-neutral-500 border border-neutral-200;
+  @media (min-width: 1024px) {
+    .btn-primary {
+      @apply px-8 py-3.5;
+    }
   }
 
-  .btn-outline {
-    @apply btn bg-transparent text-neutral-700 border-2 border-neutral-300
-           hover:bg-neutral-50 hover:border-neutral-400 focus:ring-neutral-400;
+  .btn-glass {
+    @apply bg-white/40 backdrop-blur-md border border-white/40 text-slate font-medium px-6 py-3 rounded-xl hover:bg-white/60 active:scale-95 transition-all;
   }
 
-  .btn-ghost {
-    @apply btn bg-transparent text-neutral-700 hover:bg-neutral-100 focus:ring-neutral-400;
+  /* Responsive grid layouts */
+  .grid-responsive-cards {
+    @apply grid grid-cols-1 gap-4;
   }
 
-  .btn-danger {
-    @apply btn bg-danger-600 text-white hover:bg-danger-700 focus:ring-danger-500 shadow-sm hover:shadow-md;
+  @media (min-width: 640px) {
+    .grid-responsive-cards {
+      @apply grid-cols-2 gap-5;
+    }
   }
 
-  .btn-success {
-    @apply btn bg-success-600 text-white hover:bg-success-700 focus:ring-success-500 shadow-sm hover:shadow-md;
+  @media (min-width: 1024px) {
+    .grid-responsive-cards {
+      @apply grid-cols-3 gap-6;
+    }
   }
 
-  /* Card styles */
-  .card {
-    @apply rounded-xl border border-neutral-200 bg-white shadow-sm transition-shadow duration-200;
+  @media (min-width: 1280px) {
+    .grid-responsive-cards {
+      @apply grid-cols-4;
+    }
   }
 
-  .card-hoverable {
-    @apply card hover:shadow-md hover:border-neutral-300;
+  /* Tablet sidebar navigation (sm to lg) */
+  .sidebar-nav {
+    @apply hidden sm:flex lg:hidden flex-col fixed left-0 top-0 h-full bg-white/70 backdrop-blur-xl border-r border-white/40 shadow-glass z-sticky;
+    width: 14rem;
   }
 
-  .card-interactive {
-    @apply card cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200;
+  /* Mobile bottom dock (sm-) */
+  .dock-nav {
+    @apply sm:hidden fixed bottom-0 left-0 right-0 z-docked p-3;
   }
 
-  /* Input styles */
-  .input {
-    @apply flex w-full rounded-lg border border-neutral-300 bg-white px-3 py-2
-           text-sm text-neutral-900 placeholder:text-neutral-400
-           transition-all duration-200
-           focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500
-           disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-neutral-50;
+  /* Main content area with responsive margins */
+  .main-content {
+    @apply min-h-screen;
   }
 
-  .input-error {
-    @apply input border-danger-500 focus:border-danger-500 focus:ring-danger-500/20;
+  /* Mobile: space for bottom dock */
+  @media (max-width: 639px) {
+    .main-content {
+      padding-bottom: 6rem;
+    }
   }
 
-  .input-success {
-    @apply input border-success-500 focus:border-success-500 focus:ring-success-500/20;
+  /* Tablet: offset for left sidebar */
+  @media (min-width: 640px) and (max-width: 1023px) {
+    .main-content {
+      padding-left: 14rem;
+      padding-bottom: 2rem;
+    }
   }
 
-  /* Form label */
-  .form-label {
-    @apply block text-sm font-medium text-neutral-700 mb-1.5;
+  /* Responsive table wrapper */
+  .table-responsive {
+    @apply w-full overflow-x-auto;
+    -webkit-overflow-scrolling: touch;
   }
 
-  /* Form helper text */
-  .form-helper {
-    @apply mt-1.5 text-xs text-neutral-500;
+  @media (min-width: 1024px) {
+    .table-responsive {
+      @apply overflow-visible;
+    }
   }
 
-  /* Form error text */
-  .form-error {
-    @apply mt-1.5 text-xs text-danger-600;
+  /* Touch-friendly targets for mobile */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
   }
 
-  /* Badge styles */
-  .badge {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors;
+  /* Responsive text utilities */
+  .text-responsive-title {
+    font-size: var(--text-2xl);
+    @apply font-bold leading-tight;
   }
 
-  .badge-default {
-    @apply badge bg-neutral-100 text-neutral-800;
+  @media (min-width: 640px) {
+    .text-responsive-title {
+      font-size: var(--text-3xl);
+    }
   }
 
-  .badge-primary {
-    @apply badge bg-primary-100 text-primary-800;
+  .text-responsive-subtitle {
+    font-size: var(--text-base);
+    @apply text-slate;
   }
 
-  .badge-success {
-    @apply badge bg-success-100 text-success-800;
+  @media (min-width: 640px) {
+    .text-responsive-subtitle {
+      font-size: var(--text-lg);
+    }
   }
 
-  .badge-warning {
-    @apply badge bg-warning-100 text-warning-800;
-  }
+  /* Hover states only on devices that support it */
+  @media (hover: hover) and (pointer: fine) {
+    .hover-lift {
+      @apply transition-transform duration-200;
+    }
 
-  .badge-danger {
-    @apply badge bg-danger-100 text-danger-800;
-  }
-
-  /* Alert styles */
-  .alert {
-    @apply relative w-full rounded-lg border p-4 flex items-start gap-3;
-  }
-
-  .alert-info {
-    @apply alert bg-primary-50 border-primary-200 text-primary-900;
-  }
-
-  .alert-success {
-    @apply alert bg-success-50 border-success-200 text-success-900;
-  }
-
-  .alert-warning {
-    @apply alert bg-warning-50 border-warning-200 text-warning-900;
-  }
-
-  .alert-error {
-    @apply alert bg-danger-50 border-danger-200 text-danger-900;
-  }
-
-  /* Table styles */
-  .table-wrapper {
-    @apply w-full overflow-x-auto rounded-lg border border-neutral-200;
-  }
-
-  .table {
-    @apply w-full text-sm text-left;
-  }
-
-  .table thead {
-    @apply bg-neutral-50 text-neutral-700 uppercase text-xs font-semibold;
-  }
-
-  .table th {
-    @apply px-4 py-3;
-  }
-
-  .table tbody {
-    @apply divide-y divide-neutral-200 bg-white;
-  }
-
-  .table tr {
-    @apply hover:bg-neutral-50/50 transition-colors;
-  }
-
-  .table td {
-    @apply px-4 py-3 text-neutral-900;
-  }
-
-  /* Modal styles */
-  .modal-overlay {
-    @apply fixed inset-0 z-modal bg-neutral-900/50 backdrop-blur-sm
-           flex items-center justify-center p-4 animate-fade-in;
-  }
-
-  .modal-container {
-    @apply relative w-full max-w-lg bg-white rounded-2xl shadow-2xl
-           animate-scale-in overflow-hidden;
-  }
-
-  .modal-header {
-    @apply flex items-center justify-between px-6 py-4 border-b border-neutral-100;
-  }
-
-  .modal-body {
-    @apply px-6 py-4;
-  }
-
-  .modal-footer {
-    @apply flex items-center justify-end gap-3 px-6 py-4
-           border-t border-neutral-100 bg-neutral-50/50;
-  }
-
-  /* Container styles */
-  .container-app {
-    @apply max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8;
-  }
-
-  /* Section spacing */
-  .section {
-    @apply py-8 sm:py-12;
-  }
-
-  /* Amount display (for financial data) */
-  .amount {
-    @apply font-semibold tabular-nums;
-  }
-
-  .amount-income {
-    @apply amount text-income;
-  }
-
-  .amount-expense {
-    @apply amount text-expense;
-  }
-
-  /* Status indicators */
-  .status-dot {
-    @apply w-2 h-2 rounded-full;
-  }
-
-  .status-dot-success {
-    @apply status-dot bg-success-500;
-  }
-
-  .status-dot-warning {
-    @apply status-dot bg-warning-500;
-  }
-
-  .status-dot-danger {
-    @apply status-dot bg-danger-500;
-  }
-
-  .status-dot-neutral {
-    @apply status-dot bg-neutral-400;
+    .hover-lift:hover {
+      @apply -translate-y-0.5;
+    }
   }
 }
 
 /* ============================================
    ANIMATIONS
    ============================================ */
+@layer utilities {
 
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
+  /* Fade in animation */
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out forwards;
   }
-  100% {
-    background-position: 200% 0;
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Scale in animation for modals */
+  .animate-scale-in {
+    animation: scaleIn 0.25s ease-out forwards;
+  }
+
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* Slide up animation for mobile sheets */
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out forwards;
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Slide in from left for desktop sidebar */
+  .animate-slide-in-left {
+    animation: slideInLeft 0.3s ease-out forwards;
+  }
+
+  @keyframes slideInLeft {
+    from {
+      opacity: 0;
+      transform: translateX(-100%);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
   }
 }
 
-.animate-shimmer {
-  background: linear-gradient(
-    90deg,
-    var(--color-neutral-200) 25%,
-    var(--color-neutral-100) 50%,
-    var(--color-neutral-200) 75%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 2s linear infinite;
+/* Custom Scrollbar for Mist theme */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
 
-/* ============================================
-   PRINT STYLES
-   ============================================ */
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
 
-@media print {
-  .no-print {
-    display: none !important;
-  }
+::-webkit-scrollbar-thumb {
+  @apply bg-slate/20 rounded-full;
+}
 
-  body {
-    background: white !important;
-    color: black !important;
-  }
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-slate/40;
+}
 
-  .card {
-    box-shadow: none !important;
-    border: 1px solid #ddd !important;
+/* Desktop: wider scrollbar */
+@media (min-width: 1024px) {
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
   }
 }

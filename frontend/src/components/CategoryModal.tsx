@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Mic, Square, Loader2, Check, AlertCircle } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent } from './Card';
-import { Button } from './Button';
+import { Mic, Square, Loader2, Check, AlertCircle, X } from 'lucide-react';
+import { BaseModal } from './BaseModal';
 import { Input } from './Input';
-import { useVoiceRecorder } from '../hooks/useVoiceRecorder';
+import { useVoiceForm } from '../hooks/useVoiceForm';
 import { sendVoiceCategoryUpdate } from '../services/voiceService';
 import type { Category } from '../types';
+import { cn } from '../utils/cn';
 
 interface CategoryModalProps {
   isOpen: boolean;
@@ -14,6 +14,7 @@ interface CategoryModalProps {
   category?: Category | null;
   onSave: (category: Partial<Category>) => void;
   userId: string;
+  autoStartRecording?: boolean;
 }
 
 const CATEGORY_COLORS = [
@@ -28,6 +29,7 @@ export function CategoryModal({
   category,
   onSave,
   userId,
+  autoStartRecording = false,
 }: CategoryModalProps) {
   const { t, i18n } = useTranslation();
   const isEditing = !!category;
@@ -38,11 +40,7 @@ export function CategoryModal({
     color: CATEGORY_COLORS[0],
   });
 
-  // Voice state
-  const { state: voiceState, error: voiceError, startRecording, stopRecording, reset: resetVoice } = useVoiceRecorder();
-  const [voiceFeedback, setVoiceFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [isProcessingVoice, setIsProcessingVoice] = useState(false);
-  const [hasVoiceData, setHasVoiceData] = useState(false);
+  const voice = useVoiceForm({ autoStartRecording });
 
   useEffect(() => {
     if (category) {
@@ -58,215 +56,206 @@ export function CategoryModal({
         color: CATEGORY_COLORS[0],
       });
     }
-    setVoiceFeedback(null);
-    setHasVoiceData(false);
+    voice.resetVoice();
   }, [category, isOpen]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Ensure type is valid
+    let validType = formData.type;
+    const lowerType = String(formData.type).toLowerCase();
+
+    if (lowerType === 'receita' || lowerType === 'income' || lowerType === 'entrada') {
+      validType = 'income';
+    } else {
+      // Default to expense for safety, or if it's explicitly expense/despesa
+      validType = 'expense';
+    }
+
     onSave({
       ...formData,
+      type: validType,
       userId,
     });
   };
 
   const handleVoiceInput = useCallback(async () => {
-    if (voiceState === 'recording') {
-      const audioBlob = await stopRecording();
+    if (voice.voiceState === 'recording') {
+      const audioBlob = await voice.stopRecording();
 
       if (audioBlob) {
-        setIsProcessingVoice(true);
+        voice.setProcessing(true);
 
         try {
-          // Send audio to backend for processing
+          // Use update mode if editing OR if we already have voice data (second voice input)
           const result = await sendVoiceCategoryUpdate(
             audioBlob,
             i18n.language,
             formData,
-            isEditing
+            isEditing || voice.hasVoiceData  // Second audio = update mode
           );
 
           if (result.success && result.data) {
-            // Apply parsed updates to form
+            // Normalize data received from voice
+            const normalizedData = { ...result.data };
+
+            if (normalizedData.type) {
+              const t = String(normalizedData.type).toLowerCase();
+              if (t.includes('receita') || t.includes('income')) {
+                normalizedData.type = 'income';
+              } else if (t.includes('despesa') || t.includes('expense') || t.includes('gasto')) {
+                normalizedData.type = 'expense';
+              }
+            }
+
             setFormData(prev => ({
               ...prev,
-              ...result.data,
+              ...normalizedData,
             }));
-            setHasVoiceData(true);
-
-            setVoiceFeedback({
-              type: 'success',
-              message: result.message || t('voice.updateSuccess') || 'Category information extracted from voice',
-            });
+            voice.setVoiceDataReceived();
+            voice.showFeedback('success', result.message || t('voice.updateSuccess') || 'Category information extracted from voice');
           } else {
-            setVoiceFeedback({
-              type: 'error',
-              message: result.error || t('voice.error') || 'Could not understand. Please try again.',
-            });
+            voice.showFeedback('error', result.error || t('voice.error') || 'Could not understand. Please try again.');
           }
-
-          setTimeout(() => {
-            setVoiceFeedback(null);
-            resetVoice();
-          }, 3000);
         } catch (error) {
           console.error('Voice processing error:', error);
-          setVoiceFeedback({
-            type: 'error',
-            message: t('voice.error') || 'Could not understand. Please try again.',
-          });
-
-          setTimeout(() => {
-            setVoiceFeedback(null);
-            resetVoice();
-          }, 5000);
+          voice.showFeedback('error', t('voice.error') || 'Could not understand. Please try again.');
         } finally {
-          setIsProcessingVoice(false);
+          voice.setProcessing(false);
         }
       }
-    } else if (voiceState === 'idle' || voiceState === 'error') {
-      setVoiceFeedback(null);
-      await startRecording();
+    } else if (voice.voiceState === 'idle' || voice.voiceState === 'error') {
+      voice.clearFeedback();
+      await voice.startRecording();
     }
-  }, [voiceState, stopRecording, startRecording, resetVoice, i18n.language, formData, isEditing, t]);
-
-  if (!isOpen) return null;
+  }, [voice, i18n.language, formData, isEditing, t]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-      <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>
-            {isEditing ? t('categories.editCategory') : t('categories.addNew')}
-          </CardTitle>
-          <button
-            onClick={onClose}
-            className="p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <Input
-              label={t('common.name')}
-              value={formData.name}
-              onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
-              }
-              required
+    <BaseModal
+      isOpen={isOpen}
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      title={isEditing ? t('categories.editCategory') : t('categories.addNew')}
+      hasVoiceData={voice.hasVoiceData}
+      isEditing={isEditing}
+      submitLabel={voice.hasVoiceData ? t('common.update') : (isEditing ? t('common.update') : t('common.create'))}
+      cancelLabel={t('common.cancel')}
+      isRecording={voice.voiceState === 'recording'}
+      onCancelRecording={voice.cancelRecording}
+    >
+      <Input
+        label={t('common.name')}
+        value={formData.name}
+        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+        required
+      />
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          {t('common.type')}
+        </label>
+        <select
+          value={formData.type}
+          onChange={(e) => setFormData({
+            ...formData,
+            type: e.target.value as 'income' | 'expense',
+          })}
+          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+        >
+          <option value="expense" className="text-neutral-900">{t('common.expense')}</option>
+          <option value="income" className="text-neutral-900">{t('common.income')}</option>
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          {t('categories.form.color')}
+        </label>
+        <div className="flex flex-wrap gap-2">
+          {CATEGORY_COLORS.map((color) => (
+            <button
+              key={color}
+              type="button"
+              onClick={() => setFormData({ ...formData, color })}
+              className={`w-8 h-8 rounded-full border-2 ${formData.color === color
+                ? 'border-gray-900'
+                : 'border-transparent'
+                }`}
+              style={{ backgroundColor: color }}
             />
+          ))}
+        </div>
+      </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t('common.type')}
-              </label>
-              <select
-                value={formData.type}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    type: e.target.value as 'income' | 'expense',
-                  })
-                }
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+      {/* Voice Input Section */}
+      <div className="border-t border-slate/10 pt-4 mt-4">
+        <label className="block text-sm font-medium text-ink mb-3">
+          {(voice.hasVoiceData || isEditing) ? t('voice.updateByVoice') : t('voice.addByVoice')}
+        </label>
+        <div className="flex flex-col gap-3">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleVoiceInput}
+              disabled={voice.voiceState === 'processing' || voice.isProcessingVoice}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-2 h-14 rounded-full font-medium transition-all duration-300",
+                voice.voiceState === 'recording'
+                  ? 'bg-emerald text-white ring-4 ring-emerald/20 animate-pulse'
+                  : voice.voiceState === 'processing' || voice.isProcessingVoice
+                    ? 'bg-slate/10 text-slate cursor-wait'
+                    : 'bg-gradient-to-r from-teal to-teal-hover text-white shadow-lg shadow-teal/20 hover:shadow-teal/30 hover:scale-[1.02]'
+              )}
+            >
+              {voice.voiceState === 'recording' ? (
+                <>
+                  <Square className="h-5 w-5" />
+                  <span>{t('voice.stopRecording')}</span>
+                </>
+              ) : voice.voiceState === 'processing' || voice.isProcessingVoice ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span>{t('voice.processing')}</span>
+                </>
+              ) : (
+                <>
+                  <Mic className="h-5 w-5" />
+                  <span>{(voice.hasVoiceData || isEditing) ? t('voice.updateByVoice') : t('voice.addByVoice')}</span>
+                </>
+              )}
+            </button>
+
+            {voice.voiceState === 'recording' && (
+              <button
+                type="button"
+                onClick={voice.cancelRecording}
+                className="h-14 w-14 flex items-center justify-center rounded-full bg-rose/10 text-rose hover:bg-rose/20 transition-all duration-200 border-2 border-rose/20 shadow-lg shadow-rose/10"
+                title={t('common.cancel')}
               >
-                <option value="expense" className="text-neutral-900">{t('common.expense')}</option>
-                <option value="income" className="text-neutral-900">{t('common.income')}</option>
-              </select>
-            </div>
+                <X className="h-5 w-5" />
+              </button>
+            )}
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                {t('categories.form.color')}
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {CATEGORY_COLORS.map((color) => (
-                  <button
-                    key={color}
-                    type="button"
-                    onClick={() => setFormData({ ...formData, color })}
-                    className={`w-8 h-8 rounded-full border-2 ${
-                      formData.color === color
-                        ? 'border-gray-900'
-                        : 'border-transparent'
-                    }`}
-                    style={{ backgroundColor: color }}
-                  />
-                ))}
-              </div>
+          {voice.voiceFeedback && (
+            <div className={`flex items-center gap-2 text-sm px-3 py-2 rounded-md ${voice.voiceFeedback.type === 'success'
+              ? 'bg-green-50 text-green-700 border border-green-200'
+              : 'bg-red-50 text-red-700 border border-red-200'
+              }`}>
+              {voice.voiceFeedback.type === 'success' ? (
+                <Check className="h-4 w-4 flex-shrink-0" />
+              ) : (
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+              )}
+              <span>{voice.voiceFeedback.message}</span>
             </div>
-
-            {/* Voice Input Section */}
-            <div className="border-t border-gray-200 pt-4 mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                {t('voice.addByVoice')}
-              </label>
-              <div className="flex flex-col gap-3">
-                <button
-                  type="button"
-                  onClick={handleVoiceInput}
-                  disabled={voiceState === 'processing' || isProcessingVoice}
-                  className={`
-                    flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium
-                    transition-all duration-200 ease-in-out
-                    ${voiceState === 'recording'
-                      ? 'bg-red-500 hover:bg-red-600 text-white ring-4 ring-red-200 animate-pulse'
-                      : voiceState === 'processing' || isProcessingVoice
-                        ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
-                        : 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-md hover:shadow-lg transform hover:-translate-y-0.5'
-                    }
-                  `}
-                >
-                  {voiceState === 'recording' ? (
-                    <>
-                      <Square className="h-5 w-5" />
-                      <span>{t('voice.stopRecording')}</span>
-                    </>
-                  ) : voiceState === 'processing' || isProcessingVoice ? (
-                    <>
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                      <span>{t('voice.processing')}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Mic className="h-5 w-5" />
-                      <span>{t('voice.addByVoice')}</span>
-                    </>
-                  )}
-                </button>
-
-                {voiceFeedback && (
-                  <div className={`flex items-center gap-2 text-sm px-3 py-2 rounded-md ${
-                    voiceFeedback.type === 'success'
-                      ? 'bg-green-50 text-green-700 border border-green-200'
-                      : 'bg-red-50 text-red-700 border border-red-200'
-                  }`}>
-                    {voiceFeedback.type === 'success' ? (
-                      <Check className="h-4 w-4 flex-shrink-0" />
-                    ) : (
-                      <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                    )}
-                    <span>{voiceFeedback.message}</span>
-                  </div>
-                )}
-              </div>
-              <p className="text-xs text-gray-500 mt-3 italic">
-                {t('voice.categoryHint') || 'Diga algo como: "Criar categoria Alimentação do tipo despesa com cor verde"'}
-              </p>
-            </div>
-
-            <div className="flex flex-row gap-2 pt-4">
-              <Button type="submit" className="flex-1 sm:flex-none whitespace-nowrap" leftIcon={<Check className="h-4 w-4 flex-shrink-0" />}>
-                {hasVoiceData ? t('common.update') : (isEditing ? t('common.update') : t('common.create'))}
-              </Button>
-              <Button type="button" variant="secondary" onClick={onClose} className="flex-1 sm:flex-none whitespace-nowrap" leftIcon={<X className="h-4 w-4 flex-shrink-0" />}>
-                {t('common.cancel')}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+          )}
+        </div>
+        <p className="text-xs text-gray-500 mt-3 italic">
+          {t('voice.categoryHint') || 'Diga algo como: "Criar categoria Alimentação do tipo despesa com cor verde"'}
+        </p>
+      </div>
+    </BaseModal>
   );
 }

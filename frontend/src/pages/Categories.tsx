@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
+import { useVoice } from '../context/VoiceContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/Card';
-import { Button } from '../components/Button';
 import { CategoryModal } from '../components/CategoryModal';
 import {
   getCategories,
@@ -12,7 +12,8 @@ import {
 } from '../services/categoryService';
 import { getTranslatedCategoryName } from '../utils/categoryTranslations';
 import type { Category } from '../types';
-import { Plus, Edit2, Trash2, TrendingUp, TrendingDown, Tag } from 'lucide-react';
+import { Edit2, Trash2, TrendingUp, TrendingDown, Tag } from 'lucide-react';
+import { cn } from '../utils/cn';
 
 export function Categories() {
   const { user } = useAuth();
@@ -21,12 +22,28 @@ export function Categories() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [autoRecordOnOpen, setAutoRecordOnOpen] = useState(false);
+
+  /* New state for highlighting */
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+
+  // Access voice context for Hero button modal trigger
+  const { shouldOpenModal, shouldAutoRecord, clearModalRequest } = useVoice();
 
   useEffect(() => {
     if (user) {
       loadCategories();
     }
   }, [user]);
+
+  // Listen for Hero button click to open add modal
+  useEffect(() => {
+    if (shouldOpenModal) {
+      setAutoRecordOnOpen(shouldAutoRecord);
+      handleOpenModal();
+      clearModalRequest();
+    }
+  }, [shouldOpenModal, shouldAutoRecord, clearModalRequest]);
 
   const loadCategories = async () => {
     setLoading(true);
@@ -53,7 +70,11 @@ export function Categories() {
           type: categoryData.type || 'expense',
           color: categoryData.color || '#ef4444',
         };
-        await createCategory(user.uid, newCategory);
+        const created = await createCategory(user.uid, newCategory);
+
+        // Highlight the new item for 5 seconds
+        setHighlightedId(created.id);
+        setTimeout(() => setHighlightedId(null), 5000);
       }
       await loadCategories();
       handleCloseModal();
@@ -80,6 +101,7 @@ export function Categories() {
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
+    setAutoRecordOnOpen(false);
     setEditingCategory(null);
   };
 
@@ -96,15 +118,10 @@ export function Categories() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-neutral-900">{t('categories.title')}</h1>
-          <p className="text-neutral-500 mt-1">Manage your income and expense categories</p>
-        </div>
-        <Button onClick={() => handleOpenModal()} leftIcon={<Plus className="h-4 w-4 flex-shrink-0" />} className="w-full sm:w-auto">
-          {t('categories.addNew')}
-        </Button>
+      {/* Header - no add button, Hero handles it */}
+      <div className="flex flex-col gap-2">
+        <h1 className="text-3xl font-bold text-neutral-900">{t('categories.title')}</h1>
+        <p className="text-neutral-500">Manage your income and expense categories</p>
       </div>
 
       <CategoryModal
@@ -113,6 +130,7 @@ export function Categories() {
         category={editingCategory}
         onSave={handleSave}
         userId={user?.uid || ''}
+        autoStartRecording={autoRecordOnOpen}
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -142,7 +160,12 @@ export function Categories() {
                 {incomeCategories.map((category) => (
                   <div
                     key={category.id}
-                    className="flex items-center justify-between p-3 bg-neutral-50 rounded-xl hover:bg-neutral-100 transition-colors group"
+                    className={cn(
+                      "flex items-center justify-between p-3 rounded-xl transition-all duration-1000 group",
+                      highlightedId === category.id
+                        ? "animate-highlight shadow-lg scale-[1.02]"
+                        : "bg-neutral-50 hover:bg-neutral-100"
+                    )}
                   >
                     <div className="flex items-center gap-3">
                       <div
@@ -198,7 +221,12 @@ export function Categories() {
                 {expenseCategories.map((category) => (
                   <div
                     key={category.id}
-                    className="flex items-center justify-between p-3 bg-neutral-50 rounded-xl hover:bg-neutral-100 transition-colors group"
+                    className={cn(
+                      "flex items-center justify-between p-3 rounded-xl transition-all duration-1000 group",
+                      highlightedId === category.id
+                        ? "animate-highlight shadow-lg scale-[1.02]"
+                        : "bg-neutral-50 hover:bg-neutral-100"
+                    )}
                   >
                     <div className="flex items-center gap-3">
                       <div

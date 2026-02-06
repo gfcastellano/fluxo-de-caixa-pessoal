@@ -285,7 +285,7 @@ export const esTranslations = {
   voice: {
     addByVoice: 'Añadir por Voz',
     startRecording: 'Toca para grabar',
-    stopRecording: 'Toca para detener',
+    stopRecording: 'Enviar Audio',
     processing: 'Procesando...',
     success: 'Transacción añadida con éxito',
     error: 'No pude entender. Inténtalo de nuevo.',

@@ -22,46 +22,46 @@ app.use('*', authMiddleware);
  */
 app.post('/transactions/update', async (c) => {
   let language = 'en';
-  
+
   try {
     const userId = c.get('userId');
-    
+
     const formData = await c.req.formData();
     const audioFile = formData.get('audio') as File | null;
     language = (formData.get('language') as string) || 'en';
     const transactionId = formData.get('transactionId') as string;
     const currentTransactionStr = formData.get('currentTransaction') as string;
     const categoriesStr = formData.get('categories') as string;
-    
+
     if (!audioFile) {
       return c.json(
         { success: false, error: getErrorTranslation(language, 'noAudioFile') },
         400
       );
     }
-    
+
     if (!transactionId || !currentTransactionStr) {
       return c.json(
         { success: false, error: getErrorTranslation(language, 'processingFailed') },
         400
       );
     }
-    
+
     const audioBuffer = await audioFile.arrayBuffer();
-    
+
     if (audioBuffer.byteLength === 0) {
       return c.json(
         { success: false, error: getErrorTranslation(language, 'emptyAudio') },
         400
       );
     }
-    
+
     const currentTransaction = JSON.parse(currentTransactionStr) as Transaction;
     const categories = categoriesStr ? JSON.parse(categoriesStr) as Category[] : [];
-    
+
     const openai = new OpenAIService(c.env);
     const firebase = new FirebaseService(c.env);
-    
+
     // Step 1: Transcribe audio
     let transcription: string;
     try {
@@ -73,14 +73,14 @@ app.post('/transactions/update', async (c) => {
         500
       );
     }
-    
+
     if (!transcription || transcription.trim().length === 0) {
       return c.json(
         { success: false, error: getErrorTranslation(language, 'noSpeechDetected') },
         400
       );
     }
-    
+
     // Step 2: Get user's accounts for parsing
     let accounts: { id: string; name: string }[] = [];
     try {
@@ -89,7 +89,7 @@ app.post('/transactions/update', async (c) => {
     } catch (error) {
       // Continue without accounts - GPT will return empty accountId
     }
-    
+
     // Step 3: Parse the voice command for updates
     let updates: Partial<Transaction>;
     try {
@@ -103,33 +103,155 @@ app.post('/transactions/update', async (c) => {
     } catch (error) {
       console.error('Parsing error:', error);
       return c.json(
-        { 
-          success: false, 
+        {
+          success: false,
           error: getErrorTranslation(language, 'parsingFailed'),
-          transcription 
+          transcription
         },
         400
       );
     }
-    
+
     // Step 3: Apply updates to Firestore
     const now = new Date().toISOString();
     const updateData = {
       ...updates,
       updatedAt: now,
     };
-    
+
     await firebase.updateDocument('transactions', transactionId, updateData);
-    
+
     return c.json({
       success: true,
       data: updates,
       transcription,
       message: getSuccessTranslation(language, 'transactionUpdated'),
     }, 200);
-    
+
   } catch (error) {
     console.error('Voice transaction update error:', error);
+    return c.json(
+      { success: false, error: getErrorTranslation(language, 'processingFailed') },
+      500
+    );
+  }
+});
+
+/**
+ * POST /api/voice/transactions/update-pending
+ * Update a PENDING transaction (not yet created) from voice input
+ * This is used when the user sends a second audio to modify form data
+ * before clicking "Create". Unlike /transactions/update, this does NOT
+ * persist to Firestore - it just returns the updated data.
+ * 
+ * Expects multipart/form-data with:
+ * - audio: audio file (webm/opus)
+ * - language: language code (e.g., 'pt', 'en', 'es')
+ * - currentTransaction: JSON string of current form data
+ * - categories: JSON string of available categories
+ */
+app.post('/transactions/update-pending', async (c) => {
+  let language = 'en';
+
+  try {
+    const userId = c.get('userId');
+
+    const formData = await c.req.formData();
+    const audioFile = formData.get('audio') as File | null;
+    language = (formData.get('language') as string) || 'en';
+    const currentTransactionStr = formData.get('currentTransaction') as string;
+    const categoriesStr = formData.get('categories') as string;
+
+    if (!audioFile) {
+      return c.json(
+        { success: false, error: getErrorTranslation(language, 'noAudioFile') },
+        400
+      );
+    }
+
+    if (!currentTransactionStr) {
+      return c.json(
+        { success: false, error: getErrorTranslation(language, 'processingFailed') },
+        400
+      );
+    }
+
+    const audioBuffer = await audioFile.arrayBuffer();
+
+    if (audioBuffer.byteLength === 0) {
+      return c.json(
+        { success: false, error: getErrorTranslation(language, 'emptyAudio') },
+        400
+      );
+    }
+
+    const currentTransaction = JSON.parse(currentTransactionStr) as Transaction;
+    const categories = categoriesStr ? JSON.parse(categoriesStr) as Category[] : [];
+
+    const openai = new OpenAIService(c.env);
+    const firebase = new FirebaseService(c.env);
+
+    // Step 1: Transcribe audio
+    let transcription: string;
+    try {
+      transcription = await openai.transcribeAudio(audioBuffer, language);
+    } catch (error) {
+      console.error('Transcription error:', error);
+      return c.json(
+        { success: false, error: getErrorTranslation(language, 'transcriptionFailed') },
+        500
+      );
+    }
+
+    if (!transcription || transcription.trim().length === 0) {
+      return c.json(
+        { success: false, error: getErrorTranslation(language, 'noSpeechDetected') },
+        400
+      );
+    }
+
+    // Step 2: Get user's accounts for parsing
+    let accounts: { id: string; name: string }[] = [];
+    try {
+      const accountsData = await firebase.getDocuments('accounts', userId);
+      accounts = (accountsData as { id: string; name: string }[]).map(acc => ({ id: acc.id, name: acc.name }));
+    } catch (error) {
+      // Continue without accounts - GPT will return empty accountId
+    }
+
+    // Step 3: Parse the voice command for updates
+    let updates: Partial<Transaction>;
+    try {
+      updates = await openai.parseTransactionUpdate(
+        transcription,
+        currentTransaction,
+        categories,
+        language,
+        accounts
+      );
+    } catch (error) {
+      console.error('Parsing error:', error);
+      return c.json(
+        {
+          success: false,
+          error: getErrorTranslation(language, 'parsingFailed'),
+          transcription
+        },
+        400
+      );
+    }
+
+    // Step 4: Return updates WITHOUT persisting to Firestore
+    // The user will click "Create" to actually save the transaction
+    return c.json({
+      success: true,
+      data: updates,
+      transcription,
+      message: getSuccessTranslation(language, 'transactionUpdated'),
+    }, 200);
+
+  } catch (error) {
+    console.error('Voice pending transaction update error:', error);
     return c.json(
       { success: false, error: getErrorTranslation(language, 'processingFailed') },
       500
@@ -147,7 +269,7 @@ app.post('/transactions/update', async (c) => {
 app.post('/transactions', async (c) => {
   try {
     const userId = c.get('userId');
-    
+
     // Parse multipart form data
     const formData = await c.req.formData();
     const audioFile = formData.get('audio') as File | null;
@@ -222,17 +344,17 @@ app.post('/transactions', async (c) => {
       recurrenceDay?: number | null;
       recurrenceEndDate?: string | null;
     };
-    
+
     try {
       const defaultDescription = getDefaultTranslation(language, 'description');
       parsedTransaction = await openai.parseTransaction(transcription, categories, language, defaultDescription, accounts);
     } catch (error) {
       console.error('Parsing error:', error);
       return c.json(
-        { 
-          success: false, 
+        {
+          success: false,
           error: getErrorTranslation(language, 'parsingFailed'),
-          transcription 
+          transcription
         },
         400
       );
@@ -274,7 +396,7 @@ app.post('/transactions', async (c) => {
 app.post('/categories', async (c) => {
   try {
     const userId = c.get('userId');
-    
+
     // Parse multipart form data
     const formData = await c.req.formData();
     const audioFile = formData.get('audio') as File | null;
@@ -325,7 +447,7 @@ app.post('/categories', async (c) => {
       type: 'income' | 'expense';
       color: string;
     };
-    
+
     try {
       parsedCategory = await openai.parseCategory(transcription, language);
     } catch (error) {
@@ -377,10 +499,10 @@ app.post('/categories', async (c) => {
  */
 app.post('/budgets', async (c) => {
   let language = 'en';
-  
+
   try {
     const userId = c.get('userId');
-    
+
     // Parse multipart form data
     const formData = await c.req.formData();
     const audioFile = formData.get('audio') as File | null;
@@ -409,7 +531,7 @@ app.post('/budgets', async (c) => {
 
     // Parse categories if provided
     const categories = categoriesStr ? JSON.parse(categoriesStr) as Category[] : [];
-    
+
     // Parse current budget if editing
     let currentBudget: Partial<Budget> | null = null;
     if (isEditing && currentBudgetStr) {
@@ -440,7 +562,7 @@ app.post('/budgets', async (c) => {
 
     // Step 2: Parse transcription based on mode (create or update)
     let parsedBudget: Partial<Budget> & { matchedCategory?: string | null };
-    
+
     if (isEditing && currentBudget) {
       // Update mode: Parse as partial update
       try {
@@ -466,7 +588,7 @@ app.post('/budgets', async (c) => {
       try {
         const result = await openai.parseBudget(transcription, categories, language);
         parsedBudget = result;
-        
+
         // Validate that a category was matched for new budgets
         if (!parsedBudget.categoryId || parsedBudget.categoryId === '') {
           return c.json(
@@ -502,8 +624,8 @@ app.post('/budgets', async (c) => {
       success: true,
       data: parsedBudget,
       transcription,
-      message: isEditing 
-        ? getSuccessTranslation(language, 'budgetUpdated') 
+      message: isEditing
+        ? getSuccessTranslation(language, 'budgetUpdated')
         : getSuccessTranslation(language, 'budgetCreated'),
     }, 200);
 
@@ -526,7 +648,7 @@ app.post('/budgets', async (c) => {
 app.post('/accounts', async (c) => {
   try {
     const userId = c.get('userId');
-    
+
     // Parse multipart form data
     const formData = await c.req.formData();
     const audioFile = formData.get('audio') as File | null;
@@ -579,7 +701,7 @@ app.post('/accounts', async (c) => {
       initialBalance: number;
       isDefault: boolean;
     };
-    
+
     try {
       parsedAccount = await openai.parseAccount(transcription, language);
     } catch (error) {

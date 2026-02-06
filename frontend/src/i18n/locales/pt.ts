@@ -1,4 +1,9 @@
 export const ptTranslations = {
+  // App
+  app: {
+    subtitle: 'Fluxo de Caixa Pessoal',
+  },
+
   // Navigation
   nav: {
     dashboard: 'Painel',
@@ -48,11 +53,15 @@ export const ptTranslations = {
     total: 'Total',
     balance: 'Saldo',
     period: 'Período',
+    month: 'Mês',
+    week: 'Semana',
     monthly: 'Mensal',
     yearly: 'Anual',
     weekly: 'Semanal',
     welcome: 'Bem-vindo',
     welcomeBack: 'Bem-vindo de volta',
+    selectColor: 'Selecionar cor',
+    customColor: 'Cor personalizada',
   },
 
   // Auth
@@ -226,6 +235,8 @@ export const ptTranslations = {
       name: 'Nome da Conta',
       currency: 'Moeda',
       initialBalance: 'Saldo Inicial',
+      balance: 'Saldo Atual',
+      color: 'Cor da Conta',
       setAsDefault: 'Definir como conta padrão',
     },
     errors: {
@@ -285,7 +296,7 @@ export const ptTranslations = {
   voice: {
     addByVoice: 'Adicionar por Voz',
     startRecording: 'Toque para gravar',
-    stopRecording: 'Toque para parar',
+    stopRecording: 'Enviar Áudio',
     processing: 'Processando...',
     success: 'Transação adicionada com sucesso',
     error: 'Não consegui entender. Tente novamente.',

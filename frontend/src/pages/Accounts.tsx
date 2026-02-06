@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
+import { usePageModal } from '../hooks/usePageModal';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/Card';
 import { Button } from '../components/Button';
 import { AccountModal } from '../components/AccountModal';
@@ -14,7 +15,8 @@ import {
 } from '../services/accountService';
 import { formatDate } from '../utils/format';
 import type { Account } from '../types';
-import { Plus, Edit2, Trash2, Star, Wallet } from 'lucide-react';
+import { Edit2, Trash2, Star, Wallet } from 'lucide-react';
+import { cn } from '../utils/cn';
 
 export function Accounts() {
   const { user } = useAuth();
@@ -22,8 +24,12 @@ export function Accounts() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [accountBalances, setAccountBalances] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+
+  /* New state for highlighting */
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+
+  // Use the new consolidated page modal hook
+  const modal = usePageModal<Account>();
 
   useEffect(() => {
     if (user) {
@@ -36,8 +42,7 @@ export function Accounts() {
     try {
       const data = await getAccounts(user!.uid);
       setAccounts(data);
-      
-      // Calculate balances for all accounts
+
       const balances: Record<string, number> = {};
       for (const account of data) {
         const calculatedBalance = await calculateAccountBalance(account.id, user!.uid);
@@ -55,8 +60,8 @@ export function Accounts() {
     if (!user) return;
 
     try {
-      if (editingAccount) {
-        await updateAccount(editingAccount.id, {
+      if (modal.editingItem) {
+        await updateAccount(modal.editingItem.id, {
           name: accountData.name,
           currency: accountData.currency,
           balance: accountData.balance,
@@ -64,7 +69,7 @@ export function Accounts() {
           color: accountData.color,
         });
       } else {
-        await createAccount({
+        const newAccount = await createAccount({
           userId: user.uid,
           name: accountData.name!,
           currency: accountData.currency!,
@@ -74,9 +79,13 @@ export function Accounts() {
           isDefault: accountData.isDefault || false,
           color: accountData.color,
         });
+
+        // Highlight logic
+        setHighlightedId(newAccount.id);
+        setTimeout(() => setHighlightedId(null), 5000);
       }
       await loadAccounts();
-      handleCloseModal();
+      modal.close();
     } catch (error) {
       console.error('Error saving account:', error);
     }
@@ -104,16 +113,6 @@ export function Accounts() {
     }
   };
 
-  const handleOpenModal = (account?: Account) => {
-    setEditingAccount(account || null);
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setEditingAccount(null);
-  };
-
   const formatCurrency = (amount: number, currency: string) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -131,19 +130,18 @@ export function Accounts() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      {/* Header - no add button, Hero handles it */}
+      <div className="flex items-center">
         <h1 className="text-2xl font-bold text-neutral-900">{t('accounts.title')}</h1>
-        <Button onClick={() => handleOpenModal()} className="w-full sm:w-auto whitespace-nowrap" leftIcon={<Plus className="h-4 w-4 flex-shrink-0" />}>
-          {t('accounts.addNew')}
-        </Button>
       </div>
 
       <AccountModal
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        account={editingAccount}
+        isOpen={modal.isOpen}
+        onClose={modal.close}
+        account={modal.editingItem}
         onSave={handleSave}
         userId={user?.uid || ''}
+        autoStartRecording={modal.autoStartRecording}
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -160,7 +158,14 @@ export function Accounts() {
           </div>
         ) : (
           accounts.map((account) => (
-            <Card key={account.id} className={account.isDefault ? 'ring-2 ring-primary-500' : ''}>
+            <Card
+              key={account.id}
+              className={cn(
+                "transition-all duration-1000",
+                account.isDefault ? 'ring-2 ring-primary-500' : '',
+                highlightedId === account.id ? "animate-highlight scale-[1.02]" : ""
+              )}
+            >
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2">
@@ -217,7 +222,7 @@ export function Accounts() {
                     type="button"
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleOpenModal(account)}
+                    onClick={() => modal.openEdit(account)}
                     leftIcon={<Edit2 className="h-3 w-3 flex-shrink-0" />}
                   >
                     {t('common.edit')}

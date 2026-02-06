@@ -122,7 +122,7 @@ export function Reports() {
       // If a specific account is selected, use that
       // Otherwise, if a currency is selected, we need to aggregate data from all accounts with that currency
       const accountId = selectedAccountId || undefined;
-      
+
       // Fetch summary and breakdown data
       const [summaryData, expenseData, incomeData] = await Promise.all([
         getMonthlySummary(user!.uid, year, month, accountId),
@@ -216,26 +216,26 @@ export function Reports() {
         setIncomeBreakdown(incomeData);
         setSummary(summaryData);
       }
-      
+
       // Fetch trend data - handle currency filtering by aggregating multiple account trends
       let trend: { month: string; income: number; expenses: number }[] = [];
-      
+
       if (selectedCurrency && !selectedAccountId) {
         // When currency is selected but no specific account, fetch trend for each account with that currency
         // and aggregate the results
         const accountsWithCurrency = accounts.filter(a => a.currency === selectedCurrency);
-        
+
         if (accountsWithCurrency.length > 0) {
           // Fetch trend data for each account
           const trendPromises = accountsWithCurrency.map(account =>
             getTrendData(user!.uid, year, 1, year, 12, account.id)
           );
-          
+
           const trendsPerAccount = await Promise.all(trendPromises);
-          
+
           // Aggregate trends by month
           const monthlyData = new Map<string, { income: number; expenses: number }>();
-          
+
           trendsPerAccount.forEach(accountTrend => {
             accountTrend.forEach(monthData => {
               const existing = monthlyData.get(monthData.month) || { income: 0, expenses: 0 };
@@ -245,7 +245,7 @@ export function Reports() {
               });
             });
           });
-          
+
           // Convert map to array and sort by month
           trend = Array.from(monthlyData.entries())
             .map(([month, data]) => ({
@@ -269,7 +269,7 @@ export function Reports() {
           accountId
         );
       }
-      
+
       // Calculate projected balance for each month
       // Get stored balance for the filtered accounts
       let accountsToCalculate = accounts;
@@ -279,7 +279,7 @@ export function Reports() {
         accountsToCalculate = accounts.filter(a => a.currency === selectedCurrency);
       }
       const storedBalance = accountsToCalculate.reduce((sum, account) => sum + account.balance, 0);
-      
+
       // Calculate cumulative projected balance for each month
       let runningBalance = storedBalance;
       const trendWithProjectedBalance = trend.map(monthData => {
@@ -290,7 +290,7 @@ export function Reports() {
           projectedBalance: runningBalance,
         };
       });
-      
+
       setTrendData(trendWithProjectedBalance);
     } catch (error) {
       console.error('Error loading report data:', error);
@@ -301,7 +301,7 @@ export function Reports() {
 
   const loadCalculatedBalance = async () => {
     if (!user) return;
-    
+
     try {
       // Get accounts to calculate stored balance
       let accountsToCalculate = accounts;
@@ -310,60 +310,60 @@ export function Reports() {
       } else if (selectedCurrency) {
         accountsToCalculate = accounts.filter(a => a.currency === selectedCurrency);
       }
-      
+
       // Calculate stored balance (sum of account balances)
       const storedBalance = accountsToCalculate.reduce((sum, account) => sum + account.balance, 0);
-      
+
       // Find the earliest balanceDate among the accounts we're calculating for
       // This is the date from which we need to start calculating monthly balances
       const balanceDates = accountsToCalculate
         .map(a => a.balanceDate)
         .filter((date): date is string => !!date);
-      
+
       // If no balance dates exist, use the earliest possible date
-      const earliestBalanceDate = balanceDates.length > 0 
+      const earliestBalanceDate = balanceDates.length > 0
         ? balanceDates.reduce((earliest, current) => current < earliest ? current : earliest)
         : '1970-01-01';
-      
+
       // Calculate the end date (last day of the current selected month)
       const currentMonthEndDate = `${year}-${String(month).padStart(2, '0')}-31`;
-      
+
       // Import getTransactions
       const { getTransactions } = await import('../services/transactionService');
-      
+
       // Fetch ALL transactions from balanceDate up to the end of the current month
       const transactions = await getTransactions(user.uid, {
         startDate: earliestBalanceDate,
         endDate: currentMonthEndDate,
         accountId: selectedAccountId || undefined,
       });
-      
+
       // If currency filter is applied (but not specific account), filter by account IDs
       let filteredTransactions = transactions;
       if (selectedCurrency && !selectedAccountId) {
         const accountIdsInCurrency = new Set(accountsToCalculate.map(a => a.id));
         filteredTransactions = transactions.filter(t => t.accountId && accountIdsInCurrency.has(t.accountId));
       }
-      
+
       // Group transactions by month and calculate net balance for each month
       const monthlyNetBalances = new Map<string, number>();
-      
+
       filteredTransactions.forEach(transaction => {
         const transactionDate = new Date(transaction.date);
         const monthKey = `${transactionDate.getFullYear()}-${String(transactionDate.getMonth() + 1).padStart(2, '0')}`;
-        
+
         const currentBalance = monthlyNetBalances.get(monthKey) || 0;
         const transactionAmount = transaction.type === 'income' ? transaction.amount : -transaction.amount;
         monthlyNetBalances.set(monthKey, currentBalance + transactionAmount);
       });
-      
+
       // Sum all monthly net balances
       const totalMonthlyNetBalance = Array.from(monthlyNetBalances.values())
         .reduce((sum, balance) => sum + balance, 0);
-      
+
       // Calculate: stored balance + sum of all monthly net balances
       const calculatedBalance = storedBalance + totalMonthlyNetBalance;
-      
+
       setCalculatedBalance(calculatedBalance);
     } catch (error) {
       console.error('Error loading calculated balance:', error);
@@ -372,7 +372,7 @@ export function Reports() {
 
   const loadTotalAccountBalance = async () => {
     if (!user) return;
-    
+
     try {
       // Get accounts to calculate based on filter
       let accountsToCalculate = accounts;
@@ -381,20 +381,20 @@ export function Reports() {
       } else if (selectedCurrency) {
         accountsToCalculate = accounts.filter(a => a.currency === selectedCurrency);
       }
-      
+
       // Calculate stored balance (sum of account balances)
       const storedBalance = accountsToCalculate.reduce((sum, account) => sum + account.balance, 0);
-      
+
       // Find the earliest balanceDate among the accounts we're calculating for
       const balanceDates = accountsToCalculate
         .map(a => a.balanceDate)
         .filter((date): date is string => !!date);
-      
+
       // If no balance dates exist, use the earliest possible date
-      const earliestBalanceDate = balanceDates.length > 0 
+      const earliestBalanceDate = balanceDates.length > 0
         ? balanceDates.reduce((earliest, current) => current < earliest ? current : earliest)
         : '1970-01-01';
-      
+
       // Calculate the end date (last day of the month BEFORE the current selected month)
       // This gives us the balance at the start of the current month
       let previousYear = year;
@@ -404,34 +404,34 @@ export function Reports() {
         previousYear = year - 1;
       }
       const previousMonthEndDate = `${previousYear}-${String(previousMonth).padStart(2, '0')}-31`;
-      
+
       // Import getTransactions
       const { getTransactions } = await import('../services/transactionService');
-      
+
       // Fetch ALL transactions from balanceDate up to the end of the previous month
       const transactions = await getTransactions(user.uid, {
         startDate: earliestBalanceDate,
         endDate: previousMonthEndDate,
         accountId: selectedAccountId || undefined,
       });
-      
+
       // If currency filter is applied (but not specific account), filter by account IDs
       let filteredTransactions = transactions;
       if (selectedCurrency && !selectedAccountId) {
         const accountIdsInCurrency = new Set(accountsToCalculate.map(a => a.id));
         filteredTransactions = transactions.filter(t => t.accountId && accountIdsInCurrency.has(t.accountId));
       }
-      
+
       // Calculate total net balance from all transactions up to end of previous month
       const totalNetBalance = filteredTransactions.reduce((sum, transaction) => {
         const transactionAmount = transaction.type === 'income' ? transaction.amount : -transaction.amount;
         return sum + transactionAmount;
       }, 0);
-      
+
       // Calculate: stored balance + sum of all net balances up to previous month
       // This gives us the balance at the START of the current month
       const monthStartBalance = storedBalance + totalNetBalance;
-      
+
       setTotalAccountBalance(monthStartBalance);
     } catch (error) {
       console.error('Error loading total account balance:', error);
@@ -485,19 +485,19 @@ export function Reports() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal"></div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 px-4 py-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl font-bold text-gray-900">{t('reports.title')}</h1>
+        <h1 className="text-2xl font-bold text-ink">{t('reports.title')}</h1>
         <div className="flex flex-wrap gap-2">
           {/* Currency Filter Toggle Buttons */}
           {availableCurrencies.length > 0 && (
-            <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-md">
+            <div className="flex items-center gap-1 bg-white/50 backdrop-blur-sm p-1 rounded-xl border border-white/40">
               {availableCurrencies.map((currency) => (
                 <Button
                   key={currency}
@@ -514,11 +514,11 @@ export function Reports() {
           <select
             value={selectedAccountId}
             onChange={(e) => setSelectedAccountId(e.target.value)}
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="rounded-xl border border-white/40 bg-white/50 backdrop-blur-sm px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-teal/20 focus:border-teal"
           >
-            <option value="" className="text-neutral-900">{t('reports.allAccounts')}</option>
+            <option value="" className="text-ink">{t('reports.allAccounts')}</option>
             {filteredAccounts.map((account) => (
-              <option key={account.id} value={account.id} className="text-neutral-900">
+              <option key={account.id} value={account.id} className="text-ink">
                 {account.name} ({account.currency})
               </option>
             ))}
@@ -526,10 +526,10 @@ export function Reports() {
           <select
             value={year}
             onChange={(e) => setYear(parseInt(e.target.value))}
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="rounded-xl border border-white/40 bg-white/50 backdrop-blur-sm px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-teal/20 focus:border-teal"
           >
             {[2023, 2024, 2025, 2026].map((y) => (
-              <option key={y} value={y} className="text-neutral-900">
+              <option key={y} value={y} className="text-ink">
                 {y}
               </option>
             ))}
@@ -546,10 +546,10 @@ export function Reports() {
             <select
               value={month}
               onChange={(e) => setMonth(parseInt(e.target.value))}
-              className="rounded-md border border-gray-300 px-3 py-2 text-sm text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="rounded-xl border border-white/40 bg-white/50 backdrop-blur-sm px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-teal/20 focus:border-teal"
             >
               {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                <option key={m} value={m} className="text-neutral-900">
+                <option key={m} value={m} className="text-ink">
                   {new Date(2000, m - 1).toLocaleString('default', {
                     month: 'long',
                   })}
@@ -573,83 +573,81 @@ export function Reports() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card>
+        <Card className="border-l-4 border-l-emerald">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
+            <CardTitle className="text-sm font-medium text-slate">
               {t('common.income')}
             </CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
+            <TrendingUp className="h-4 w-4 text-emerald" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-               {formatCurrency(summary?.income || 0, selectedCurrency || 'BRL')}
+            <div className="text-2xl font-bold text-emerald">
+              {formatCurrency(summary?.income || 0, selectedCurrency || 'BRL')}
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-l-4 border-l-rose">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
+            <CardTitle className="text-sm font-medium text-slate">
               {t('common.expense')}
             </CardTitle>
-            <TrendingDown className="h-4 w-4 text-red-600" />
+            <TrendingDown className="h-4 w-4 text-rose" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-               {formatCurrency(summary?.expenses || 0, selectedCurrency || 'BRL')}
+            <div className="text-2xl font-bold text-rose">
+              {formatCurrency(summary?.expenses || 0, selectedCurrency || 'BRL')}
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-l-4 border-l-teal">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
+            <CardTitle className="text-sm font-medium text-slate">
               {t('reports.monthlyBalance')}
             </CardTitle>
-            <Calendar className="h-4 w-4 text-blue-600" />
+            <Calendar className="h-4 w-4 text-teal" />
           </CardHeader>
           <CardContent>
             <div
-              className={`text-2xl font-bold ${
-                monthlyBalance >= 0 ? 'text-green-600' : 'text-red-600'
-              }`}
+              className={`text-2xl font-bold ${monthlyBalance >= 0 ? 'text-emerald' : 'text-rose'
+                }`}
             >
-               {formatCurrency(monthlyBalance, selectedCurrency || 'BRL')}
+              {formatCurrency(monthlyBalance, selectedCurrency || 'BRL')}
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-l-4 border-l-amber">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
+            <CardTitle className="text-sm font-medium text-slate">
               {t('reports.totalBalance')}
             </CardTitle>
-            <PiggyBank className="h-4 w-4 text-purple-600" />
+            <PiggyBank className="h-4 w-4 text-amber" />
           </CardHeader>
           <CardContent>
             <div
-              className={`text-2xl font-bold ${
-                totalAccountBalance >= 0 ? 'text-green-600' : 'text-red-600'
-              }`}
+              className={`text-2xl font-bold ${totalAccountBalance >= 0 ? 'text-emerald' : 'text-rose'
+                }`}
             >
-               {formatCurrency(totalAccountBalance, selectedCurrency || 'BRL')}
+              {formatCurrency(totalAccountBalance, selectedCurrency || 'BRL')}
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-l-4 border-l-slate">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
+            <CardTitle className="text-sm font-medium text-slate">
               {t('reports.calculatedBalance')}
             </CardTitle>
-            <Calculator className="h-4 w-4" style={{ color: 'var(--color-projected-balance)' }} />
+            <Calculator className="h-4 w-4 text-slate" />
           </CardHeader>
           <CardContent>
             <div
-              className="text-2xl font-bold"
-              style={{ color: 'var(--color-projected-balance)' }}
+              className={`text-2xl font-bold ${calculatedBalance >= 0 ? 'text-emerald' : 'text-rose'
+                }`}
             >
-               {formatCurrency(calculatedBalance, selectedCurrency || 'BRL')}
+              {formatCurrency(calculatedBalance, selectedCurrency || 'BRL')}
             </div>
           </CardContent>
         </Card>
@@ -660,11 +658,11 @@ export function Reports() {
         {/* Expense Breakdown */}
         <Card>
           <CardHeader>
-            <CardTitle>{t('reports.expensesByCategory')}</CardTitle>
+            <CardTitle className="text-ink">{t('reports.expensesByCategory')}</CardTitle>
           </CardHeader>
           <CardContent>
             {expenseBreakdown.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">{t('reports.noData')}</p>
+              <p className="text-slate text-center py-8">{t('reports.noData')}</p>
             ) : (
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
@@ -700,11 +698,11 @@ export function Reports() {
         {/* Income Composition */}
         <Card>
           <CardHeader>
-            <CardTitle>{t('reports.incomeComposition')}</CardTitle>
+            <CardTitle className="text-ink">{t('reports.incomeComposition')}</CardTitle>
           </CardHeader>
           <CardContent>
             {incomeBreakdown.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">{t('reports.noData')}</p>
+              <p className="text-slate text-center py-8">{t('reports.noData')}</p>
             ) : (
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
@@ -741,14 +739,15 @@ export function Reports() {
       {/* Trend Chart */}
       <Card>
         <CardHeader>
-          <CardTitle>{t('reports.monthlyTrend')}</CardTitle>
+          <CardTitle className="text-ink">{t('reports.monthlyTrend')}</CardTitle>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={trendData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-slate-light, #E2E8F0)" />
+              <XAxis dataKey="month" stroke="var(--color-slate, #64748B)" />
               <YAxis
+                stroke="var(--color-slate, #64748B)"
                 tickFormatter={(value) =>
                   new Intl.NumberFormat('pt-BR', {
                     style: 'currency',
@@ -758,25 +757,28 @@ export function Reports() {
                 }
               />
               <Tooltip
-                    formatter={(value) => formatCurrency(Number(value), selectedCurrency || 'BRL')}
+                formatter={(value) => formatCurrency(Number(value), selectedCurrency || 'BRL')}
+                contentStyle={{ backgroundColor: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(8px)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.5)' }}
               />
               <Legend />
               <Line
                 type="monotone"
                 dataKey="income"
-                stroke="#22c55e"
+                stroke="#10B981"
                 name={t('common.income')}
+                strokeWidth={2}
               />
               <Line
                 type="monotone"
                 dataKey="expenses"
-                stroke="#ef4444"
+                stroke="#F43F5E"
                 name={t('common.expense')}
+                strokeWidth={2}
               />
               <Line
                 type="monotone"
                 dataKey="projectedBalance"
-                stroke="var(--color-projected-balance)"
+                stroke="#14B8A6"
                 strokeWidth={2}
                 name={t('reports.projectedBalance')}
               />

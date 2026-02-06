@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 
-export type RecordingState = 'idle' | 'recording' | 'processing' | 'success' | 'error';
+export type RecordingState = 'idle' | 'recording' | 'preview' | 'processing' | 'success' | 'error';
 
 export interface UseVoiceRecorderReturn {
   state: RecordingState;
@@ -9,18 +9,48 @@ export interface UseVoiceRecorderReturn {
   stopRecording: () => Promise<Blob | null>;
   reset: () => void;
   isSupported: boolean;
+  // New: Audio level for waveform visualization (0-100)
+  getAudioLevel: () => number;
+  // New: Recorded audio blob for preview
+  audioBlob: Blob | null;
+  // New: Clear recorded audio (discard)
+  clearAudio: () => void;
+  // New: Confirm audio and move to processing
+  confirmAudio: () => Blob | null;
 }
 
 export function useVoiceRecorder(): UseVoiceRecorderReturn {
   const [state, setState] = useState<RecordingState>('idle');
   const [error, setError] = useState<string | null>(null);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const dataArrayRef = useRef<Uint8Array | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   // Check if browser supports MediaRecorder
-  const isSupported = typeof window !== 'undefined' && 
+  const isSupported = typeof window !== 'undefined' &&
     !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) &&
     typeof MediaRecorder !== 'undefined';
+
+  // Get current audio level (0-100) for waveform visualization
+  const getAudioLevel = useCallback((): number => {
+    if (!analyserRef.current || !dataArrayRef.current || state !== 'recording') {
+      return 0;
+    }
+
+    analyserRef.current.getByteFrequencyData(dataArrayRef.current);
+
+    // Calculate average volume from frequency data
+    const sum = dataArrayRef.current.reduce((acc, val) => acc + val, 0);
+    const average = sum / dataArrayRef.current.length;
+
+    // Normalize to 0-100 scale
+    return Math.min(100, Math.round((average / 255) * 100 * 1.5)); // 1.5x boost for visibility
+  }, [state]);
 
   const startRecording = useCallback(async (): Promise<void> => {
     if (!isSupported) {
@@ -31,23 +61,39 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
 
     try {
       setError(null);
+      setAudioBlob(null);
       audioChunksRef.current = [];
 
       // Request microphone access
-      const stream = await navigator.mediaDevices.getUserMedia({ 
+      const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
         }
       });
+      streamRef.current = stream;
+
+      // Setup AudioContext and AnalyserNode for waveform visualization
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      audioContextRef.current = audioContext;
+
+      const source = audioContext.createMediaStreamSource(stream);
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.8;
+      source.connect(analyser);
+      analyserRef.current = analyser;
+
+      const bufferLength = analyser.frequencyBinCount;
+      dataArrayRef.current = new Uint8Array(bufferLength);
 
       // Create MediaRecorder with webm/opus format
       const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
         ? 'audio/webm;codecs=opus'
         : MediaRecorder.isTypeSupported('audio/webm')
-        ? 'audio/webm'
-        : 'audio/mp4';
+          ? 'audio/webm'
+          : 'audio/mp4';
 
       const mediaRecorder = new MediaRecorder(stream, { mimeType });
       mediaRecorderRef.current = mediaRecorder;
@@ -56,11 +102,6 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
         if (event.data.size > 0) {
           audioChunksRef.current.push(event.data);
         }
-      };
-
-      mediaRecorder.onstop = () => {
-        // Stop all tracks to release microphone
-        stream.getTracks().forEach(track => track.stop());
       };
 
       mediaRecorder.onerror = () => {
@@ -75,7 +116,7 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
 
     } catch (err) {
       console.error('Error starting recording:', err);
-      
+
       if (err instanceof DOMException) {
         if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
           setError('Microphone permission denied. Please allow microphone access.');
@@ -87,7 +128,7 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
       } else {
         setError('Failed to start recording');
       }
-      
+
       setState('error');
     }
   }, [isSupported]);
@@ -95,33 +136,45 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
   const stopRecording = useCallback(async (): Promise<Blob | null> => {
     return new Promise((resolve) => {
       const mediaRecorder = mediaRecorderRef.current;
-      
+
       if (!mediaRecorder || state !== 'recording') {
         resolve(null);
         return;
       }
 
-      setState('processing');
-
       mediaRecorder.onstop = () => {
+        // Stop audio context but keep stream alive for potential re-recording
+        if (audioContextRef.current) {
+          audioContextRef.current.close();
+          audioContextRef.current = null;
+        }
+        analyserRef.current = null;
+        dataArrayRef.current = null;
+
         // Stop all tracks
-        mediaRecorder.stream.getTracks().forEach(track => track.stop());
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(track => track.stop());
+          streamRef.current = null;
+        }
 
         // Combine all chunks into a single blob
-        const audioBlob = new Blob(audioChunksRef.current, { 
-          type: mediaRecorder.mimeType 
+        const blob = new Blob(audioChunksRef.current, {
+          type: mediaRecorder.mimeType
         });
 
         // Clear chunks
         audioChunksRef.current = [];
         mediaRecorderRef.current = null;
 
-        if (audioBlob.size === 0) {
+        if (blob.size === 0) {
           setError('No audio recorded');
           setState('error');
           resolve(null);
         } else {
-          resolve(audioBlob);
+          // Store blob for preview and move to preview state
+          setAudioBlob(blob);
+          setState('preview');
+          resolve(blob);
         }
       };
 
@@ -129,15 +182,45 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
     });
   }, [state]);
 
+  // Clear recorded audio (user cancelled)
+  const clearAudio = useCallback(() => {
+    setAudioBlob(null);
+    audioChunksRef.current = [];
+    setState('idle');
+    setError(null);
+  }, []);
+
+  // Confirm audio for processing (user approved)
+  const confirmAudio = useCallback((): Blob | null => {
+    if (!audioBlob) return null;
+    setState('processing');
+    return audioBlob;
+  }, [audioBlob]);
+
   const reset = useCallback(() => {
     // Stop any ongoing recording
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
-      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
     }
-    
+
+    // Clean up audio context
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
+    }
+
+    // Stop stream
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+
     mediaRecorderRef.current = null;
     audioChunksRef.current = [];
+    analyserRef.current = null;
+    dataArrayRef.current = null;
+
+    setAudioBlob(null);
     setState('idle');
     setError(null);
   }, []);
@@ -149,5 +232,9 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
     stopRecording,
     reset,
     isSupported,
+    getAudioLevel,
+    audioBlob,
+    clearAudio,
+    confirmAudio,
   };
 }
