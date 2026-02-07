@@ -88,7 +88,7 @@ export const ptTranslations = {
     summary: 'Resumo Financeiro',
     totalIncome: 'Total de Receitas',
     totalExpenses: 'Total de Despesas',
-    currentBalance: 'Saldo Inicial',
+    currentBalance: 'Saldo do Mês',
     recentTransactions: 'Transações Recentes',
     budgetOverview: 'Visão Geral do Orçamento',
     noTransactions: 'Nenhuma transação encontrada',

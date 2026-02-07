@@ -573,44 +573,44 @@ export function Reports() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card hoverable className="border-l-4 border-l-emerald bg-white/40 backdrop-blur-xl border-white/60">
+        <Card hoverable className="bg-white/40 backdrop-blur-xl border-white/60 min-h-[120px]" style={{ borderLeftWidth: '4px', borderLeftColor: `rgba(34, 197, 94, ${Math.min((summary?.income || 0) / 20000 + 0.3, 1)})` }}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate">
+            <CardTitle className="text-sm font-medium text-slate truncate">
               {t('common.income')}
             </CardTitle>
-            <TrendingUp className="h-4 w-4 text-emerald" />
+            <TrendingUp className="h-4 w-4 text-emerald flex-shrink-0" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-emerald">
+          <CardContent className="pt-0">
+            <div className="text-xl lg:text-2xl font-bold text-emerald truncate">
               {formatCurrency(summary?.income || 0, selectedCurrency || 'BRL')}
             </div>
           </CardContent>
         </Card>
 
-        <Card hoverable className="border-l-4 border-l-rose bg-white/40 backdrop-blur-xl border-white/60">
+        <Card hoverable className="bg-white/40 backdrop-blur-xl border-white/60 min-h-[120px]" style={{ borderLeftWidth: '4px', borderLeftColor: `rgba(255, 92, 138, ${Math.min((summary?.expenses || 0) / 15000 + 0.3, 1)})` }}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate">
+            <CardTitle className="text-sm font-medium text-slate truncate">
               {t('common.expense')}
             </CardTitle>
-            <TrendingDown className="h-4 w-4 text-rose" />
+            <TrendingDown className="h-4 w-4 text-rose flex-shrink-0" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-rose">
+          <CardContent className="pt-0">
+            <div className="text-xl lg:text-2xl font-bold text-rose truncate">
               {formatCurrency(summary?.expenses || 0, selectedCurrency || 'BRL')}
             </div>
           </CardContent>
         </Card>
 
-        <Card hoverable className="border-l-4 border-l-blue bg-white/40 backdrop-blur-xl border-white/60">
+        <Card hoverable className="bg-white/40 backdrop-blur-xl border-white/60 min-h-[120px]" style={{ borderLeftWidth: '4px', borderLeftColor: monthlyBalance >= 0 ? `rgba(34, 197, 94, ${Math.min(Math.abs(monthlyBalance) / 10000 + 0.3, 1)})` : `rgba(255, 92, 138, ${Math.min(Math.abs(monthlyBalance) / 10000 + 0.3, 1)})` }}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate">
+            <CardTitle className="text-sm font-medium text-slate truncate">
               {t('reports.monthlyBalance')}
             </CardTitle>
-            <Calendar className="h-4 w-4 text-blue" />
+            <Calendar className={`h-4 w-4 flex-shrink-0 ${monthlyBalance >= 0 ? 'text-emerald' : 'text-rose'}`} />
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             <div
-              className={`text-xl sm:text-2xl font-bold ${monthlyBalance >= 0 ? 'text-emerald' : 'text-rose'
+              className={`text-xl lg:text-2xl font-bold truncate ${monthlyBalance >= 0 ? 'text-emerald' : 'text-rose'
                 }`}
             >
               {formatCurrency(monthlyBalance, selectedCurrency || 'BRL')}
@@ -618,35 +618,29 @@ export function Reports() {
           </CardContent>
         </Card>
 
-        <Card hoverable className="border-l-4 border-l-slate-light bg-white/40 backdrop-blur-xl border-white/60">
+        <Card hoverable className="bg-white/40 backdrop-blur-xl border-white/60 min-h-[120px]" style={{ borderLeftWidth: '4px', borderLeftColor: `rgba(141, 153, 174, ${Math.min(Math.abs(totalAccountBalance) / 20000 + 0.3, 1)})` }}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate">
+            <CardTitle className="text-sm font-medium text-slate truncate">
               {t('reports.totalBalance')}
             </CardTitle>
-            <PiggyBank className="h-4 w-4 text-slate" />
+            <PiggyBank className="h-4 w-4 text-slate flex-shrink-0" />
           </CardHeader>
-          <CardContent>
-            <div
-              className={`text-xl sm:text-2xl font-bold ${totalAccountBalance >= 0 ? 'text-emerald' : 'text-rose'
-                }`}
-            >
+          <CardContent className="pt-0">
+            <div className="text-xl lg:text-2xl font-bold text-slate truncate">
               {formatCurrency(totalAccountBalance, selectedCurrency || 'BRL')}
             </div>
           </CardContent>
         </Card>
 
-        <Card hoverable className="border-l-4 border-l-amber bg-white/40 backdrop-blur-xl border-white/60">
+        <Card hoverable className="bg-white/40 backdrop-blur-xl border-white/60 min-h-[120px]" style={{ borderLeftWidth: '4px', borderLeftColor: `rgba(255, 190, 11, ${Math.min(Math.abs(calculatedBalance) / 20000 + 0.3, 1)})` }}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate">
+            <CardTitle className="text-sm font-medium text-slate truncate">
               {t('reports.calculatedBalance')}
             </CardTitle>
-            <Calculator className="h-4 w-4 text-amber" />
+            <Calculator className="h-4 w-4 text-amber flex-shrink-0" />
           </CardHeader>
-          <CardContent>
-            <div
-              className={`text-xl sm:text-2xl font-bold ${calculatedBalance >= 0 ? 'text-emerald' : 'text-rose'
-                }`}
-            >
+          <CardContent className="pt-0">
+            <div className="text-xl lg:text-2xl font-bold text-amber truncate">
               {formatCurrency(calculatedBalance, selectedCurrency || 'BRL')}
             </div>
           </CardContent>

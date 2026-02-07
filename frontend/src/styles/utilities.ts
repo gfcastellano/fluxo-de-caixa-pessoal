@@ -207,17 +207,19 @@ export const alertVariants = components.alert.variants;
 // TABLE UTILITIES
 // ============================================
 
+import { table as tableStyles } from './design-system';
+
 /**
  * Table classes
  */
 export const tableClasses = {
-  wrapper: components.table.wrapper,
-  table: components.table.table,
-  thead: components.table.thead,
-  th: components.table.th,
-  tbody: components.table.tbody,
-  tr: components.table.tr,
-  td: components.table.td,
+  wrapper: tableStyles.wrapper,
+  table: tableStyles.table,
+  thead: tableStyles.thead,
+  th: tableStyles.th,
+  tbody: tableStyles.tbody,
+  tr: tableStyles.tr,
+  td: tableStyles.td,
 };
 
 // ============================================
