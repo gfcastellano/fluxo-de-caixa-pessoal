@@ -149,26 +149,26 @@ export function Dashboard() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
         {/* Income Card */}
-        <Card hoverable className="bg-white/40 backdrop-blur-xl border-white/60 min-h-[120px]" style={{ borderLeftWidth: '4px', borderLeftColor: `rgba(34, 197, 94, ${Math.min(Object.values(currencySummaries).reduce((sum, s) => sum + s.income, 0) / 20000 + 0.3, 1)})` }}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate truncate">
+        <Card hoverable className="bg-white/40 backdrop-blur-xl border-white/60 min-h-[80px] lg:min-h-[120px]" style={{ borderLeftWidth: '4px', borderLeftColor: `rgba(34, 197, 94, ${Math.min(Object.values(currencySummaries).reduce((sum, s) => sum + s.income, 0) / 20000 + 0.3, 1)})` }}>
+          <CardHeader className="flex flex-row items-center justify-between pb-1 lg:pb-2">
+            <CardTitle className="text-xs lg:text-sm font-medium text-slate truncate">
               {t('dashboard.totalIncome')}
             </CardTitle>
-            <div className="p-2 bg-emerald/10 rounded-xl flex-shrink-0">
-              <TrendingUp className="h-4 w-4 text-emerald" />
+            <div className="p-1.5 lg:p-2 bg-emerald/10 rounded-xl flex-shrink-0">
+              <TrendingUp className="h-3 w-3 lg:h-4 lg:w-4 text-emerald" />
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="space-y-1">
+            <div className="space-y-0.5 lg:space-y-1">
               {Object.keys(currencySummaries).length === 0 ? (
-                <div className="text-xl lg:text-2xl font-bold text-emerald tabular-nums truncate">
+                <div className="text-base lg:text-xl font-bold text-emerald tabular-nums truncate">
                   {formatCurrency(0)}
                 </div>
               ) : (
                 Object.entries(currencySummaries).map(([currency, summary]) => (
-                  <div key={currency} className="text-xl lg:text-2xl font-bold text-emerald tabular-nums tracking-tight truncate">
+                  <div key={currency} className="text-base lg:text-xl font-bold text-emerald tabular-nums tracking-tight truncate">
                     {formatCurrency(summary.income, currency)}
                   </div>
                 ))
@@ -178,24 +178,24 @@ export function Dashboard() {
         </Card>
 
         {/* Expenses Card */}
-        <Card hoverable className="bg-white/40 backdrop-blur-xl border-white/60 min-h-[120px]" style={{ borderLeftWidth: '4px', borderLeftColor: `rgba(255, 92, 138, ${Math.min(Object.values(currencySummaries).reduce((sum, s) => sum + s.expenses, 0) / 15000 + 0.3, 1)})` }}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate truncate">
+        <Card hoverable className="bg-white/40 backdrop-blur-xl border-white/60 min-h-[80px] lg:min-h-[120px]" style={{ borderLeftWidth: '4px', borderLeftColor: `rgba(255, 92, 138, ${Math.min(Object.values(currencySummaries).reduce((sum, s) => sum + s.expenses, 0) / 15000 + 0.3, 1)})` }}>
+          <CardHeader className="flex flex-row items-center justify-between pb-1 lg:pb-2">
+            <CardTitle className="text-xs lg:text-sm font-medium text-slate truncate">
               {t('dashboard.totalExpenses')}
             </CardTitle>
-            <div className="p-2 bg-rose/10 rounded-xl flex-shrink-0">
-              <TrendingDown className="h-4 w-4 text-rose" />
+            <div className="p-1.5 lg:p-2 bg-rose/10 rounded-xl flex-shrink-0">
+              <TrendingDown className="h-3 w-3 lg:h-4 lg:w-4 text-rose" />
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="space-y-1">
+            <div className="space-y-0.5 lg:space-y-1">
               {Object.keys(currencySummaries).length === 0 ? (
-                <div className="text-xl lg:text-2xl font-bold text-rose tabular-nums truncate">
+                <div className="text-base lg:text-xl font-bold text-rose tabular-nums truncate">
                   {formatCurrency(0)}
                 </div>
               ) : (
                 Object.entries(currencySummaries).map(([currency, summary]) => (
-                  <div key={currency} className="text-xl lg:text-2xl font-bold text-rose tabular-nums tracking-tight truncate">
+                  <div key={currency} className="text-base lg:text-xl font-bold text-rose tabular-nums tracking-tight truncate">
                     {formatCurrency(summary.expenses, currency)}
                   </div>
                 ))
@@ -205,26 +205,26 @@ export function Dashboard() {
         </Card>
 
         {/* Balance Card */}
-        <Card hoverable className="bg-white/40 backdrop-blur-xl border-white/60 min-h-[120px]" style={{ borderLeftWidth: '4px', borderLeftColor: Object.values(currencySummaries).reduce((sum, s) => sum + s.balance, 0) >= 0 ? `rgba(34, 197, 94, ${Math.min(Object.values(currencySummaries).reduce((sum, s) => sum + s.balance, 0) / 20000 + 0.3, 1)})` : `rgba(255, 92, 138, ${Math.min(Math.abs(Object.values(currencySummaries).reduce((sum, s) => sum + s.balance, 0)) / 20000 + 0.3, 1)})` }}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate truncate">
+        <Card hoverable className="bg-white/40 backdrop-blur-xl border-white/60 min-h-[80px] lg:min-h-[120px] col-span-2 lg:col-span-1" style={{ borderLeftWidth: '4px', borderLeftColor: Object.values(currencySummaries).reduce((sum, s) => sum + s.balance, 0) >= 0 ? `rgba(34, 197, 94, ${Math.min(Object.values(currencySummaries).reduce((sum, s) => sum + s.balance, 0) / 20000 + 0.3, 1)})` : `rgba(255, 92, 138, ${Math.min(Math.abs(Object.values(currencySummaries).reduce((sum, s) => sum + s.balance, 0)) / 20000 + 0.3, 1)})` }}>
+          <CardHeader className="flex flex-row items-center justify-between pb-1 lg:pb-2">
+            <CardTitle className="text-xs lg:text-sm font-medium text-slate truncate">
               {t('dashboard.currentBalance')}
             </CardTitle>
-            <div className={`p-2 rounded-xl flex-shrink-0 ${Object.values(currencySummaries).reduce((sum, s) => sum + s.balance, 0) >= 0 ? 'bg-emerald/10' : 'bg-rose/10'}`}>
-              <Wallet className={`h-4 w-4 ${Object.values(currencySummaries).reduce((sum, s) => sum + s.balance, 0) >= 0 ? 'text-emerald' : 'text-rose'}`} />
+            <div className={`p-1.5 lg:p-2 rounded-xl flex-shrink-0 ${Object.values(currencySummaries).reduce((sum, s) => sum + s.balance, 0) >= 0 ? 'bg-emerald/10' : 'bg-rose/10'}`}>
+              <Wallet className={`h-3 w-3 lg:h-4 lg:w-4 ${Object.values(currencySummaries).reduce((sum, s) => sum + s.balance, 0) >= 0 ? 'text-emerald' : 'text-rose'}`} />
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="space-y-1">
+            <div className="space-y-0.5 lg:space-y-1">
               {Object.keys(currencySummaries).length === 0 ? (
-                <div className="text-xl lg:text-2xl font-bold text-emerald tabular-nums truncate">
+                <div className="text-base lg:text-xl font-bold text-emerald tabular-nums truncate">
                   {formatCurrency(0)}
                 </div>
               ) : (
                 Object.entries(currencySummaries).map(([currency, summary]) => (
                   <div
                     key={currency}
-                    className={`text-xl lg:text-2xl font-bold tabular-nums tracking-tight truncate ${summary.balance >= 0 ? 'text-emerald' : 'text-rose'
+                    className={`text-base lg:text-xl font-bold tabular-nums tracking-tight truncate ${summary.balance >= 0 ? 'text-emerald' : 'text-rose'
                       }`}
                   >
                     {formatCurrency(summary.balance, currency)}
