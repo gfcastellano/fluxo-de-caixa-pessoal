@@ -161,7 +161,7 @@ export function CategoryModal({
             ...formData,
             type: e.target.value as 'income' | 'expense',
           })}
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue"
         >
           <option value="expense" className="text-neutral-900">{t('common.expense')}</option>
           <option value="income" className="text-neutral-900">{t('common.income')}</option>
@@ -189,39 +189,39 @@ export function CategoryModal({
       </div>
 
       {/* Voice Input Section */}
-      <div className="border-t border-slate/10 pt-4 mt-4">
-        <label className="block text-sm font-medium text-ink mb-3">
+      <div className="border-t border-slate/10 pt-3 mt-3 sm:pt-4 sm:mt-4">
+        <label className="block text-sm font-medium text-ink mb-2 sm:mb-3">
           {(voice.hasVoiceData || isEditing) ? t('voice.updateByVoice') : t('voice.addByVoice')}
         </label>
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2 sm:gap-3">
           <div className="flex gap-2">
             <button
               type="button"
               onClick={handleVoiceInput}
               disabled={voice.voiceState === 'processing' || voice.isProcessingVoice}
               className={cn(
-                "flex-1 flex items-center justify-center gap-2 h-14 rounded-full font-medium transition-all duration-300",
+                "flex-1 flex items-center justify-center gap-2 h-11 sm:h-14 rounded-full font-medium transition-all duration-300",
                 voice.voiceState === 'recording'
                   ? 'bg-emerald text-white ring-4 ring-emerald/20 animate-pulse'
                   : voice.voiceState === 'processing' || voice.isProcessingVoice
                     ? 'bg-slate/10 text-slate cursor-wait'
-                    : 'bg-gradient-to-r from-teal to-teal-hover text-white shadow-lg shadow-teal/20 hover:shadow-teal/30 hover:scale-[1.02]'
+                    : 'bg-gradient-to-r from-blue to-blue-hover text-white shadow-lg shadow-blue/20 hover:shadow-blue/30 hover:scale-[1.02]'
               )}
             >
               {voice.voiceState === 'recording' ? (
                 <>
-                  <Square className="h-5 w-5" />
-                  <span>{t('voice.stopRecording')}</span>
+                  <Square className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <span className="text-sm sm:text-base">{t('voice.stopRecording')}</span>
                 </>
               ) : voice.voiceState === 'processing' || voice.isProcessingVoice ? (
                 <>
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  <span>{t('voice.processing')}</span>
+                  <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
+                  <span className="text-sm sm:text-base">{t('voice.processing')}</span>
                 </>
               ) : (
                 <>
-                  <Mic className="h-5 w-5" />
-                  <span>{(voice.hasVoiceData || isEditing) ? t('voice.updateByVoice') : t('voice.addByVoice')}</span>
+                  <Mic className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <span className="text-sm sm:text-base">{(voice.hasVoiceData || isEditing) ? t('voice.updateByVoice') : t('voice.addByVoice')}</span>
                 </>
               )}
             </button>
@@ -230,10 +230,10 @@ export function CategoryModal({
               <button
                 type="button"
                 onClick={voice.cancelRecording}
-                className="h-14 w-14 flex items-center justify-center rounded-full bg-rose/10 text-rose hover:bg-rose/20 transition-all duration-200 border-2 border-rose/20 shadow-lg shadow-rose/10"
+                className="h-11 w-11 sm:h-14 sm:w-14 flex items-center justify-center rounded-full bg-rose/10 text-rose hover:bg-rose/20 transition-all duration-200 border-2 border-rose/20 shadow-lg shadow-rose/10"
                 title={t('common.cancel')}
               >
-                <X className="h-5 w-5" />
+                <X className="h-4 w-4 sm:h-5 sm:w-5" />
               </button>
             )}
           </div>

@@ -129,10 +129,10 @@ export function Accounts() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col sm:gap-6 gap-4 sm:p-6 p-4 overflow-x-hidden">
       {/* Header - no add button, Hero handles it */}
       <div className="flex items-center">
-        <h1 className="text-2xl font-bold text-neutral-900">{t('accounts.title')}</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-ink">{t('accounts.title')}</h1>
       </div>
 
       <AccountModal
@@ -147,7 +147,7 @@ export function Accounts() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {accounts.length === 0 ? (
           <div className="col-span-full">
-            <Card>
+            <Card className="bg-white/40 backdrop-blur-xl border-white/60">
               <CardContent className="py-12">
                 <div className="text-center">
                   <Wallet className="mx-auto h-12 w-12 text-neutral-400" />
@@ -161,7 +161,7 @@ export function Accounts() {
             <Card
               key={account.id}
               className={cn(
-                "transition-all duration-1000",
+                "transition-all duration-1000 bg-white/40 backdrop-blur-xl border-white/60",
                 account.isDefault ? 'ring-2 ring-primary-500' : '',
                 highlightedId === account.id ? "animate-highlight scale-[1.02]" : ""
               )}
@@ -196,7 +196,7 @@ export function Accounts() {
               <CardContent>
                 <div className="mb-4">
                   <p className="text-sm text-neutral-500">{t('accounts.currentBalance')}</p>
-                  <p className={`text-2xl font-bold ${(accountBalances[account.id] ?? account.balance) >= 0 ? 'text-neutral-900' : 'text-red-600'}`}>
+                  <p className={`text-xl sm:text-2xl font-bold ${(accountBalances[account.id] ?? account.balance) >= 0 ? 'text-neutral-900' : 'text-red-600'}`}>
                     {formatCurrency(accountBalances[account.id] ?? account.balance, account.currency)}
                   </p>
                 </div>

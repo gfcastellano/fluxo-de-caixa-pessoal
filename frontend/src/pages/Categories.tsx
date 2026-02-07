@@ -117,10 +117,10 @@ export function Categories() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="flex flex-col sm:gap-6 gap-4 sm:p-6 p-4 overflow-x-hidden">
       {/* Header - no add button, Hero handles it */}
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold text-neutral-900">{t('categories.title')}</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-ink">{t('categories.title')}</h1>
         <p className="text-neutral-500">Manage your income and expense categories</p>
       </div>
 
@@ -135,7 +135,7 @@ export function Categories() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Income Categories */}
-        <Card>
+        <Card className="bg-white/40 backdrop-blur-xl border-white/60">
           <CardHeader className="pb-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-success-100 rounded-lg">
@@ -164,7 +164,7 @@ export function Categories() {
                       "flex items-center justify-between p-3 rounded-xl transition-all duration-1000 group",
                       highlightedId === category.id
                         ? "animate-highlight shadow-lg scale-[1.02]"
-                        : "bg-neutral-50 hover:bg-neutral-100"
+                        : "bg-white/40 hover:bg-white/60 backdrop-blur-sm"
                     )}
                   >
                     <div className="flex items-center gap-3">
@@ -172,7 +172,7 @@ export function Categories() {
                         className="w-4 h-4 rounded-full ring-2 ring-white shadow-sm"
                         style={{ backgroundColor: category.color }}
                       />
-                      <span className="font-medium text-neutral-900">{t(getTranslatedCategoryName(category.name))}</span>
+                      <span className="font-medium text-neutral-900 text-sm">{t(getTranslatedCategoryName(category.name))}</span>
                     </div>
                     <div className="flex flex-wrap gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
@@ -196,7 +196,7 @@ export function Categories() {
         </Card>
 
         {/* Expense Categories */}
-        <Card>
+        <Card className="bg-white/40 backdrop-blur-xl border-white/60">
           <CardHeader className="pb-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-danger-100 rounded-lg">
@@ -225,7 +225,7 @@ export function Categories() {
                       "flex items-center justify-between p-3 rounded-xl transition-all duration-1000 group",
                       highlightedId === category.id
                         ? "animate-highlight shadow-lg scale-[1.02]"
-                        : "bg-neutral-50 hover:bg-neutral-100"
+                        : "bg-white/40 hover:bg-white/60 backdrop-blur-sm"
                     )}
                   >
                     <div className="flex items-center gap-3">
@@ -233,7 +233,7 @@ export function Categories() {
                         className="w-4 h-4 rounded-full ring-2 ring-white shadow-sm"
                         style={{ backgroundColor: category.color }}
                       />
-                      <span className="font-medium text-neutral-900">{t(getTranslatedCategoryName(category.name))}</span>
+                      <span className="font-medium text-neutral-900 text-sm">{t(getTranslatedCategoryName(category.name))}</span>
                     </div>
                     <div className="flex flex-wrap gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
@@ -256,6 +256,7 @@ export function Categories() {
           </CardContent>
         </Card>
       </div>
+
     </div>
   );
 }

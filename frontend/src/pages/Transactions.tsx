@@ -377,7 +377,7 @@ export function Transactions() {
   if (isInitialLoading && transactions.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue"></div>
       </div>
     );
   }
@@ -411,7 +411,7 @@ export function Transactions() {
                   variant="ghost"
                   size="icon-sm"
                   onClick={handlePrevious}
-                  className="text-slate hover:bg-teal/10 hover:text-teal h-7 w-7 sm:h-8 sm:w-8"
+                  className="text-slate hover:bg-blue/10 hover:text-blue h-7 w-7 sm:h-8 sm:w-8"
                 >
                   <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
@@ -424,7 +424,7 @@ export function Transactions() {
                   className={cn(
                     "flex items-center gap-1 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all",
                     filterMode === 'all'
-                      ? "bg-teal text-white shadow-sm"
+                      ? "bg-blue text-white shadow-sm"
                       : "text-slate hover:bg-white/50 hover:text-ink"
                   )}
                 >
@@ -436,7 +436,7 @@ export function Transactions() {
                   className={cn(
                     "flex items-center gap-1 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all",
                     filterMode === 'month'
-                      ? "bg-teal text-white shadow-sm"
+                      ? "bg-blue text-white shadow-sm"
                       : "text-slate hover:bg-white/50 hover:text-ink"
                   )}
                 >
@@ -448,7 +448,7 @@ export function Transactions() {
                   className={cn(
                     "flex items-center gap-1 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all",
                     filterMode === 'week'
-                      ? "bg-teal text-white shadow-sm"
+                      ? "bg-blue text-white shadow-sm"
                       : "text-slate hover:bg-white/50 hover:text-ink"
                   )}
                 >
@@ -463,7 +463,7 @@ export function Transactions() {
                   variant="ghost"
                   size="icon-sm"
                   onClick={handleNext}
-                  className="text-slate hover:bg-teal/10 hover:text-teal h-7 w-7 sm:h-8 sm:w-8"
+                  className="text-slate hover:bg-blue/10 hover:text-blue h-7 w-7 sm:h-8 sm:w-8"
                 >
                   <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
@@ -486,13 +486,13 @@ export function Transactions() {
                   placeholder={t('common.search')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-7 sm:pl-9 pr-3 sm:pr-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border border-slate/10 bg-white/50 text-xs sm:text-sm text-ink focus:outline-none focus:ring-2 focus:ring-teal/20 focus:border-teal transition-all placeholder:text-slate/60"
+                  className="w-full pl-7 sm:pl-9 pr-3 sm:pr-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border border-slate/10 bg-white/50 text-xs sm:text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue transition-all placeholder:text-slate/60"
                 />
               </div>
               <select
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value as any)}
-                className="rounded-lg sm:rounded-xl border border-slate/10 bg-white/50 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-ink focus:outline-none focus:ring-2 focus:ring-teal/20 focus:border-teal cursor-pointer"
+                className="rounded-lg sm:rounded-xl border border-slate/10 bg-white/50 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue cursor-pointer"
               >
                 <option value="all">{t('common.all')}</option>
                 <option value="income">{t('common.income')}</option>
@@ -506,7 +506,7 @@ export function Transactions() {
           {/* Table loading overlay */}
           {isTableLoading && (
             <div className="absolute inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center z-10 rounded-lg">
-              <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-teal"></div>
+              <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-blue"></div>
             </div>
           )}
 
@@ -530,12 +530,12 @@ export function Transactions() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 mb-0.5">
-                          <Repeat className="h-3 w-3 text-teal flex-shrink-0" />
+                          <Repeat className="h-3 w-3 text-blue flex-shrink-0" />
                           <span className="font-medium text-ink text-xs truncate">{parent.description}</span>
                         </div>
                         <div className="flex items-center gap-1.5 text-[10px] text-slate">
                           <span>{formatDate(parent.date)}</span>
-                          <span className="px-1 py-0.5 rounded bg-teal/10 text-teal text-[8px] font-medium">
+                          <span className="px-1 py-0.5 rounded bg-blue/10 text-blue text-[8px] font-medium">
                             {parent.recurrencePattern}
                           </span>
                         </div>
@@ -549,7 +549,7 @@ export function Transactions() {
                         <span className="px-1.5 py-0.5 rounded-full bg-slate/5 text-slate">
                           {parent.category ? t(getTranslatedCategoryName(parent.category.name)) : t('common.category')}
                         </span>
-                        <span className="text-slate">{parent.account?.name}</span>
+                        <span style={{ color: parent.account?.color }}>{parent.account?.name}</span>
                       </div>
                       <div className="flex gap-0.5">
                         <button onClick={() => handleOpenEditModal(parent)} className="p-1.5 text-slate hover:bg-slate/10 rounded-full touch-target">
@@ -586,7 +586,7 @@ export function Transactions() {
                         <span className="px-1.5 py-0.5 rounded-full bg-slate/5 text-slate">
                           {transaction.category ? t(getTranslatedCategoryName(transaction.category.name)) : t('common.category')}
                         </span>
-                        <span className="text-slate">{transaction.account?.name}</span>
+                        <span style={{ color: transaction.account?.color }}>{transaction.account?.name}</span>
                       </div>
                       <div className="flex gap-0.5">
                         <button onClick={() => handleOpenEditModal(transaction)} className="p-1.5 text-slate hover:bg-slate/10 rounded-full touch-target">
@@ -624,13 +624,13 @@ export function Transactions() {
                       return (
                         <>
                           <tr key={parent.id} className={cn(
-                            "hover:bg-white/40 transition-all duration-1000 bg-teal/5",
+                            "hover:bg-white/40 transition-all duration-1000 bg-blue/5",
                             highlightedId === parent.id ? "animate-highlight shadow-lg scale-[1.01] relative z-10" : ""
                           )}>
                             <td className="py-3 px-4 text-sm">
                               <div className="flex items-center gap-2">
-                                <Repeat className="h-4 w-4 text-teal" />
-                                <button onClick={() => toggleRecurringExpand(parent.id)} className="text-teal hover:text-teal-hover font-medium">
+                                <Repeat className="h-4 w-4 text-blue" />
+                                <button onClick={() => toggleRecurringExpand(parent.id)} className="text-blue hover:text-blue-hover font-medium">
                                   {formatDate(parent.date)}
                                 </button>
                               </div>
@@ -638,7 +638,7 @@ export function Transactions() {
                             <td className="py-3 px-4">
                               <div className="flex items-center gap-2">
                                 <span className="font-medium text-ink">{parent.description}</span>
-                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-teal/10 text-teal-hover border border-teal/20">
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue/10 text-blue-hover border border-blue/20">
                                   {parent.recurrencePattern}
                                 </span>
                               </div>
@@ -648,7 +648,7 @@ export function Transactions() {
                                 {parent.category ? t(getTranslatedCategoryName(parent.category.name)) : t('common.category')}
                               </span>
                             </td>
-                            <td className="py-3 px-4 text-sm text-slate hidden lg:table-cell">{parent.account?.name || '-'}</td>
+                            <td className="py-3 px-4 text-sm text-slate hidden lg:table-cell" style={{ color: parent.account?.color }}>{parent.account?.name || '-'}</td>
                             <td className={`py-3 px-4 text-right font-medium ${parent.type === 'income' ? 'text-emerald' : 'text-rose'}`}>
                               {parent.type === 'income' ? '+' : '-'}{formatCurrency(parent.amount, parent.account?.currency)}
                             </td>
@@ -664,7 +664,7 @@ export function Transactions() {
                               <td className="py-2 px-4 pl-10 text-sm text-slate flex items-center gap-2"><Copy size={12} /> {formatDate(instance.date)}</td>
                               <td className="py-2 px-4 text-sm text-slate">{instance.description} <span className="text-[10px] opacity-70">(Auto)</span></td>
                               <td className="py-2 px-4 hidden md:table-cell"><span className="text-xs text-slate opacity-70">{instance.category ? t(getTranslatedCategoryName(instance.category.name)) : '-'}</span></td>
-                              <td className="py-2 px-4 text-sm text-slate opacity-70 hidden lg:table-cell">{instance.account?.name}</td>
+                              <td className="py-2 px-4 text-sm text-slate opacity-70 hidden lg:table-cell" style={{ color: instance.account?.color }}>{instance.account?.name}</td>
                               <td className={`py-2 px-4 text-right text-sm ${instance.type === 'income' ? 'text-emerald' : 'text-rose'}`}>
                                 {instance.type === 'income' ? '+' : '-'}{formatCurrency(instance.amount, instance.account?.currency)}
                               </td>
@@ -694,7 +694,7 @@ export function Transactions() {
                             {transaction.category ? t(getTranslatedCategoryName(transaction.category.name)) : t('common.category')}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-sm text-slate hidden lg:table-cell">{transaction.account?.name || '-'}</td>
+                        <td className="py-3 px-4 text-sm text-slate hidden lg:table-cell" style={{ color: transaction.account?.color }}>{transaction.account?.name || '-'}</td>
                         <td className={`py-3 px-4 text-right font-medium text-base ${transaction.type === 'income' ? 'text-emerald' : 'text-rose'}`}>
                           {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount, transaction.account?.currency)}
                         </td>

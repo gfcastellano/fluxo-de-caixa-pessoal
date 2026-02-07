@@ -6,6 +6,7 @@ import { VoiceDock } from './VoiceDock';
 import { VoiceHeroButton } from './VoiceHeroButton';
 import { LogOut, LayoutDashboard, ArrowLeftRight, Tags, Landmark, PiggyBank, BarChart3 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useScrollDirection } from '../hooks/useScrollDirection';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -34,6 +35,8 @@ export function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
+  const scrollDirection = useScrollDirection();
+  const isHeaderVisible = scrollDirection === 'up';
 
   const handleLogout = async () => {
     await logout();
@@ -52,13 +55,13 @@ export function Layout({ children }: LayoutProps) {
         className={cn(
           "relative flex items-center gap-3 px-4 py-3 rounded-xl mx-2 transition-all duration-200 group",
           isActive
-            ? "bg-teal/10 text-teal font-medium"
+            ? "bg-blue/10 text-blue font-medium"
             : "text-slate hover:bg-white/50 hover:text-ink"
         )}
       >
         {/* Active indicator */}
         {isActive && (
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-teal rounded-r-full" />
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue rounded-r-full" />
         )}
 
         <Icon
@@ -89,7 +92,7 @@ export function Layout({ children }: LayoutProps) {
         className={cn(
           "relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200",
           isActive
-            ? "bg-teal/10 text-teal"
+            ? "bg-blue/10 text-blue"
             : "text-slate hover:bg-white/50 hover:text-ink"
         )}
       >
@@ -98,7 +101,7 @@ export function Layout({ children }: LayoutProps) {
 
         {/* Active indicator bar */}
         {isActive && (
-          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[calc(50%+0.5rem)] w-8 h-1 bg-teal rounded-full" />
+          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[calc(50%+0.5rem)] w-8 h-1 bg-blue rounded-full" />
         )}
       </Link>
     );
@@ -109,7 +112,13 @@ export function Layout({ children }: LayoutProps) {
       {/* ============================================
           MOBILE HEADER (sm-)
           ============================================ */}
-      <header className="sm:hidden sticky top-0 z-sticky bg-mist/80 backdrop-blur-lg px-3 py-2.5 flex justify-between items-center border-b border-white/30" style={{ height: 'var(--header-height)' }}>
+      <header
+        className={cn(
+          "sm:hidden sticky top-0 z-sticky bg-mist/80 backdrop-blur-lg px-3 py-2.5 flex justify-between items-center border-b border-white/30 transition-transform duration-300 ease-in-out",
+          !isHeaderVisible && "-translate-y-full"
+        )}
+        style={{ height: 'var(--header-height)' }}
+      >
         <div className="flex flex-col">
           <h1 className="text-sm font-semibold text-ink tracking-tight">Assist</h1>
         </div>
@@ -124,7 +133,7 @@ export function Layout({ children }: LayoutProps) {
             <LogOut size={16} />
           </button>
 
-          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-teal/20 to-blue/20 flex items-center justify-center border border-white/50 text-[10px] font-bold text-teal">
+          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue/20 to-indigo/20 flex items-center justify-center border border-white/50 text-[10px] font-bold text-blue">
             {user?.displayName?.[0] || user?.email?.[0] || 'U'}
           </div>
         </div>
@@ -150,7 +159,7 @@ export function Layout({ children }: LayoutProps) {
         {/* User Section */}
         <div className="px-3 py-4 border-t border-white/30">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-teal/20 to-blue/20 flex items-center justify-center border border-white/50 text-sm font-bold text-teal flex-shrink-0">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue/20 to-indigo/20 flex items-center justify-center border border-white/50 text-sm font-bold text-blue flex-shrink-0">
               {user?.displayName?.[0] || user?.email?.[0] || 'U'}
             </div>
             <div className="flex-1 min-w-0">
@@ -207,7 +216,7 @@ export function Layout({ children }: LayoutProps) {
                   <span className="hidden xl:inline">{t('nav.logout')}</span>
                 </button>
 
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal/20 to-blue/20 flex items-center justify-center border border-white/50 text-sm font-bold text-teal">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue/20 to-indigo/20 flex items-center justify-center border border-white/50 text-sm font-bold text-blue">
                   {user?.displayName?.[0] || user?.email?.[0] || 'U'}
                 </div>
               </div>
@@ -229,8 +238,8 @@ export function Layout({ children }: LayoutProps) {
           MAIN CONTENT AREA
           ============================================ */}
       <main className={cn(
-        "", // Mobile: no padding, page handles its own layout
-        "sm:pb-8 sm:pl-56", // Tablet: sidebar offset
+        "pb-24", // Mobile: ensure content clears the bottom dock
+        "sm:pb-8 sm:pl-56", // Tablet: sidebar offset and normal padding
         "lg:pl-0" // Desktop: no sidebar offset
       )}>
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-6 animate-fade-in h-full">

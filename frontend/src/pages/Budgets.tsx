@@ -146,15 +146,15 @@ export function Budgets() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col sm:gap-6 gap-4 sm:p-6 p-4 overflow-x-hidden">
       {/* Header - no add button, Hero handles it */}
       <div className="flex items-center">
-        <h1 className="text-2xl font-bold text-neutral-900">{t('budgets.title')}</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-ink">{t('budgets.title')}</h1>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {budgets.length === 0 ? (
-          <Card className="md:col-span-2">
+          <Card className="md:col-span-2 bg-white/40 backdrop-blur-xl border-white/60">
             <CardContent className="text-center py-8">
               <p className="text-neutral-500">{t('budgets.noBudgets')}</p>
               <Button onClick={() => handleOpenModal()} className="mt-4 w-full sm:w-auto whitespace-nowrap" leftIcon={<Plus className="h-4 w-4 flex-shrink-0" />}>
@@ -172,30 +172,30 @@ export function Budgets() {
               <Card
                 key={budget.id}
                 className={cn(
-                  "transition-all duration-1000",
+                  "transition-all duration-1000 bg-white/40 backdrop-blur-xl border-white/60",
                   highlightedId === budget.id ? "animate-highlight scale-[1.02]" : ""
                 )}
               >
-                <CardHeader className="flex flex-row items-center justify-between">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <div className="flex items-center gap-3">
                     <div
-                      className="w-4 h-4 rounded-full"
+                      className="w-4 h-4 rounded-full ring-2 ring-white shadow-sm"
                       style={{ backgroundColor: getCategoryColor(budget.categoryId) }}
                     />
-                    <CardTitle className="text-lg">
+                    <CardTitle className="text-lg font-bold text-ink">
                       {getCategoryName(budget.categoryId)}
                     </CardTitle>
                   </div>
                   <div className="flex flex-wrap gap-1">
                     <button
                       onClick={() => handleOpenModal(budget)}
-                      className="p-2 text-neutral-600 hover:bg-neutral-200 rounded-md"
+                      className="p-2 text-neutral-600 hover:bg-white hover:shadow-sm rounded-lg transition-all"
                     >
                       <Edit2 className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => handleDelete(budget.id)}
-                      className="p-2 text-red-600 hover:bg-red-100 rounded-md"
+                      className="p-2 text-danger-600 hover:bg-danger-50 rounded-lg transition-colors"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -203,33 +203,30 @@ export function Budgets() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-neutral-600">
+                    <div className="flex justify-between text-sm sm:text-base">
+                      <span className="text-neutral-600 font-medium">
                         {t('budgets.spent')}: {formatCurrency(status?.spent || 0)}
                       </span>
-                      <span className="text-neutral-600">
+                      <span className="text-neutral-600 font-medium">
                         {t('budgets.form.amount')}: {formatCurrency(budget.amount)}
                       </span>
                     </div>
-                    <div className="relative h-4 bg-neutral-200 rounded-full overflow-hidden">
+                    <div className="relative h-4 bg-slate/10 rounded-full overflow-hidden">
                       <div
-                        className={`absolute top-0 left-0 h-full transition-all ${isOverBudget ? 'bg-red-500' : 'bg-green-500'
-                          }`}
+                        className={`absolute top-0 left-0 h-full transition-all ${isOverBudget ? 'bg-red-500' : 'bg-emerald-500'}`}
                         style={{ width: `${Math.min(percentage, 100)}%` }}
                       />
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className={`font-medium ${isOverBudget ? 'text-red-600' : 'text-green-600'
-                        }`}
-                      >
+                      <span className={`font-bold ${isOverBudget ? 'text-red-600' : 'text-emerald-600'}`}>
                         {percentage.toFixed(1)}% {t('budgets.spent').toLowerCase()}
                       </span>
-                      <span className="text-neutral-600">
+                      <span className="text-neutral-600 font-medium">
                         {t('budgets.remaining')}: {formatCurrency(status?.remaining || 0)}
                       </span>
                     </div>
                     {isOverBudget && (
-                      <p className="text-sm text-red-600 bg-red-50 p-2 rounded">
+                      <p className="text-sm text-red-600 bg-red-50 p-2 rounded-lg border border-red-100">
                         {t('budgets.overBudget')} {formatCurrency(Math.abs(status?.remaining || 0))}
                       </p>
                     )}
@@ -251,6 +248,7 @@ export function Budgets() {
         userId={user?.uid || ''}
         autoStartRecording={autoRecordOnOpen}
       />
+
     </div>
   );
 }

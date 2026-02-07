@@ -263,7 +263,7 @@ export function TransactionModal({
       isRecording={voice.voiceState === 'recording'}
       onCancelRecording={voice.cancelRecording}
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
         <Input
           label={t('transactions.form.title')}
           value={formData.description}
@@ -280,13 +280,13 @@ export function TransactionModal({
           required
         />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
         <div>
           <label className="block text-sm font-medium text-ink mb-1.5">{t('transactions.form.type')}</label>
           <select
             value={formData.type}
             onChange={(e) => setFormData({ ...formData, type: e.target.value as 'income' | 'expense', categoryId: '' })}
-            className="w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-teal/20 focus:border-teal transition-all"
+            className="w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue transition-all"
           >
             <option value="expense">{t('common.expense')}</option>
             <option value="income">{t('common.income')}</option>
@@ -297,7 +297,7 @@ export function TransactionModal({
           <select
             value={formData.categoryId}
             onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-            className="w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-teal/20 focus:border-teal transition-all"
+            className="w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue transition-all"
             required
           >
             <option value="">{t('transactions.form.selectCategory')}</option>
@@ -311,7 +311,7 @@ export function TransactionModal({
           <select
             value={selectedAccountId}
             onChange={(e) => setSelectedAccountId(e.target.value)}
-            className="w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-teal/20 focus:border-teal transition-all"
+            className="w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue transition-all"
           >
             <option value="">{t('transactions.form.selectAccount')}</option>
             {accounts.map((account) => (
@@ -329,14 +329,14 @@ export function TransactionModal({
       </div>
 
       {!isEditing && (
-        <div className="border-t border-slate/10 pt-4 mt-4">
-          <div className="flex items-center gap-2 mb-4">
+        <div className="border-t border-slate/10 pt-3 mt-3 sm:pt-4 sm:mt-4">
+          <div className="flex items-center gap-2 mb-3 sm:mb-4">
             <input
               type="checkbox"
               id="isRecurring"
               checked={isRecurring}
               onChange={(e) => setIsRecurring(e.target.checked)}
-              className="h-4 w-4 text-teal focus:ring-teal border-gray-300 rounded"
+              className="h-4 w-4 text-blue focus:ring-blue border-gray-300 rounded"
             />
             <label htmlFor="isRecurring" className="flex items-center gap-2 text-sm font-medium text-slate cursor-pointer hover:text-ink">
               <Repeat className="h-4 w-4" />
@@ -345,14 +345,14 @@ export function TransactionModal({
           </div>
 
           {isRecurring && (
-            <div className="space-y-4 pl-6 border-l-2 border-teal/20">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-3 sm:space-y-4 pl-4 sm:pl-6 border-l-2 border-blue/20">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-sm font-medium text-ink mb-1.5">{t('transactions.form.recurrencePattern') || 'Frequency'}</label>
                   <select
                     value={recurrencePattern}
                     onChange={(e) => { setRecurrencePattern(e.target.value as any); setRecurrenceDay(''); }}
-                    className="w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-teal/20 focus:border-teal"
+                    className="w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue"
                   >
                     <option value="monthly">{t('common.monthly') || 'Monthly'}</option>
                     <option value="weekly">{t('common.weekly') || 'Weekly'}</option>
@@ -368,7 +368,7 @@ export function TransactionModal({
                     value={recurrenceDay}
                     onChange={(e) => setRecurrenceDay(e.target.value ? parseInt(e.target.value) : '')}
                     placeholder={t('transactions.form.recurrenceDayPlaceholder') || 'Auto'}
-                    className="w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-teal/20 focus:border-teal"
+                    className="w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue"
                   />
                   <p className="text-xs text-slate mt-1">{t('transactions.form.recurrenceDayHint') || 'Leave empty to use the transaction date'}</p>
                 </div>
@@ -380,7 +380,7 @@ export function TransactionModal({
                   value={recurrenceEndDate}
                   onChange={(e) => setRecurrenceEndDate(e.target.value)}
                   min={formData.date}
-                  className="w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-teal/20 focus:border-teal"
+                  className="w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue"
                 />
                 <p className="text-xs text-slate mt-1">{t('transactions.form.recurrenceEndDateHint') || 'If not set, instances will be generated until end of year'}</p>
               </div>
@@ -390,11 +390,11 @@ export function TransactionModal({
       )}
 
       {/* Voice Input Section */}
-      <div className="border-t border-slate/10 pt-4 mt-4">
-        <label className="block text-sm font-medium text-ink mb-3">
+      <div className="border-t border-slate/10 pt-3 mt-3 sm:pt-4 sm:mt-4">
+        <label className="block text-sm font-medium text-ink mb-2 sm:mb-3">
           {(voice.hasVoiceData || isEditing) ? t('voice.updateByVoice') : t('voice.addByVoice')}
         </label>
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2 sm:gap-3">
           <div className="flex gap-2">
             <button
               type="button"
@@ -409,28 +409,28 @@ export function TransactionModal({
               }}
               disabled={voice.voiceState === 'processing' || voice.isProcessingVoice}
               className={cn(
-                "flex-1 flex items-center justify-center gap-2 h-14 rounded-full font-medium transition-all duration-300",
+                "flex-1 flex items-center justify-center gap-2 h-11 sm:h-14 rounded-full font-medium transition-all duration-300",
                 voice.voiceState === 'recording'
                   ? 'bg-emerald text-white ring-4 ring-emerald/20 animate-pulse'
                   : (voice.voiceState === 'processing' || voice.isProcessingVoice)
                     ? 'bg-slate/10 text-slate cursor-wait'
-                    : 'bg-gradient-to-r from-teal to-teal-hover text-white shadow-lg shadow-teal/20 hover:shadow-teal/30 hover:scale-[1.02]'
+                    : 'bg-gradient-to-r from-blue to-blue-hover text-white shadow-lg shadow-blue/20 hover:shadow-blue/30 hover:scale-[1.02]'
               )}
             >
               {voice.voiceState === 'recording' ? (
                 <>
-                  <Square className="h-5 w-5" />
-                  <span>{t('voice.stopRecording')}</span>
+                  <Square className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <span className="text-sm sm:text-base">{t('voice.stopRecording')}</span>
                 </>
               ) : voice.voiceState === 'processing' || voice.isProcessingVoice ? (
                 <>
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  <span>{t('voice.processing')}</span>
+                  <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
+                  <span className="text-sm sm:text-base">{t('voice.processing')}</span>
                 </>
               ) : (
                 <>
-                  <Mic className="h-5 w-5" />
-                  <span>{(voice.hasVoiceData || isEditing) ? t('voice.updateByVoice') : t('voice.addByVoice')}</span>
+                  <Mic className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <span className="text-sm sm:text-base">{(voice.hasVoiceData || isEditing) ? t('voice.updateByVoice') : t('voice.addByVoice')}</span>
                 </>
               )}
             </button>
@@ -439,10 +439,10 @@ export function TransactionModal({
               <button
                 type="button"
                 onClick={voice.cancelRecording}
-                className="h-14 w-14 flex items-center justify-center rounded-full bg-rose/10 text-rose hover:bg-rose/20 transition-all duration-200 border-2 border-rose/20 shadow-lg shadow-rose/10"
+                className="h-11 w-11 sm:h-14 sm:w-14 flex items-center justify-center rounded-full bg-rose/10 text-rose hover:bg-rose/20 transition-all duration-200 border-2 border-rose/20 shadow-lg shadow-rose/10"
                 title={t('common.cancel')}
               >
-                <X className="h-5 w-5" />
+                <X className="h-4 w-4 sm:h-5 sm:w-5" />
               </button>
             )}
           </div>

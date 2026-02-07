@@ -485,15 +485,15 @@ export function Reports() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue"></div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 px-4 py-6">
+    <div className="flex flex-col sm:gap-6 gap-4 sm:p-6 p-4 overflow-x-hidden">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl font-bold text-ink">{t('reports.title')}</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-ink">{t('reports.title')}</h1>
         <div className="flex flex-wrap gap-2">
           {/* Currency Filter Toggle Buttons */}
           {availableCurrencies.length > 0 && (
@@ -514,7 +514,7 @@ export function Reports() {
           <select
             value={selectedAccountId}
             onChange={(e) => setSelectedAccountId(e.target.value)}
-            className="rounded-xl border border-white/40 bg-white/50 backdrop-blur-sm px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-teal/20 focus:border-teal"
+            className="rounded-xl border border-white/40 bg-white/50 backdrop-blur-sm px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue"
           >
             <option value="" className="text-ink">{t('reports.allAccounts')}</option>
             {filteredAccounts.map((account) => (
@@ -526,7 +526,7 @@ export function Reports() {
           <select
             value={year}
             onChange={(e) => setYear(parseInt(e.target.value))}
-            className="rounded-xl border border-white/40 bg-white/50 backdrop-blur-sm px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-teal/20 focus:border-teal"
+            className="rounded-xl border border-white/40 bg-white/50 backdrop-blur-sm px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue"
           >
             {[2023, 2024, 2025, 2026].map((y) => (
               <option key={y} value={y} className="text-ink">
@@ -534,7 +534,7 @@ export function Reports() {
               </option>
             ))}
           </select>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 bg-white/50 backdrop-blur-sm p-1 rounded-xl border border-white/40">
             <Button
               variant="ghost"
               size="icon-sm"
@@ -546,7 +546,7 @@ export function Reports() {
             <select
               value={month}
               onChange={(e) => setMonth(parseInt(e.target.value))}
-              className="rounded-xl border border-white/40 bg-white/50 backdrop-blur-sm px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-teal/20 focus:border-teal"
+              className="bg-transparent border-none text-sm text-ink focus:outline-none cursor-pointer py-1"
             >
               {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
                 <option key={m} value={m} className="text-ink">
@@ -573,7 +573,7 @@ export function Reports() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card className="border-l-4 border-l-emerald">
+        <Card hoverable className="border-l-4 border-l-emerald bg-white/40 backdrop-blur-xl border-white/60">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-slate">
               {t('common.income')}
@@ -587,7 +587,7 @@ export function Reports() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-rose">
+        <Card hoverable className="border-l-4 border-l-rose bg-white/40 backdrop-blur-xl border-white/60">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-slate">
               {t('common.expense')}
@@ -601,16 +601,16 @@ export function Reports() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-teal">
+        <Card hoverable className="border-l-4 border-l-blue bg-white/40 backdrop-blur-xl border-white/60">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-slate">
               {t('reports.monthlyBalance')}
             </CardTitle>
-            <Calendar className="h-4 w-4 text-teal" />
+            <Calendar className="h-4 w-4 text-blue" />
           </CardHeader>
           <CardContent>
             <div
-              className={`text-2xl font-bold ${monthlyBalance >= 0 ? 'text-emerald' : 'text-rose'
+              className={`text-xl sm:text-2xl font-bold ${monthlyBalance >= 0 ? 'text-emerald' : 'text-rose'
                 }`}
             >
               {formatCurrency(monthlyBalance, selectedCurrency || 'BRL')}
@@ -618,16 +618,16 @@ export function Reports() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-amber">
+        <Card hoverable className="border-l-4 border-l-slate-light bg-white/40 backdrop-blur-xl border-white/60">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-slate">
               {t('reports.totalBalance')}
             </CardTitle>
-            <PiggyBank className="h-4 w-4 text-amber" />
+            <PiggyBank className="h-4 w-4 text-slate" />
           </CardHeader>
           <CardContent>
             <div
-              className={`text-2xl font-bold ${totalAccountBalance >= 0 ? 'text-emerald' : 'text-rose'
+              className={`text-xl sm:text-2xl font-bold ${totalAccountBalance >= 0 ? 'text-emerald' : 'text-rose'
                 }`}
             >
               {formatCurrency(totalAccountBalance, selectedCurrency || 'BRL')}
@@ -635,16 +635,16 @@ export function Reports() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-slate">
+        <Card hoverable className="border-l-4 border-l-amber bg-white/40 backdrop-blur-xl border-white/60">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-slate">
               {t('reports.calculatedBalance')}
             </CardTitle>
-            <Calculator className="h-4 w-4 text-slate" />
+            <Calculator className="h-4 w-4 text-amber" />
           </CardHeader>
           <CardContent>
             <div
-              className={`text-2xl font-bold ${calculatedBalance >= 0 ? 'text-emerald' : 'text-rose'
+              className={`text-xl sm:text-2xl font-bold ${calculatedBalance >= 0 ? 'text-emerald' : 'text-rose'
                 }`}
             >
               {formatCurrency(calculatedBalance, selectedCurrency || 'BRL')}
@@ -656,7 +656,7 @@ export function Reports() {
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Expense Breakdown */}
-        <Card>
+        <Card className="bg-white/40 backdrop-blur-xl border-white/60">
           <CardHeader>
             <CardTitle className="text-ink">{t('reports.expensesByCategory')}</CardTitle>
           </CardHeader>
@@ -688,6 +688,7 @@ export function Reports() {
                       const translatedName = getTranslatedCategoryName(categoryName);
                       return [formatCurrency(Number(value), selectedCurrency || 'BRL'), translatedName];
                     }}
+                    contentStyle={{ backgroundColor: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(8px)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.5)' }}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -696,7 +697,7 @@ export function Reports() {
         </Card>
 
         {/* Income Composition */}
-        <Card>
+        <Card className="bg-white/40 backdrop-blur-xl border-white/60">
           <CardHeader>
             <CardTitle className="text-ink">{t('reports.incomeComposition')}</CardTitle>
           </CardHeader>
@@ -728,6 +729,7 @@ export function Reports() {
                       const translatedName = getTranslatedCategoryName(categoryName);
                       return [formatCurrency(Number(value), selectedCurrency || 'BRL'), translatedName];
                     }}
+                    contentStyle={{ backgroundColor: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(8px)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.5)' }}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -737,7 +739,7 @@ export function Reports() {
       </div>
 
       {/* Trend Chart */}
-      <Card>
+      <Card className="bg-white/40 backdrop-blur-xl border-white/60">
         <CardHeader>
           <CardTitle className="text-ink">{t('reports.monthlyTrend')}</CardTitle>
         </CardHeader>
@@ -778,8 +780,8 @@ export function Reports() {
               <Line
                 type="monotone"
                 dataKey="projectedBalance"
-                stroke="#14B8A6"
-                strokeWidth={2}
+                stroke="#F59E0B"
+                strokeWidth={3}
                 name={t('reports.projectedBalance')}
               />
             </LineChart>

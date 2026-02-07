@@ -88,9 +88,9 @@ export function VoiceTransactionButton({
         disabled={isProcessing || state === 'success'}
         className={cn(
           "relative flex items-center justify-center w-16 h-16 rounded-full shadow-float-button transition-all duration-300 z-10",
-          "active:scale-95 focus:outline-none focus:ring-4 focus:ring-teal/20",
+          "active:scale-95 focus:outline-none focus:ring-4 focus:ring-blue/20",
           // State Styles
-          state === 'idle' && "bg-gradient-to-br from-teal to-teal-hover text-white hover:scale-105",
+          state === 'idle' && "bg-gradient-to-br from-blue to-blue-hover text-white hover:scale-105",
           state === 'recording' && "bg-rose text-white scale-110",
           state === 'processing' && "bg-slate-light text-white cursor-wait",
           state === 'success' && "bg-emerald text-white",

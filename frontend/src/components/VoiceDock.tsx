@@ -26,7 +26,7 @@ const reportsItem: NavItem = { name: 'Relatórios', href: '/reports', icon: BarC
 
 // Green separator bar component
 function Separator() {
-    return <div className="w-0.5 h-8 bg-teal rounded-full mx-1" />;
+    return <div className="w-0.5 h-8 bg-blue rounded-full mx-1" />;
 }
 
 export function VoiceDock() {
@@ -49,13 +49,13 @@ export function VoiceDock() {
                     "relative flex flex-col items-center justify-center p-1 sm:p-2 rounded-2xl transition-all duration-200 group flex-1",
                     // Removed min-w-[44px] to allow shrinking on tiny screens
                     isActive
-                        ? "bg-teal/10 text-teal"
+                        ? "bg-blue/10 text-blue"
                         : "text-slate hover:bg-white/50 hover:text-ink"
                 )}
             >
                 {/* Active Indicator Pill - Scale width with viewport */}
                 {isActive && (
-                    <div className="absolute -top-1 left-1/2 -translate-x-1/2 h-1 bg-teal rounded-full"
+                    <div className="absolute -top-1 left-1/2 -translate-x-1/2 h-1 bg-blue rounded-full"
                         style={{ width: 'clamp(12px, 4vw, 20px)' }} />
                 )}
 

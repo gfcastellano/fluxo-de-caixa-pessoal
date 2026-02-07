@@ -12,11 +12,11 @@ export const colors = {
   brand: {
     ink: '#0B1220',
     slate: '#5B667A',
-    mist: '#F6F8FB',
-    teal: '#2EC4B6',
+    mist: '#F0F4F8',
+    blue: '#3A86FF',
   },
   semantic: {
-    primary: 'var(--color-primary)', // Mapped to Teal
+    primary: 'var(--color-primary)', // Mapped to Blue
     success: '#22C55E',
     warning: '#FFBE0B',
     danger: '#FF5C8A',
@@ -35,7 +35,7 @@ export const components = {
       'inline-flex items-center justify-center',
       'rounded-xl font-medium',
       'transition-all duration-300',
-      'focus:outline-none focus:ring-2 focus:ring-teal/20',
+      'focus:outline-none focus:ring-2 focus:ring-blue/20',
       'disabled:opacity-50 disabled:pointer-events-none disabled:cursor-not-allowed',
       'active:scale-[0.98]',
       'whitespace-nowrap',
@@ -52,8 +52,8 @@ export const components = {
 
     variants: {
       primary: [
-        'bg-teal text-white shadow-lg shadow-teal/20',
-        'hover:bg-teal-hover hover:shadow-teal/30',
+        'bg-blue text-white shadow-lg shadow-blue/20',
+        'hover:bg-blue-hover hover:shadow-blue/30',
         'border border-transparent',
       ].join(' '),
 
@@ -93,8 +93,8 @@ export const components = {
       ].join(' '),
 
       link: [
-        'bg-transparent text-teal',
-        'hover:text-teal-hover hover:underline',
+        'bg-transparent text-blue',
+        'hover:text-blue-hover hover:underline',
         'p-0 h-auto',
       ].join(' '),
     },
@@ -113,8 +113,8 @@ export const components = {
 
     sizes: {
       sm: 'p-4',
-      md: 'p-6',
-      lg: 'p-8',
+      md: 'p-4 sm:p-6',
+      lg: 'p-6 sm:p-8',
     },
 
     header: [
@@ -238,7 +238,7 @@ export const components = {
 
     variants: {
       default: 'bg-slate/10 text-slate',
-      primary: 'bg-teal/10 text-teal-hover',
+      primary: 'bg-blue/10 text-blue',
       success: 'bg-emerald/10 text-emerald',
       warning: 'bg-amber/10 text-amber-default', // using default suffix if needed or just amber
       danger: 'bg-rose/10 text-rose',

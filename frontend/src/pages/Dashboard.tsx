@@ -10,7 +10,8 @@ import { formatCurrency, formatMonthYear, getCurrentMonth } from '../utils/forma
 import { getTranslatedCategoryName } from '../utils/categoryTranslations';
 import { getTransactions } from '../services/transactionService';
 import { getAccounts, calculateAccountBalance } from '../services/accountService';
-import type { Transaction, Account } from '../types';
+import { getCategories } from '../services/categoryService';
+import type { Transaction, Account, Category } from '../types';
 import { TrendingUp, TrendingDown, Wallet, Plus, Calendar } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -56,9 +57,10 @@ export function Dashboard() {
       const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
       const endDate = `${year}-${String(month).padStart(2, '0')}-31`;
 
-      const [transactions, accountsData] = await Promise.all([
+      const [transactions, accountsData, categoriesData] = await Promise.all([
         getTransactions(user!.uid, { startDate, endDate }),
         getAccounts(user!.uid),
+        getCategories(user!.uid),
       ]);
 
       const accountCurrencyMap: Record<string, string> = {};
@@ -87,7 +89,26 @@ export function Dashboard() {
       });
 
       setCurrencySummaries(summaries);
-      setRecentTransactions(transactions.slice(0, 5));
+      setCurrencySummaries(summaries);
+
+      // Enrich transactions with account and category data for display
+      const accountsMap = accountsData.reduce((acc, account) => {
+        acc[account.id] = account;
+        return acc;
+      }, {} as Record<string, Account>);
+
+      const categoriesMap = categoriesData.reduce((acc, category) => {
+        acc[category.id] = category;
+        return acc;
+      }, {} as Record<string, Category>);
+
+      const enrichedTransactions = transactions.map(t => ({
+        ...t,
+        account: t.accountId ? accountsMap[t.accountId] : undefined,
+        category: t.categoryId ? categoriesMap[t.categoryId] : undefined,
+      }));
+
+      setRecentTransactions(enrichedTransactions.slice(0, 5));
       setAccounts(accountsData);
       setAccountCurrencyMap(accountCurrencyMap);
 
@@ -107,7 +128,7 @@ export function Dashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue"></div>
       </div>
     );
   }
@@ -115,23 +136,22 @@ export function Dashboard() {
   const { year, month } = getCurrentMonth();
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col sm:gap-6 gap-4 sm:p-6 p-4 overflow-x-hidden">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-ink">{t('dashboard.title')}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-ink">{t('dashboard.title')}</h1>
           <div className="flex items-center gap-2 text-slate mt-1">
             <Calendar className="h-4 w-4" />
-            <span>{formatMonthYear(year, month)}</span>
+            <span className="text-sm">{formatMonthYear(year, month)}</span>
           </div>
         </div>
-
       </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
         {/* Income Card */}
-        <Card hoverable className="border-l-4 border-l-emerald bg-white/60 backdrop-blur-md">
+        <Card hoverable className="border-l-4 border-l-emerald bg-white/40 backdrop-blur-xl border-white/60">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-slate">
               {t('dashboard.totalIncome')}
@@ -143,12 +163,12 @@ export function Dashboard() {
           <CardContent>
             <div className="space-y-1">
               {Object.keys(currencySummaries).length === 0 ? (
-                <div className="text-2xl font-bold text-emerald tabular-nums">
+                <div className="text-xl sm:text-2xl font-bold text-emerald tabular-nums">
                   {formatCurrency(0)}
                 </div>
               ) : (
                 Object.entries(currencySummaries).map(([currency, summary]) => (
-                  <div key={currency} className="text-2xl font-bold text-emerald tabular-nums tracking-tight">
+                  <div key={currency} className="text-xl sm:text-2xl font-bold text-emerald tabular-nums tracking-tight">
                     {formatCurrency(summary.income, currency)}
                   </div>
                 ))
@@ -159,7 +179,7 @@ export function Dashboard() {
         </Card>
 
         {/* Expenses Card */}
-        <Card hoverable className="border-l-4 border-l-rose bg-white/60 backdrop-blur-md">
+        <Card hoverable className="border-l-4 border-l-rose bg-white/40 backdrop-blur-xl border-white/60">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-slate">
               {t('dashboard.totalExpenses')}
@@ -171,12 +191,12 @@ export function Dashboard() {
           <CardContent>
             <div className="space-y-1">
               {Object.keys(currencySummaries).length === 0 ? (
-                <div className="text-2xl font-bold text-rose tabular-nums">
+                <div className="text-xl sm:text-2xl font-bold text-rose tabular-nums">
                   {formatCurrency(0)}
                 </div>
               ) : (
                 Object.entries(currencySummaries).map(([currency, summary]) => (
-                  <div key={currency} className="text-2xl font-bold text-rose tabular-nums tracking-tight">
+                  <div key={currency} className="text-xl sm:text-2xl font-bold text-rose tabular-nums tracking-tight">
                     {formatCurrency(summary.expenses, currency)}
                   </div>
                 ))
@@ -187,26 +207,26 @@ export function Dashboard() {
         </Card>
 
         {/* Balance Card */}
-        <Card hoverable className="border-l-4 border-l-teal bg-white/60 backdrop-blur-md">
+        <Card hoverable className="border-l-4 border-l-blue bg-white/40 backdrop-blur-xl border-white/60">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-slate">
               {t('dashboard.currentBalance')}
             </CardTitle>
-            <div className="p-2 bg-teal/10 rounded-xl">
-              <Wallet className="h-4 w-4 text-teal" />
+            <div className="p-2 bg-blue/10 rounded-xl">
+              <Wallet className="h-4 w-4 text-blue" />
             </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-1">
               {Object.keys(currencySummaries).length === 0 ? (
-                <div className="text-2xl font-bold text-teal tabular-nums">
+                <div className="text-xl sm:text-2xl font-bold text-blue tabular-nums">
                   {formatCurrency(0)}
                 </div>
               ) : (
                 Object.entries(currencySummaries).map(([currency, summary]) => (
                   <div
                     key={currency}
-                    className={`text-2xl font-bold tabular-nums tracking-tight ${summary.balance >= 0 ? 'text-teal' : 'text-rose'
+                    className={`text-xl sm:text-2xl font-bold tabular-nums tracking-tight ${summary.balance >= 0 ? 'text-blue' : 'text-rose'
                       }`}
                   >
                     {formatCurrency(summary.balance, currency)}
@@ -220,7 +240,7 @@ export function Dashboard() {
       </div>
 
       {/* Recent Transactions */}
-      <Card className="bg-white/40 backdrop-blur-xl border-white/60">
+      <Card className="bg-white/40 backdrop-blur-xl border-white/60 flex-1">
         <CardHeader>
           <CardTitle className="text-lg text-ink">{t('dashboard.recentTransactions')}</CardTitle>
           <CardDescription className="text-slate">Suas últimas atividades</CardDescription>
@@ -256,13 +276,21 @@ export function Dashboard() {
                         <TrendingDown className="h-5 w-5" />
                       )}
                     </div>
-                    <div>
-                      <p className="font-medium text-ink text-base">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-ink text-base truncate">
                         {transaction.description}
                       </p>
-                      <p className="text-xs text-slate mt-0.5">
-                        {transaction.category ? t(getTranslatedCategoryName(transaction.category.name)) : t('common.category')}
-                      </p>
+                      <div className="flex items-center gap-2 text-xs mt-0.5">
+                        <span className="text-slate font-medium">
+                          {transaction.category ? t(getTranslatedCategoryName(transaction.category.name)) : t('common.category')}
+                        </span>
+                        {transaction.account && (
+                          <>
+                            <span className="text-slate/40">•</span>
+                            <span className="font-medium" style={{ color: transaction.account.color }}>{transaction.account.name}</span>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -287,8 +315,6 @@ export function Dashboard() {
         </CardContent>
       </Card>
 
-      {/* Spacer for Dock */}
-      <div className="h-20" />
     </div>
   );
 }

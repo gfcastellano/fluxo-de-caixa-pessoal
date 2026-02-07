@@ -35,19 +35,20 @@ export default {
           light: '#8D99AE',
         },
         mist: {
-          DEFAULT: '#F6F8FB', // Background principal
-          dark: '#E2E6EA',
+          DEFAULT: '#F0F4F8', // Background principal (Cooler/Blueish gray)
+          dark: '#D9E2EC',
         },
 
         // Brand Accents
-        teal: {
-          DEFAULT: '#2EC4B6', // Primary / Ação / Voz
-          hover: '#25A094',
-          light: '#E0F7F6', // Backgrounds de tint
-        },
         blue: {
-          DEFAULT: '#3A86FF', // Info
-          light: '#E6F0FF',
+          DEFAULT: '#3A86FF', // Primary / Ação / Voz (New Brand Color)
+          hover: '#2563EB',
+          light: '#E6F0FF', // Backgrounds de tint
+        },
+        teal: {
+          DEFAULT: '#2EC4B6', // Secondary / Legacy
+          hover: '#25A094',
+          light: '#E0F7F6',
         },
         amber: {
           DEFAULT: '#FFBE0B', // Atenção
@@ -63,9 +64,9 @@ export default {
         },
 
         // Semantic Aliases (Mapping for refactoring ease)
-        background: '#F6F8FB', // Mist
-        surface: 'rgba(255, 255, 255, 0.55)', // Glass base
-        primary: '#2EC4B6', // Teal
+        background: '#F0F4F8', // Mist
+        surface: 'rgba(255, 255, 255, 0.65)', // Glass base (Slightly more opaque for calmness)
+        primary: '#3A86FF', // Blue
         text: {
           primary: '#0B1220', // Ink
           secondary: '#5B667A', // Slate
@@ -95,7 +96,7 @@ export default {
       boxShadow: {
         'glass': '0 4px 24px -1px rgba(0, 0, 0, 0.04), 0 0 1px 0 rgba(0, 0, 0, 0.06)',
         'glass-hover': '0 8px 32px -2px rgba(0, 0, 0, 0.08), 0 0 1px 0 rgba(0, 0, 0, 0.08)',
-        'float-button': '0 12px 36px -4px rgba(46, 196, 182, 0.35)', // Teal shadow
+        'float-button': '0 12px 36px -4px rgba(58, 134, 255, 0.35)', // Blue shadow
       },
       animation: {
         'wave': 'wave 2s infinite',
@@ -103,8 +104,8 @@ export default {
       },
       keyframes: {
         highlight: {
-          '0%, 100%': { backgroundColor: 'transparent', boxShadow: 'inset 0 0 0 0 rgba(46, 196, 182, 0)' },
-          '50%': { backgroundColor: 'rgba(46, 196, 182, 0.1)', boxShadow: 'inset 0 0 0 1px rgba(46, 196, 182, 0.3)' },
+          '0%, 100%': { backgroundColor: 'transparent', boxShadow: 'inset 0 0 0 0 rgba(58, 134, 255, 0)' },
+          '50%': { backgroundColor: 'rgba(58, 134, 255, 0.1)', boxShadow: 'inset 0 0 0 1px rgba(58, 134, 255, 0.3)' },
         },
         wave: {
           '0%': { transform: 'scale(0.95)', opacity: '0.6' },

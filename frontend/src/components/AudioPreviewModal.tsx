@@ -130,7 +130,7 @@ export function AudioPreviewModal({
                                 className={cn(
                                     "w-1 rounded-full transition-all duration-150",
                                     currentTime / duration > i / 30
-                                        ? "bg-teal"
+                                        ? "bg-blue"
                                         : "bg-slate/20"
                                 )}
                                 style={{
@@ -153,7 +153,7 @@ export function AudioPreviewModal({
                             disabled={isProcessing}
                             className={cn(
                                 "w-14 h-14 rounded-full flex items-center justify-center transition-all duration-200",
-                                "bg-gradient-to-br from-teal to-teal-hover text-white shadow-lg",
+                                "bg-gradient-to-br from-blue to-blue-hover text-white shadow-lg",
                                 "hover:scale-105 active:scale-95 disabled:opacity-50"
                             )}
                         >
@@ -178,7 +178,7 @@ export function AudioPreviewModal({
                         onClick={onConfirm}
                         disabled={isProcessing}
                         leftIcon={<Send className="h-4 w-4" />}
-                        className="flex-1 bg-teal hover:bg-teal-hover"
+                        className="flex-1 bg-blue hover:bg-blue-hover"
                     >
                         {isProcessing
                             ? t('voice.processing', 'Processando...')

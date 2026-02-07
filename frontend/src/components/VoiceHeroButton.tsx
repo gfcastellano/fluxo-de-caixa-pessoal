@@ -79,8 +79,8 @@ export function VoiceHeroButton() {
                 onClick={handleClick}
                 className={cn(
                     "relative flex items-center justify-center w-14 h-14 rounded-full shadow-float-button transition-all duration-300 z-10",
-                    "bg-gradient-to-br from-teal to-teal-hover text-white hover:scale-105",
-                    "active:scale-95 focus:outline-none focus:ring-4 focus:ring-teal/20"
+                    "bg-gradient-to-br from-blue to-blue-hover text-white hover:scale-105",
+                    "active:scale-95 focus:outline-none focus:ring-4 focus:ring-blue/20"
                 )}
                 aria-label={getAriaLabel()}
             >

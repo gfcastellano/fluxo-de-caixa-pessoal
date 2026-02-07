@@ -88,7 +88,7 @@ export const ptTranslations = {
     summary: 'Resumo Financeiro',
     totalIncome: 'Total de Receitas',
     totalExpenses: 'Total de Despesas',
-    currentBalance: 'Saldo Atual',
+    currentBalance: 'Saldo Inicial',
     recentTransactions: 'Transações Recentes',
     budgetOverview: 'Visão Geral do Orçamento',
     noTransactions: 'Nenhuma transação encontrada',
@@ -228,7 +228,7 @@ export const ptTranslations = {
     deleteConfirm: 'Tem certeza que deseja excluir esta conta?',
     setDefault: 'Definir como Padrão',
     default: 'Padrão',
-    currentBalance: 'Saldo Atual',
+    currentBalance: 'Saldo Inicial',
     initialBalanceDate: 'Data do Saldo Inicial',
     noAccounts: 'Nenhuma conta encontrada',
     form: {

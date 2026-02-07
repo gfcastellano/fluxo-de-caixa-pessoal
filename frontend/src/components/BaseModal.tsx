@@ -86,7 +86,7 @@ export function BaseModal({
     const defaultSubmitLabel = hasVoiceData || isEditing ? 'Atualizar' : 'Criar';
 
     return (
-        <div className="fixed inset-0 z-[1400] flex items-center justify-center p-4 overflow-hidden">
+        <div className="fixed inset-0 z-[1400] flex items-center justify-center p-2 sm:p-4 overflow-hidden">
             {/* Backdrop */}
             <div
                 className="absolute inset-0 bg-ink/20 backdrop-blur-sm animate-fade-in"
@@ -94,20 +94,20 @@ export function BaseModal({
             />
 
             {/* Modal Container - Always centered, with max height to fit viewport */}
-            <div className="relative w-full max-w-lg max-h-[85vh] flex flex-col bg-mist/95 backdrop-blur-xl border border-white/50 rounded-3xl shadow-2xl animate-scale-in">
+            <div className="relative w-full max-w-lg max-h-[95vh] sm:max-h-[85vh] flex flex-col bg-mist/95 backdrop-blur-xl border border-white/50 rounded-2xl sm:rounded-3xl shadow-2xl animate-scale-in">
                 {/* Header - Fixed at top */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate/5 flex-shrink-0">
-                    <h2 className="text-lg font-semibold text-ink">{title}</h2>
+                <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-slate/5 flex-shrink-0">
+                    <h2 className="text-base sm:text-lg font-semibold text-ink">{title}</h2>
                     <button
                         onClick={handleCancel}
-                        className="p-2 text-slate hover:text-ink hover:bg-slate/10 rounded-full transition-colors"
+                        className="p-1.5 sm:p-2 text-slate hover:text-ink hover:bg-slate/10 rounded-full transition-colors"
                     >
                         <X className="h-5 w-5" />
                     </button>
                 </div>
 
                 {/* Content - Scrollable */}
-                <div className="px-6 py-4 overflow-y-auto flex-1">
+                <div className="px-4 py-3 sm:px-6 sm:py-4 overflow-y-auto flex-1 custom-scrollbar">
                     {onSubmit ? (
                         <form onSubmit={onSubmit} className="space-y-4">
                             {children}
