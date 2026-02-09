@@ -218,6 +218,8 @@ async function generateRecurringInstancesWithCount(
       isRecurringInstance: true, // Mark as generated child instance
       createdFromRecurring: true, // Mark that this was created from a recurring transaction
       recurrencePattern: recurrencePattern, // Store the recurrence pattern for display purposes
+      installmentNumber: i + 2, // Child instances start from 2 (parent is 1)
+      totalInstallments: count, // Total number of installments in the series
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });

@@ -39,6 +39,9 @@ export interface Transaction {
   // Recurring count for initial creation
   recurringCount?: number; // Number of recurring instances to create initially
   createdFromRecurring?: boolean; // true = this transaction was created as part of a recurring series
+  // Installment tracking fields for displaying "X of Y"
+  installmentNumber?: number; // Current installment position (1-based)
+  totalInstallments?: number; // Total number of installments in the series
 }
 
 export interface Budget {
