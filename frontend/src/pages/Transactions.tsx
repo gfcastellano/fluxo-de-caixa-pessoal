@@ -19,8 +19,24 @@ import { getAccounts } from '../services/accountService';
 import { getTranslatedCategoryName } from '../utils/categoryTranslations';
 import type { Transaction, Category, Account } from '../types';
 import { formatCurrency, formatDate } from '../utils/format';
-import { Plus, Edit2, Trash2, Search, ChevronLeft, ChevronRight, Repeat, Copy, Calendar, CalendarDays, List } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, ChevronLeft, ChevronRight, Repeat, Copy, Calendar, CalendarDays, List, ChevronDown, ChevronUp, FileText } from 'lucide-react';
 import { cn } from '../utils/cn';
+
+// RecurringGroup interface for grouping recurring transactions
+interface RecurringGroup {
+  parentId: string;
+  description: string;
+  recurrencePattern: 'monthly' | 'weekly' | 'yearly';
+  totalInstallments: number;
+  occurrencesInPeriod: number;
+  totalAmountInPeriod: number;
+  transactions: Transaction[];
+  type: 'income' | 'expense';
+  categoryId: string;
+  category?: Category;
+  accountId?: string;
+  account?: Account;
+}
 
 // Filter mode type
 type FilterMode = 'all' | 'month' | 'week';
@@ -282,19 +298,27 @@ export function Transactions() {
     if (!user) return;
     try {
       if (editingTransaction) {
-        await updateTransaction(editingTransaction.id, data);
-        // Optimistic update
-        setTransactions(prev => prev.map(t => {
-          if (t.id === editingTransaction.id) {
-            return {
-              ...t,
-              ...data,
-              category: data.categoryId ? categories.find(c => c.id === data.categoryId) : t.category,
-              account: data.accountId ? accounts.find(a => a.id === data.accountId) : t.account,
-            };
-          }
-          return t;
-        }));
+        // Extract editMode from data if present (for recurring transactions)
+        const { editMode, ...transactionData } = data as Partial<Transaction> & { editMode?: 'single' | 'forward' | 'all' };
+        await updateTransaction(editingTransaction.id, transactionData, editMode);
+        
+        // If bulk edit (forward or all), reload all transactions to get updated data
+        if (editMode === 'forward' || editMode === 'all') {
+          await loadTransactions(false);
+        } else {
+          // Optimistic update for single transaction edit
+          setTransactions(prev => prev.map(t => {
+            if (t.id === editingTransaction.id) {
+              return {
+                ...t,
+                ...transactionData,
+                category: transactionData.categoryId ? categories.find(c => c.id === transactionData.categoryId) : t.category,
+                account: transactionData.accountId ? accounts.find(a => a.id === transactionData.accountId) : t.account,
+              };
+            }
+            return t;
+          }));
+        }
       } else {
         const newTransaction = await createTransaction(user.uid, data as any);
         // Add to list if within current filter range
@@ -376,29 +400,53 @@ export function Transactions() {
   };
 
   // Group transactions for recurring display
-  const { parentMap, standalone, recurringParents } = useMemo(() => {
-    const parentMap = new Map<string, Transaction[]>();
+  const { recurringGroups, standalone } = useMemo(() => {
+    const groups = new Map<string, RecurringGroup>();
     const standalone: Transaction[] = [];
-    const recurringParents: Transaction[] = [];
 
     transactions.forEach(t => {
-      if (t.isRecurring) {
-        recurringParents.push(t);
-      } else if (t.parentTransactionId) {
-        if (!parentMap.has(t.parentTransactionId)) parentMap.set(t.parentTransactionId, []);
-        parentMap.get(t.parentTransactionId)!.push(t);
+      // If it's a recurring transaction (parent or child)
+      if (t.isRecurring || t.parentTransactionId || t.isRecurringInstance) {
+        const parentId = t.isRecurring ? t.id : t.parentTransactionId!;
+        
+        if (!groups.has(parentId)) {
+          groups.set(parentId, {
+            parentId,
+            description: t.description,
+            recurrencePattern: t.recurrencePattern || 'monthly',
+            totalInstallments: t.totalInstallments || 1,
+            occurrencesInPeriod: 0,
+            totalAmountInPeriod: 0,
+            transactions: [],
+            type: t.type,
+            categoryId: t.categoryId,
+            category: t.category,
+            accountId: t.accountId,
+            account: t.account,
+          });
+        }
+        
+        const group = groups.get(parentId)!;
+        group.transactions.push(t);
+        group.occurrencesInPeriod++;
+        group.totalAmountInPeriod += t.amount;
       } else {
+        // Regular transaction (not recurring)
         standalone.push(t);
       }
     });
 
-    // Add orphaned instances
-    const recurringIds = new Set(recurringParents.map(t => t.id));
-    parentMap.forEach((instances, parentId) => {
-      if (!recurringIds.has(parentId)) standalone.push(...instances);
+    // Sort transactions within each group by installmentNumber
+    groups.forEach(group => {
+      group.transactions.sort((a, b) =>
+        (a.installmentNumber || 0) - (b.installmentNumber || 0)
+      );
     });
 
-    return { parentMap, standalone, recurringParents };
+    return {
+      recurringGroups: Array.from(groups.values()),
+      standalone,
+    };
   }, [transactions]);
 
   // Filter by search and type
@@ -408,9 +456,9 @@ export function Transactions() {
     return matchesSearch && matchesType;
   });
 
-  const filteredRecurringParents = recurringParents.filter((t) => {
-    const matchesSearch = t.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = filterType === 'all' || t.type === filterType;
+  const filteredRecurringGroups = recurringGroups.filter((group) => {
+    const matchesSearch = group.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = filterType === 'all' || group.type === filterType;
     return matchesSearch && matchesType;
   });
 
@@ -574,7 +622,7 @@ export function Transactions() {
             </div>
           )}
 
-          {filteredTransactions.length === 0 && filteredRecurringParents.length === 0 ? (
+          {filteredTransactions.length === 0 && filteredRecurringGroups.length === 0 ? (
             <p className="text-slate text-center py-8 sm:py-12 text-sm">{t('transactions.noTransactions')}</p>
           ) : (
             <>
@@ -582,123 +630,133 @@ export function Transactions() {
                   MOBILE: Card Layout (sm-) - Scrollable
                   ============================================ */}
               <div className="sm:hidden h-full overflow-y-auto px-3 pb-2 space-y-2">
-                {/* Recurring Parents - Mobile Cards */}
-                {filteredRecurringParents.map((parent) => {
-                  const installmentDisplay = formatInstallment(parent);
-                  const remainingOccurrences = filterMode === 'all' ? calculateRemainingOccurrences(parent) : 0;
+                {/* Recurring Groups - Mobile Cards */}
+                {filteredRecurringGroups.map((group) => {
+                  const isExpanded = expandedRecurring.has(group.parentId);
                   return (
-                    <div
-                      key={parent.id}
-                      className={cn(
-                        "card-glass p-3 space-y-2 transition-all duration-1000 bg-blue/5",
-                        highlightedId === parent.id ? "animate-highlight scale-[1.02]" : ""
-                      )}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 mb-0.5">
-                            <Repeat className="h-3 w-3 text-blue flex-shrink-0" />
-                            <span className="font-medium text-ink text-xs truncate">
-                              {parent.description}
-                              {installmentDisplay && <span className="text-blue ml-1">{installmentDisplay}</span>}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1.5 text-[10px] text-slate">
-                            <span>{formatDate(parent.date)}</span>
-                            <span className="px-1 py-0.5 rounded bg-blue/10 text-blue text-[8px] font-medium">
-                              {parent.recurrencePattern}
-                            </span>
-                            {filterMode === 'all' && remainingOccurrences > 0 && (
-                              <span className={cn(
-                                "px-1 py-0.5 rounded text-[8px] font-medium",
-                                parent.type === 'income'
-                                  ? "bg-emerald/10 text-emerald"
-                                  : "bg-rose/10 text-rose"
-                              )}>
-                                {remainingOccurrences}x
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <div className={`text-right font-bold text-sm ${parent.type === 'income' ? 'text-emerald' : 'text-rose'}`}>
-                          {parent.type === 'income' ? '+' : '-'}{formatCurrency(parent.amount, parent.account?.currency)}
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between pt-1.5 border-t border-slate/10">
-                        <div className="flex items-center gap-1.5 text-[10px]">
-                          <span className="px-1.5 py-0.5 rounded-full bg-slate/5 text-slate">
-                            {parent.category ? t(getTranslatedCategoryName(parent.category.name)) : t('common.category')}
-                          </span>
-                          <span style={{ color: parent.account?.color }}>{parent.account?.name}</span>
-                        </div>
-                        <div className="flex gap-0.5">
-                          <button onClick={() => handleOpenEditModal(parent)} className="p-1.5 text-slate hover:bg-slate/10 rounded-full touch-target">
-                            <Edit2 size={14} />
-                          </button>
-                          <button onClick={() => handleDelete(parent.id, true)} className="p-1.5 text-rose hover:bg-rose/10 rounded-full touch-target">
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {/* Recurring Instances (orphaned) - Mobile Cards */}
-                {filteredTransactions
-                  .filter(t => t.isRecurringInstance || t.parentTransactionId)
-                  .map((transaction) => {
-                    const installmentDisplay = formatInstallment(transaction);
-                    return (
+                    <div key={`group-${group.parentId}`} className="space-y-2">
+                      {/* Group Header Card */}
                       <div
-                        key={transaction.id}
-                        className={cn(
-                          "card-glass p-3 space-y-2 hover:shadow-glass-hover transition-all duration-1000 bg-blue/5",
-                          highlightedId === transaction.id ? "animate-highlight scale-[1.02]" : ""
-                        )}
+                        className="card-glass p-3 space-y-2 bg-blue/5 cursor-pointer active:scale-[0.98] transition-all"
+                        onClick={() => toggleRecurringExpand(group.parentId)}
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5 mb-0.5">
-                              <Copy className="h-3 w-3 text-blue flex-shrink-0" />
-                              <span className="font-medium text-ink text-xs truncate">
-                                {transaction.description}
-                                {installmentDisplay && <span className="text-blue ml-1">{installmentDisplay}</span>}
+                              <Repeat className="h-4 w-4 text-blue flex-shrink-0" />
+                              <span className="font-semibold text-ink text-xs truncate">
+                                {group.description}
+                              </span>
+                              {isExpanded ? <ChevronUp size={14} className="text-blue" /> : <ChevronDown size={14} className="text-blue" />}
+                            </div>
+                            <div className="flex items-center gap-1.5 text-[10px] text-slate flex-wrap">
+                              <span>
+                                {group.occurrencesInPeriod} {group.occurrencesInPeriod === 1 ? 'ocorrência' : 'ocorrências'}
+                              </span>
+                              <span className="px-1 py-0.5 rounded bg-blue/10 text-blue text-[8px] font-medium">
+                                {group.recurrencePattern}
+                              </span>
+                              <span className={cn(
+                                "px-1 py-0.5 rounded text-[8px] font-medium",
+                                group.type === 'income'
+                                  ? "bg-emerald/10 text-emerald"
+                                  : "bg-rose/10 text-rose"
+                              )}>
+                                {group.occurrencesInPeriod}x
                               </span>
                             </div>
-                            <div className="flex items-center gap-1.5 text-[10px] text-slate">
-                              <span>{formatDate(transaction.date)}</span>
-                              {transaction.recurrencePattern && (
-                                <span className="px-1 py-0.5 rounded bg-blue/10 text-blue text-[8px] font-medium">
-                                  {transaction.recurrencePattern}
-                                </span>
-                              )}
-                              <span className="text-[8px] opacity-70">(Auto)</span>
-                            </div>
                           </div>
-                          <div className={`text-right font-bold text-sm ${transaction.type === 'income' ? 'text-emerald' : 'text-rose'}`}>
-                            {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount, transaction.account?.currency)}
+                          <div className={`text-right font-bold text-sm ${group.type === 'income' ? 'text-emerald' : 'text-rose'}`}>
+                            {group.type === 'income' ? '+' : '-'}{formatCurrency(group.totalAmountInPeriod, group.account?.currency)}
                           </div>
                         </div>
                         <div className="flex items-center justify-between pt-1.5 border-t border-slate/10">
                           <div className="flex items-center gap-1.5 text-[10px]">
                             <span className="px-1.5 py-0.5 rounded-full bg-slate/5 text-slate">
-                              {transaction.category ? t(getTranslatedCategoryName(transaction.category.name)) : t('common.category')}
+                              {group.category ? t(getTranslatedCategoryName(group.category.name)) : t('common.category')}
                             </span>
-                            <span style={{ color: transaction.account?.color }}>{transaction.account?.name}</span>
+                            <span style={{ color: group.account?.color }}>{group.account?.name}</span>
                           </div>
                           <div className="flex gap-0.5">
-                            <button onClick={() => handleOpenEditModal(transaction)} className="p-1.5 text-slate hover:bg-slate/10 rounded-full touch-target">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenEditModal(group.transactions[0]);
+                              }}
+                              className="p-1.5 text-slate hover:bg-slate/10 rounded-full touch-target"
+                              title="Editar série"
+                            >
                               <Edit2 size={14} />
                             </button>
-                            <button onClick={() => handleDelete(transaction.id)} className="p-1.5 text-rose hover:bg-rose/10 rounded-full touch-target">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(group.parentId, true);
+                              }}
+                              className="p-1.5 text-rose hover:bg-rose/10 rounded-full touch-target"
+                              title="Deletar série"
+                            >
                               <Trash2 size={14} />
                             </button>
                           </div>
                         </div>
                       </div>
-                    );
-                  })}
+
+                      {/* Expanded Instance Cards */}
+                      {isExpanded && group.transactions.map((transaction) => {
+                        const installmentDisplay = formatInstallment(transaction);
+                        return (
+                          <div
+                            key={transaction.id}
+                            className="card-glass p-3 space-y-2 bg-blue/5 ml-4 border-l-2 border-blue/20"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1.5 mb-0.5">
+                                  <FileText className="h-3 w-3 text-blue flex-shrink-0" />
+                                  <span className="font-medium text-ink text-xs truncate">
+                                    {transaction.description}
+                                    {installmentDisplay && <span className="text-blue ml-1">{installmentDisplay}</span>}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1.5 text-[10px] text-slate">
+                                  <span>{formatDate(transaction.date)}</span>
+                                </div>
+                              </div>
+                              <div className={`text-right font-bold text-sm ${transaction.type === 'income' ? 'text-emerald' : 'text-rose'}`}>
+                                {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount, transaction.account?.currency)}
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between pt-1.5 border-t border-slate/10">
+                              <div className="flex items-center gap-1.5 text-[10px]">
+                                <span className="px-1.5 py-0.5 rounded-full bg-slate/5 text-slate">
+                                  {transaction.category ? t(getTranslatedCategoryName(transaction.category.name)) : t('common.category')}
+                                </span>
+                                <span style={{ color: transaction.account?.color }}>{transaction.account?.name}</span>
+                              </div>
+                              <div className="flex gap-0.5">
+                                <button
+                                  onClick={() => handleOpenEditModal(transaction)}
+                                  className="p-1.5 text-slate hover:bg-slate/10 rounded-full touch-target"
+                                  title="Editar esta ocorrência"
+                                >
+                                  <Edit2 size={14} />
+                                </button>
+                                <button
+                                  onClick={() => handleDelete(transaction.id)}
+                                  className="p-1.5 text-rose hover:bg-rose/10 rounded-full touch-target"
+                                  title="Deletar esta ocorrência"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
 
                 {/* Regular Transactions - Mobile Cards */}
                 {filteredTransactions
@@ -762,94 +820,130 @@ export function Transactions() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate/5">
-                    {/* Recurring Parents */}
-                    {filteredRecurringParents.map((parent) => {
-                      const instances = parentMap.get(parent.id) || [];
-                      const isExpanded = expandedRecurring.has(parent.id);
-                      const installmentDisplay = formatInstallment(parent);
-                      const remainingOccurrences = filterMode === 'all' ? calculateRemainingOccurrences(parent) : 0;
+                    {/* Recurring Groups */}
+                    {filteredRecurringGroups.map((group) => {
+                      const isExpanded = expandedRecurring.has(group.parentId);
                       return (
                         <>
-                          <tr key={parent.id} className={cn(
-                            "hover:bg-white/40 transition-all duration-1000 bg-blue/5",
-                            highlightedId === parent.id ? "animate-highlight shadow-lg scale-[1.01] relative z-10" : ""
-                          )}>
+                          {/* Group Header Row */}
+                          <tr
+                            key={`group-${group.parentId}`}
+                            className="bg-blue/5 hover:bg-blue/10 cursor-pointer transition-all"
+                          >
                             <td className="py-3 px-4 text-sm">
                               <div className="flex items-center gap-2">
-                                <Repeat className="h-4 w-4 text-blue" />
-                                <button onClick={() => toggleRecurringExpand(parent.id)} className="text-blue hover:text-blue-hover font-medium">
-                                  {formatDate(parent.date)}
+                                <Repeat className="h-5 w-5 text-blue flex-shrink-0" />
+                                <button
+                                  onClick={() => toggleRecurringExpand(group.parentId)}
+                                  className="text-blue hover:text-blue-hover font-medium flex items-center gap-1"
+                                >
+                                  {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                                 </button>
                               </div>
                             </td>
                             <td className="py-3 px-4">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-medium text-ink">{parent.description}</span>
-                                {installmentDisplay && (
-                                  <span className="text-blue text-sm">{installmentDisplay}</span>
-                                )}
-                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue/10 text-blue-hover border border-blue/20">
-                                  {parent.recurrencePattern}
+                                <span className="font-semibold text-ink">{group.description}</span>
+                                <span className="text-xs text-slate">
+                                  ({group.occurrencesInPeriod} {group.occurrencesInPeriod === 1 ? 'ocorrência' : 'ocorrências'})
                                 </span>
-                                {filterMode === 'all' && remainingOccurrences > 0 && (
-                                  <span className={cn(
-                                    "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border",
-                                    parent.type === 'income'
-                                      ? "bg-emerald/10 text-emerald border-emerald/20"
-                                      : "bg-rose/10 text-rose border-rose/20"
-                                  )}>
-                                    {remainingOccurrences}x
-                                  </span>
-                                )}
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue/10 text-blue-hover border border-blue/20">
+                                  {group.recurrencePattern}
+                                </span>
+                                <span className={cn(
+                                  "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border",
+                                  group.type === 'income'
+                                    ? "bg-emerald/10 text-emerald border-emerald/20"
+                                    : "bg-rose/10 text-rose border-rose/20"
+                                )}>
+                                  {group.occurrencesInPeriod}x
+                                </span>
                               </div>
                             </td>
                             <td className="py-3 px-4 hidden md:table-cell">
                               <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-slate/5 text-slate">
-                                {parent.category ? t(getTranslatedCategoryName(parent.category.name)) : t('common.category')}
+                                {group.category ? t(getTranslatedCategoryName(group.category.name)) : t('common.category')}
                               </span>
                             </td>
-                            <td className="py-3 px-4 text-sm text-slate hidden lg:table-cell" style={{ color: parent.account?.color }}>{parent.account?.name || '-'}</td>
-                            <td className={`py-3 px-4 text-right font-medium ${parent.type === 'income' ? 'text-emerald' : 'text-rose'}`}>
-                              {parent.type === 'income' ? '+' : '-'}{formatCurrency(parent.amount, parent.account?.currency)}
+                            <td className="py-3 px-4 text-sm text-slate hidden lg:table-cell" style={{ color: group.account?.color }}>
+                              {group.account?.name || '-'}
+                            </td>
+                            <td className={`py-3 px-4 text-right font-bold text-base ${group.type === 'income' ? 'text-emerald' : 'text-rose'}`}>
+                              {group.type === 'income' ? '+' : '-'}{formatCurrency(group.totalAmountInPeriod, group.account?.currency)}
                             </td>
                             <td className="py-3 px-4 text-right">
-                              <div className="flex justify-end gap-1">
-                                <button onClick={() => handleOpenEditModal(parent)} className="p-2 text-slate hover:bg-slate/10 rounded-full transition-colors"><Edit2 size={16} /></button>
-                                <button onClick={() => handleDelete(parent.id, true)} className="p-2 text-rose hover:bg-rose/10 rounded-full transition-colors"><Trash2 size={16} /></button>
+                              <div className="flex justify-end gap-1 items-center">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenEditModal(group.transactions[0]);
+                                  }}
+                                  className="p-2 text-slate hover:bg-slate/10 rounded-full transition-colors"
+                                  title="Editar série"
+                                >
+                                  <Edit2 size={16} />
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDelete(group.parentId, true);
+                                  }}
+                                  className="p-2 text-rose hover:bg-rose/10 rounded-full transition-colors"
+                                  title="Deletar série"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
                               </div>
                             </td>
                           </tr>
-                          {isExpanded && instances.map(instance => {
-                            const instanceInstallment = formatInstallment(instance);
+                          
+                          {/* Expanded Instance Rows */}
+                          {isExpanded && group.transactions.map((transaction) => {
+                            const installmentDisplay = formatInstallment(transaction);
                             return (
-                              <tr key={instance.id} className="bg-blue/5 border-b border-white/20">
+                              <tr key={transaction.id} className="bg-blue/5 border-b border-white/20">
                                 <td className="py-2 px-4 pl-10 text-sm text-slate">
                                   <div className="flex items-center gap-2">
-                                    <Copy size={12} className="text-blue" />
-                                    {formatDate(instance.date)}
+                                    <FileText size={12} className="text-blue" />
+                                    {formatDate(transaction.date)}
                                   </div>
                                 </td>
                                 <td className="py-2 px-4 text-sm text-slate">
                                   <div className="flex items-center gap-2 flex-wrap">
-                                    {instance.description}
-                                    {instanceInstallment && (
-                                      <span className="text-blue text-xs">{instanceInstallment}</span>
+                                    {transaction.description}
+                                    {installmentDisplay && (
+                                      <span className="text-blue text-xs">{installmentDisplay}</span>
                                     )}
-                                    {instance.recurrencePattern && (
-                                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue/10 text-blue-hover border border-blue/20">
-                                        {instance.recurrencePattern}
-                                      </span>
-                                    )}
-                                    <span className="text-[10px] opacity-70">(Auto)</span>
                                   </div>
                                 </td>
-                                <td className="py-2 px-4 hidden md:table-cell"><span className="text-xs text-slate opacity-70">{instance.category ? t(getTranslatedCategoryName(instance.category.name)) : '-'}</span></td>
-                                <td className="py-2 px-4 text-sm text-slate opacity-70 hidden lg:table-cell" style={{ color: instance.account?.color }}>{instance.account?.name}</td>
-                                <td className={`py-2 px-4 text-right text-sm ${instance.type === 'income' ? 'text-emerald' : 'text-rose'}`}>
-                                  {instance.type === 'income' ? '+' : '-'}{formatCurrency(instance.amount, instance.account?.currency)}
+                                <td className="py-2 px-4 hidden md:table-cell">
+                                  <span className="text-xs text-slate opacity-70">
+                                    {transaction.category ? t(getTranslatedCategoryName(transaction.category.name)) : '-'}
+                                  </span>
+                                </td>
+                                <td className="py-2 px-4 text-sm text-slate opacity-70 hidden lg:table-cell" style={{ color: transaction.account?.color }}>
+                                  {transaction.account?.name}
+                                </td>
+                                <td className={`py-2 px-4 text-right text-sm ${transaction.type === 'income' ? 'text-emerald' : 'text-rose'}`}>
+                                  {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount, transaction.account?.currency)}
                                 </td>
                                 <td className="py-2 px-4 text-right">
-                                  <button onClick={() => handleDelete(instance.id)} className="p-1.5 text-rose hover:bg-rose/10 rounded-full"><Trash2 size={14} /></button>
+                                  <div className="flex justify-end gap-1">
+                                    <button
+                                      onClick={() => handleOpenEditModal(transaction)}
+                                      className="p-1.5 text-slate hover:bg-slate/10 rounded-full transition-colors"
+                                      title="Editar esta ocorrência"
+                                    >
+                                      <Edit2 size={14} />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDelete(transaction.id)}
+                                      className="p-1.5 text-rose hover:bg-rose/10 rounded-full"
+                                      title="Deletar esta ocorrência"
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             );

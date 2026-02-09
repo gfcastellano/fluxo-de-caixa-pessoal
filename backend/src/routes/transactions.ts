@@ -56,13 +56,30 @@ app.post('/', async (c) => {
     
     // Extract recurringCount from validated data (not stored on transaction)
     const { recurringCount, ...transactionData } = validated;
-    
+
+    // Calculate total installments for recurring transactions
+    let totalInstallments: number | undefined;
+    if (validated.isRecurring) {
+      if (recurringCount && recurringCount > 0) {
+        totalInstallments = recurringCount;
+      } else if (validated.recurrenceEndDate) {
+        // Calculate total installments from end date (will be done after parent creation)
+        totalInstallments = undefined; // Will calculate after we know the pattern
+      }
+    }
+
     // Create the main transaction
+    // For recurring transactions, this is the first installment (installmentNumber: 1)
     const transaction = await firebase.createDocument('transactions', {
       ...transactionData,
       userId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      // If recurring, add installment metadata for the parent (first installment)
+      ...(validated.isRecurring ? {
+        installmentNumber: 1,
+        totalInstallments: totalInstallments, // May be undefined if using endDate, will update after calculation
+      } : {}),
     });
 
     // If recurringCount is provided, create that many recurring instances
@@ -98,14 +115,33 @@ app.patch('/:id', async (c) => {
   try {
     const transactionId = c.req.param('id');
     const body = await c.req.json();
-
-    const validated = transactionSchema.partial().parse(body);
+    const { editMode = 'single', ...updates } = body;
 
     const firebase = new FirebaseService(c.env);
-    await firebase.updateDocument('transactions', transactionId, {
-      ...validated,
-      updatedAt: new Date().toISOString(),
-    });
+
+    // Buscar transação atual
+    const transaction = await firebase.getDocument('transactions', transactionId);
+
+    if (!transaction) {
+      return c.json({ success: false, error: 'Transaction not found' }, 404);
+    }
+
+    // Verificar se é parte de série recorrente
+    const isRecurringSeries = transaction.isRecurring ||
+                              transaction.parentTransactionId ||
+                              transaction.isRecurringInstance;
+
+    if (!isRecurringSeries || editMode === 'single') {
+      // Edição simples - apenas esta transação
+      const validated = transactionSchema.partial().parse(updates);
+      await firebase.updateDocument('transactions', transactionId, {
+        ...validated,
+        updatedAt: new Date().toISOString(),
+      });
+    } else {
+      // Edição em massa
+      await updateRecurringSeries(firebase, transaction, updates, editMode);
+    }
 
     return c.json({ success: true });
   } catch (error) {
@@ -175,7 +211,7 @@ app.post('/:id/generate-recurring', async (c) => {
 // Creates exactly 'count' number of instances based on recurrence pattern
 async function generateRecurringInstancesWithCount(
   firebase: FirebaseService,
-  parentTransaction: { id: string; date: string; isRecurring?: boolean; recurrencePattern?: string; recurrenceDay?: number | null; recurrenceEndDate?: string | null; userId: string; description: string; amount: number; type: 'income' | 'expense'; categoryId: string; accountId?: string },
+  parentTransaction: { id: string; date: string; isRecurring?: boolean; recurrencePattern?: string; recurrenceDay?: number | null; recurrenceEndDate?: string | null; userId: string; description: string; amount: number; type: 'income' | 'expense'; categoryId: string; accountId?: string; installmentNumber?: number; totalInstallments?: number },
   data: { recurrencePattern?: string | null; recurrenceDay?: number | null; recurrenceEndDate?: string | null; date: string },
   count: number
 ): Promise<unknown[]> {
@@ -183,6 +219,10 @@ async function generateRecurringInstancesWithCount(
   const startDate = new Date(parentTransaction.date);
   const recurrencePattern = data.recurrencePattern || 'monthly';
   const recurrenceDay = data.recurrenceDay;
+
+  // The total in series includes the parent transaction + the instances that will be created
+  // count is the number of additional instances (recurringCount - 1)
+  const totalInSeries = count + 1;
 
   let currentDate = new Date(startDate);
 
@@ -205,6 +245,7 @@ async function generateRecurringInstancesWithCount(
 
     // Create the recurring instance with isRecurringInstance and createdFromRecurring flags
     // Include recurrencePattern so child transactions display the same as parent
+    // installmentNumber starts at 2 because parent is 1
     const instance = await firebase.createDocument('transactions', {
       userId: parentTransaction.userId,
       accountId: parentTransaction.accountId,
@@ -219,7 +260,7 @@ async function generateRecurringInstancesWithCount(
       createdFromRecurring: true, // Mark that this was created from a recurring transaction
       recurrencePattern: recurrencePattern, // Store the recurrence pattern for display purposes
       installmentNumber: i + 2, // Child instances start from 2 (parent is 1)
-      totalInstallments: count, // Total number of installments in the series
+      totalInstallments: totalInSeries, // Total number of installments including parent
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
@@ -235,10 +276,9 @@ async function generateRecurringInstancesWithCount(
 // Limited by MAX_INSTANCES_PER_REQUEST to prevent timeouts
 async function generateRecurringInstances(
   firebase: FirebaseService,
-  parentTransaction: { id: string; date: string; isRecurring?: boolean; recurrencePattern?: string; recurrenceDay?: number | null; recurrenceEndDate?: string | null; userId: string; description: string; amount: number; type: 'income' | 'expense'; categoryId: string; accountId?: string },
+  parentTransaction: { id: string; date: string; isRecurring?: boolean; recurrencePattern?: string; recurrenceDay?: number | null; recurrenceEndDate?: string | null; userId: string; description: string; amount: number; type: 'income' | 'expense'; categoryId: string; accountId?: string; installmentNumber?: number; totalInstallments?: number },
   data: { recurrencePattern?: string | null; recurrenceDay?: number | null; recurrenceEndDate?: string | null; date: string }
 ): Promise<unknown[]> {
-  const instances: unknown[] = [];
   const startDate = new Date(parentTransaction.date);
 
   // Use recurrenceEndDate if provided, otherwise default to end of current year
@@ -253,14 +293,41 @@ async function generateRecurringInstances(
   const recurrencePattern = data.recurrencePattern || 'monthly';
   const recurrenceDay = data.recurrenceDay;
 
+  // First pass: calculate total number of instances that will be created
+  // This is needed to set totalInstallments correctly
+  let tempDate = new Date(startDate);
+  let totalInstancesToCreate = 0;
+
+  // Move to the next occurrence (skip the first date since that's the parent transaction)
+  tempDate = getNextDate(tempDate, recurrencePattern, recurrenceDay);
+
+  // Count instances based on pattern until we reach the end date or max limit
+  while (tempDate <= endDate && totalInstancesToCreate < MAX_INSTANCES_PER_REQUEST) {
+    totalInstancesToCreate++;
+    tempDate = getNextDate(tempDate, recurrencePattern, recurrenceDay);
+  }
+
+  // Total in series includes parent (1) + instances to be created
+  const totalInSeries = totalInstancesToCreate + 1;
+
+  // Update the parent transaction with the calculated totalInstallments
+  if (parentTransaction.id && totalInSeries > 1) {
+    await firebase.updateDocument('transactions', parentTransaction.id, {
+      totalInstallments: totalInSeries,
+      updatedAt: new Date().toISOString(),
+    });
+  }
+
+  // Second pass: create the instances
+  const instances: unknown[] = [];
   let currentDate = new Date(startDate);
-  let instanceCount = 0;
+  let instanceIndex = 0;
 
   // Move to the next occurrence (skip the first date since that's the parent transaction)
   currentDate = getNextDate(currentDate, recurrencePattern, recurrenceDay);
 
   // Create instances based on pattern until we reach the end date or max limit
-  while (currentDate <= endDate && instanceCount < MAX_INSTANCES_PER_REQUEST) {
+  while (currentDate <= endDate && instanceIndex < MAX_INSTANCES_PER_REQUEST) {
     const dateStr = currentDate.toISOString().split('T')[0];
 
     // Check if an instance already exists for this date and parent
@@ -273,6 +340,7 @@ async function generateRecurringInstances(
     if (existingInstances.length === 0) {
       // Create the recurring instance with isRecurringInstance flag
       // Include recurrencePattern so child transactions display the same as parent
+      // installmentNumber starts at 2 because parent is 1
       const instance = await firebase.createDocument('transactions', {
         userId: parentTransaction.userId,
         accountId: parentTransaction.accountId,
@@ -285,6 +353,8 @@ async function generateRecurringInstances(
         isRecurring: false, // Instances are not recurring themselves
         isRecurringInstance: true, // Mark as generated child instance
         recurrencePattern: recurrencePattern, // Store the recurrence pattern for display purposes
+        installmentNumber: instanceIndex + 2, // Parent is 1, so instances start at 2
+        totalInstallments: totalInSeries, // Total including parent
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
@@ -292,12 +362,76 @@ async function generateRecurringInstances(
       instances.push(instance);
     }
 
-    instanceCount++;
+    instanceIndex++;
     // Move to next occurrence based on pattern
     currentDate = getNextDate(currentDate, recurrencePattern, recurrenceDay);
   }
 
   return instances;
+}
+
+// Helper function to update a recurring series of transactions
+// Updates multiple transactions based on editMode: 'forward' | 'all'
+async function updateRecurringSeries(
+  firebase: FirebaseService,
+  transaction: Record<string, unknown>,
+  updates: Record<string, unknown>,
+  editMode: 'forward' | 'all'
+): Promise<void> {
+  // Determinar o ID da transação pai
+  const transactionId = transaction.id as string;
+  const parentId = (transaction.parentTransactionId as string | null | undefined) || transactionId;
+  const userId = transaction.userId as string;
+
+  // Buscar todas as transações da série (pai + filhas)
+  const seriesTransactions = await firebase.queryDocuments('transactions', [
+    { field: 'userId', op: '==', value: userId },
+  ]);
+
+  // Filtrar transações que pertencem a esta série
+  const series = seriesTransactions.filter((t: Record<string, unknown>) =>
+    t.id === parentId || t.parentTransactionId === parentId
+  );
+
+  // Ordenar por installmentNumber (pai geralmente tem 1 ou undefined)
+  const sortedSeries = series.sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
+    const numA = (a.installmentNumber as number) || 1;
+    const numB = (b.installmentNumber as number) || 1;
+    return numA - numB;
+  });
+
+  // Determinar quais transações atualizar baseado no editMode
+  const currentInstallment = (transaction.installmentNumber as number) || 1;
+
+  let transactionsToUpdate: typeof sortedSeries;
+
+  if (editMode === 'forward') {
+    // Atualizar da selecionada em diante
+    transactionsToUpdate = sortedSeries.filter(
+      (t: Record<string, unknown>) => ((t.installmentNumber as number) || 1) >= currentInstallment
+    );
+  } else {
+    // 'all' - atualizar todas da série
+    transactionsToUpdate = sortedSeries;
+  }
+
+  // Campos permitidos para atualização
+  const allowedUpdates: Record<string, unknown> = {};
+  if (updates.description !== undefined) allowedUpdates.description = updates.description;
+  if (updates.amount !== undefined) allowedUpdates.amount = updates.amount;
+  if (updates.type !== undefined) allowedUpdates.type = updates.type;
+  if (updates.categoryId !== undefined) allowedUpdates.categoryId = updates.categoryId;
+  if (updates.accountId !== undefined) allowedUpdates.accountId = updates.accountId;
+
+  // Atualizar todas as transações em paralelo
+  await Promise.all(
+    transactionsToUpdate.map((t: Record<string, unknown>) =>
+      firebase.updateDocument('transactions', t.id as string, {
+        ...allowedUpdates,
+        updatedAt: new Date().toISOString(),
+      })
+    )
+  );
 }
 
 // Helper function to get the next date based on recurrence pattern

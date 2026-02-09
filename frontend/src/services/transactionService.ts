@@ -225,8 +225,39 @@ export async function createTransaction(
 
 export async function updateTransaction(
   transactionId: string,
-  updates: Partial<Omit<Transaction, 'id' | 'userId' | 'createdAt'>>
+  updates: Partial<Omit<Transaction, 'id' | 'userId' | 'createdAt'>>,
+  editMode?: 'single' | 'forward' | 'all'
 ): Promise<void> {
+  const API_URL = import.meta.env.VITE_API_URL || '';
+
+  // If editMode is provided, use the backend API for bulk updates
+  if (editMode && API_URL) {
+    try {
+      const response = await fetch(`${API_URL}/api/transactions/${transactionId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${await getAuthToken()}`,
+        },
+        body: JSON.stringify({
+          ...updates,
+          editMode,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update transaction');
+      }
+
+      return;
+    } catch (error) {
+      console.error('Error updating transaction via API:', error);
+      // Fallback to local update if API fails
+    }
+  }
+
+  // Local Firestore update (fallback or simple update)
   const docRef = doc(db, COLLECTION_NAME, transactionId);
   await updateDoc(docRef, {
     ...updates,

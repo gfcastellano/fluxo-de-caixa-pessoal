@@ -6,6 +6,7 @@ import { Input } from './Input';
 import { useVoiceForm } from '../hooks/useVoiceForm';
 import { sendVoiceTransaction, sendVoiceTransactionUpdate } from '../services/voiceService';
 import { getAccounts } from '../services/accountService';
+import { getRecurringInstances } from '../services/transactionService';
 import { getTranslatedCategoryName } from '../utils/categoryTranslations';
 import type { Transaction, Category, Account } from '../types';
 import { cn } from '../utils/cn';
@@ -46,8 +47,15 @@ export function TransactionModal({
   const [recurrencePattern, setRecurrencePattern] = useState<'monthly' | 'weekly' | 'yearly'>('monthly');
   const [recurrenceDay, setRecurrenceDay] = useState<number | ''>('');
   const [recurrenceEndDate, setRecurrenceEndDate] = useState<string>('');
+  const [recurringCount, setRecurringCount] = useState<number | ''>('');
+  const [recurringMode, setRecurringMode] = useState<'count' | 'date'>('date');
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
+
+  // Estados para edição em massa de transações recorrentes
+  const [editMode, setEditMode] = useState<'single' | 'forward' | 'all'>('forward');
+  const [affectedCount, setAffectedCount] = useState<number>(0);
+  const [seriesTransactions, setSeriesTransactions] = useState<Transaction[]>([]);
 
   const voice = useVoiceForm({ autoStartRecording });
 
@@ -88,6 +96,8 @@ export function TransactionModal({
       setRecurrencePattern(transaction.recurrencePattern || 'monthly');
       setRecurrenceDay(transaction.recurrenceDay ?? '');
       setRecurrenceEndDate(transaction.recurrenceEndDate || '');
+      setRecurringCount(transaction.recurringCount ?? '');
+      setRecurringMode(transaction.recurringCount ? 'count' : 'date');
     } else {
       setFormData({
         description: '',
@@ -100,9 +110,70 @@ export function TransactionModal({
       setRecurrencePattern('monthly');
       setRecurrenceDay('');
       setRecurrenceEndDate('');
+      setRecurringCount('');
+      setRecurringMode('date');
     }
     voice.resetVoice();
   }, [transaction, isOpen]);
+
+  // Load series transactions when editing a recurring transaction
+  useEffect(() => {
+    const loadSeriesData = async () => {
+      if (isEditing && transaction && userId) {
+        const isRecurringTransaction = transaction.isRecurring ||
+          transaction.parentTransactionId ||
+          transaction.isRecurringInstance;
+
+        if (isRecurringTransaction) {
+          const parentId = transaction.parentTransactionId || transaction.id;
+          try {
+            const instances = await getRecurringInstances(userId, parentId);
+            // Include parent transaction in the series
+            const allSeries = transaction.parentTransactionId
+              ? instances // If editing a child, instances already include parent
+              : instances;
+            setSeriesTransactions(allSeries);
+            
+            // Set default edit mode to 'single' for child instances
+            if (transaction.parentTransactionId || transaction.isRecurringInstance) {
+              setEditMode('single');
+            } else {
+              setEditMode('forward');
+            }
+          } catch (error) {
+            console.error('Error loading series data:', error);
+            setSeriesTransactions([]);
+          }
+        } else {
+          setSeriesTransactions([]);
+        }
+      } else {
+        setSeriesTransactions([]);
+        setEditMode('forward');
+        setAffectedCount(0);
+      }
+    };
+
+    loadSeriesData();
+  }, [isEditing, transaction, userId]);
+
+  // Calculate affected count when editMode or series changes
+  useEffect(() => {
+    if (isEditing && seriesTransactions.length > 0 && transaction) {
+      const currentInstallment = transaction.installmentNumber || 1;
+
+      if (editMode === 'single') {
+        setAffectedCount(1);
+      } else if (editMode === 'forward') {
+        const count = seriesTransactions.filter(
+          (t) => (t.installmentNumber || 1) >= currentInstallment
+        ).length;
+        setAffectedCount(count);
+      } else if (editMode === 'all') {
+        setAffectedCount(seriesTransactions.length);
+      }
+    }
+  }, [editMode, seriesTransactions, transaction, isEditing]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,8 +198,27 @@ export function TransactionModal({
     if (isRecurring && !isEditing) {
       transactionData.isRecurring = true;
       transactionData.recurrencePattern = recurrencePattern;
-      transactionData.recurrenceDay = recurrenceDay !== '' ? recurrenceDay : null;
-      transactionData.recurrenceEndDate = recurrenceEndDate || null;
+      if (recurrenceDay !== '') {
+        transactionData.recurrenceDay = recurrenceDay;
+      }
+      if (recurrenceEndDate) {
+        transactionData.recurrenceEndDate = recurrenceEndDate;
+      }
+      // Só adicionar recurringCount se tiver valor válido (>= 2)
+      if (recurringCount !== '' && recurringCount >= 2) {
+        transactionData.recurringCount = recurringCount;
+      }
+    }
+
+    // Adicionar editMode quando estiver editando transação recorrente
+    if (isEditing) {
+      const isRecurringTransaction = transaction?.isRecurring ||
+        transaction?.parentTransactionId ||
+        transaction?.isRecurringInstance;
+
+      if (isRecurringTransaction) {
+        (transactionData as Record<string, unknown>).editMode = editMode;
+      }
     }
 
     onSave(transactionData);
@@ -149,6 +239,99 @@ export function TransactionModal({
       case 'monthly': return t('transactions.form.recurrenceDayMonthly') || 'Day of Month (1-31)';
       case 'yearly': return t('transactions.form.recurrenceDayYearly') || 'Day of Year (1-366)';
       default: return t('transactions.form.recurrenceDay') || 'Day';
+    }
+  };
+
+  // Calculate recurringCount from start date and end date based on recurrence pattern
+  const calculateRecurringCount = (startDateStr: string, endDateStr: string, pattern: string): number => {
+    const startDate = new Date(startDateStr);
+    const endDate = new Date(endDateStr);
+    let count = 1; // Include the first transaction
+
+    const currentDate = new Date(startDate);
+
+    while (currentDate < endDate) {
+      switch (pattern) {
+        case 'weekly':
+          currentDate.setDate(currentDate.getDate() + 7);
+          break;
+        case 'yearly':
+          currentDate.setFullYear(currentDate.getFullYear() + 1);
+          break;
+        case 'monthly':
+        default:
+          currentDate.setMonth(currentDate.getMonth() + 1);
+          break;
+      }
+      if (currentDate <= endDate) {
+        count++;
+      }
+    }
+
+    return count;
+  };
+
+  // Calculate end date from start date and recurring count based on recurrence pattern
+  const calculateEndDate = (startDateStr: string, count: number, pattern: string): string => {
+    const startDate = new Date(startDateStr);
+    const currentDate = new Date(startDate);
+
+    // Subtract 1 because the first transaction is already counted
+    for (let i = 0; i < count - 1; i++) {
+      switch (pattern) {
+        case 'weekly':
+          currentDate.setDate(currentDate.getDate() + 7);
+          break;
+        case 'yearly':
+          currentDate.setFullYear(currentDate.getFullYear() + 1);
+          break;
+        case 'monthly':
+        default:
+          currentDate.setMonth(currentDate.getMonth() + 1);
+          break;
+      }
+    }
+
+    return currentDate.toISOString().split('T')[0];
+  };
+
+  // Handle recurringCount change
+  const handleRecurringCountChange = (value: string) => {
+    const count = value === '' ? '' : Math.max(2, Math.min(60, parseInt(value) || 2));
+    setRecurringCount(count);
+
+    // Auto-calculate end date if count is valid
+    if (count !== '' && count >= 2 && count <= 60) {
+      const newEndDate = calculateEndDate(formData.date, count, recurrencePattern);
+      setRecurrenceEndDate(newEndDate);
+    }
+  };
+
+  // Handle recurrenceEndDate change
+  const handleRecurrenceEndDateChange = (value: string) => {
+    setRecurrenceEndDate(value);
+
+    // Auto-calculate recurring count if date is valid and after start date
+    if (value && value > formData.date) {
+      const count = calculateRecurringCount(formData.date, value, recurrencePattern);
+      setRecurringCount(count);
+    } else {
+      setRecurringCount('');
+    }
+  };
+
+  // Handle recurrencePattern change - recalculate if needed
+  const handleRecurrencePatternChange = (newPattern: 'monthly' | 'weekly' | 'yearly') => {
+    setRecurrencePattern(newPattern);
+    setRecurrenceDay('');
+
+    // Recalculate based on current mode
+    if (recurringMode === 'count' && recurringCount !== '' && recurringCount >= 2) {
+      const newEndDate = calculateEndDate(formData.date, recurringCount, newPattern);
+      setRecurrenceEndDate(newEndDate);
+    } else if (recurringMode === 'date' && recurrenceEndDate && recurrenceEndDate > formData.date) {
+      const count = calculateRecurringCount(formData.date, recurrenceEndDate, newPattern);
+      setRecurringCount(count);
     }
   };
 
@@ -345,6 +528,73 @@ export function TransactionModal({
         </div>
       </div>
 
+      {/* Edit Mode Selector - only when editing recurring transaction */}
+      {isEditing && seriesTransactions.length > 0 && (
+        <div className="border-t border-slate/10 pt-3 mt-3 sm:pt-4 sm:mt-4">
+          <label className="block text-sm font-medium text-ink mb-2">
+            {t('transactions.form.editMode.label') || 'Modo de Edição'}
+          </label>
+          <div className="space-y-2">
+            {/* Single */}
+            <label className="flex items-center gap-2 cursor-pointer group">
+              <input
+                type="radio"
+                name="editMode"
+                value="single"
+                checked={editMode === 'single'}
+                onChange={(e) => setEditMode(e.target.value as 'single' | 'forward' | 'all')}
+                className="h-4 w-4 text-blue focus:ring-blue border-gray-300"
+              />
+              <span className="text-sm text-ink group-hover:text-blue transition-colors">
+                {t('transactions.form.editMode.single') || 'Somente esta'}
+              </span>
+            </label>
+
+            {/* Forward (recommended) */}
+            <label className="flex items-center gap-2 cursor-pointer group">
+              <input
+                type="radio"
+                name="editMode"
+                value="forward"
+                checked={editMode === 'forward'}
+                onChange={(e) => setEditMode(e.target.value as 'single' | 'forward' | 'all')}
+                className="h-4 w-4 text-blue focus:ring-blue border-gray-300"
+              />
+              <span className="text-sm text-ink group-hover:text-blue transition-colors">
+                {t('transactions.form.editMode.forward') || 'Esta e seguintes'}
+                <span className="text-emerald ml-1">
+                  {t('transactions.form.editMode.recommended') || '(recomendado)'}
+                </span>
+              </span>
+            </label>
+
+            {/* All (not recommended) */}
+            <label className="flex items-center gap-2 cursor-pointer group">
+              <input
+                type="radio"
+                name="editMode"
+                value="all"
+                checked={editMode === 'all'}
+                onChange={(e) => setEditMode(e.target.value as 'single' | 'forward' | 'all')}
+                className="h-4 w-4 text-blue focus:ring-blue border-gray-300"
+              />
+              <span className="text-sm text-ink group-hover:text-blue transition-colors">
+                {t('transactions.form.editMode.all') || 'Todas da série'}
+                <span className="text-rose ml-1">
+                  {t('transactions.form.editMode.notRecommended') || '(não recomendado)'}
+                </span>
+              </span>
+            </label>
+          </div>
+
+          {/* Affected count preview */}
+          <p className="mt-3 text-sm text-slate bg-slate/5 px-3 py-2 rounded-lg">
+            {t('transactions.form.editMode.affectedCount', { count: affectedCount }) ||
+              `Serão atualizadas ${affectedCount} transações`}
+          </p>
+        </div>
+      )}
+
       {!isEditing && (
         <div className="border-t border-slate/10 pt-3 mt-3 sm:pt-4 sm:mt-4">
           <div className="flex items-center gap-2 mb-3 sm:mb-4">
@@ -368,7 +618,7 @@ export function TransactionModal({
                   <label className="block text-sm font-medium text-ink mb-1.5">{t('transactions.form.recurrencePattern') || 'Frequency'}</label>
                   <select
                     value={recurrencePattern}
-                    onChange={(e) => { setRecurrencePattern(e.target.value as any); setRecurrenceDay(''); }}
+                    onChange={(e) => handleRecurrencePatternChange(e.target.value as 'monthly' | 'weekly' | 'yearly')}
                     className="w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue"
                   >
                     <option value="monthly">{t('common.monthly') || 'Monthly'}</option>
@@ -390,17 +640,85 @@ export function TransactionModal({
                   <p className="text-xs text-slate mt-1">{t('transactions.form.recurrenceDayHint') || 'Leave empty to use the transaction date'}</p>
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-ink mb-1.5">{t('transactions.form.recurrenceEndDate') || 'End Date (Optional)'}</label>
-                <input
-                  type="date"
-                  value={recurrenceEndDate}
-                  onChange={(e) => setRecurrenceEndDate(e.target.value)}
-                  min={formData.date}
-                  className="w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue"
-                />
-                <p className="text-xs text-slate mt-1">{t('transactions.form.recurrenceEndDateHint') || 'If not set, instances will be generated until end of year'}</p>
+
+              {/* Toggle between Count and Date mode */}
+              <div className="flex items-center gap-2 p-1 bg-slate/5 rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => setRecurringMode('count')}
+                  className={cn(
+                    "flex-1 px-3 py-2 text-sm font-medium rounded-md transition-all duration-200",
+                    recurringMode === 'count'
+                      ? 'bg-white text-blue shadow-sm'
+                      : 'text-slate hover:text-ink'
+                  )}
+                >
+                  {t('transactions.form.byNumberOfInstallments') || 'By Number of Installments'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRecurringMode('date')}
+                  className={cn(
+                    "flex-1 px-3 py-2 text-sm font-medium rounded-md transition-all duration-200",
+                    recurringMode === 'date'
+                      ? 'bg-white text-blue shadow-sm'
+                      : 'text-slate hover:text-ink'
+                  )}
+                >
+                  {t('transactions.form.byEndDate') || 'By End Date'}
+                </button>
               </div>
+
+              {/* Recurring Count Input */}
+              {recurringMode === 'count' && (
+                <div>
+                  <label className="block text-sm font-medium text-ink mb-1.5">
+                    {t('transactions.form.numberOfInstallments') || 'Number of Installments'}
+                  </label>
+                  <input
+                    type="number"
+                    min={2}
+                    max={60}
+                    value={recurringCount}
+                    onChange={(e) => handleRecurringCountChange(e.target.value)}
+                    placeholder="2-60"
+                    className="w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue"
+                  />
+                  <p className="text-xs text-slate mt-1">
+                    {recurringCount !== '' && (
+                      <span className="text-emerald">
+                        {t('transactions.form.endDateCalculated') || 'End date calculated'}: {recurrenceEndDate || '-'}
+                      </span>
+                    )}
+                  </p>
+                </div>
+              )}
+
+              {/* Recurrence End Date Input */}
+              {recurringMode === 'date' && (
+                <div>
+                  <label className="block text-sm font-medium text-ink mb-1.5">
+                    {t('transactions.form.recurrenceEndDate') || 'End Date (Optional)'}
+                  </label>
+                  <input
+                    type="date"
+                    value={recurrenceEndDate}
+                    onChange={(e) => handleRecurrenceEndDateChange(e.target.value)}
+                    min={formData.date}
+                    className="w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue"
+                  />
+                  <p className="text-xs text-slate mt-1">
+                    {recurrenceEndDate && recurrenceEndDate > formData.date && (
+                      <span className="text-emerald">
+                        {t('transactions.form.installmentsCalculated') || 'Installments'}: {recurringCount || '-'}
+                      </span>
+                    )}
+                    {(!recurrenceEndDate || recurrenceEndDate <= formData.date) && (
+                      t('transactions.form.recurrenceEndDateHint') || 'If not set, instances will be generated until end of year'
+                    )}
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>
