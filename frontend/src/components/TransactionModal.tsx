@@ -263,13 +263,12 @@ export function TransactionModal({
       isRecording={voice.voiceState === 'recording'}
       onCancelRecording={voice.cancelRecording}
     >
-      <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <Input
           label={t('transactions.form.title')}
           value={formData.description}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
           required
-          className="col-span-2 sm:col-span-1"
         />
         <Input
           label={t('transactions.form.amount')}
@@ -280,53 +279,59 @@ export function TransactionModal({
           onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
           required
         />
-      </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
-        <div>
-          <label className="block text-sm font-medium text-ink mb-1.5">{t('transactions.form.type')}</label>
-          <select
-            value={formData.type}
-            onChange={(e) => setFormData({ ...formData, type: e.target.value as 'income' | 'expense', categoryId: '' })}
-            className="w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue transition-all"
-          >
-            <option value="expense">{t('common.expense')}</option>
-            <option value="income">{t('common.income')}</option>
-          </select>
+        <div className="col-span-1 sm:col-span-2">
+          <div className="grid grid-cols-[2fr_3fr] gap-3">
+            <div>
+              <label className="block text-sm font-medium text-ink mb-1.5">{t('transactions.form.type')}</label>
+              <select
+                value={formData.type}
+                onChange={(e) => setFormData({ ...formData, type: e.target.value as 'income' | 'expense', categoryId: '' })}
+                className="w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue transition-all"
+              >
+                <option value="expense">{t('common.expense')}</option>
+                <option value="income">{t('common.income')}</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-ink mb-1.5">{t('transactions.form.category')}</label>
+              <select
+                value={formData.categoryId}
+                onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
+                className="w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue transition-all"
+                required
+              >
+                <option value="">{t('transactions.form.selectCategory')}</option>
+                {filteredCategories.map((category) => (
+                  <option key={category.id} value={category.id}>{t(getTranslatedCategoryName(category.name))}</option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-ink mb-1.5">{t('transactions.form.category')}</label>
-          <select
-            value={formData.categoryId}
-            onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-            className="w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue transition-all"
-            required
-          >
-            <option value="">{t('transactions.form.selectCategory')}</option>
-            {filteredCategories.map((category) => (
-              <option key={category.id} value={category.id}>{t(getTranslatedCategoryName(category.name))}</option>
-            ))}
-          </select>
+        <div className="col-span-1 sm:col-span-2">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-ink mb-1.5">{t('transactions.form.account')}</label>
+              <select
+                value={selectedAccountId}
+                onChange={(e) => setSelectedAccountId(e.target.value)}
+                className="w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue transition-all"
+              >
+                <option value="">{t('transactions.form.selectAccount')}</option>
+                {accounts.map((account) => (
+                  <option key={account.id} value={account.id}>{account.name} {account.isDefault ? `(${t('common.default')})` : ''}</option>
+                ))}
+              </select>
+            </div>
+            <Input
+              label={t('transactions.form.date')}
+              type="date"
+              value={formData.date}
+              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+              required
+            />
+          </div>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-ink mb-1.5">{t('transactions.form.account')}</label>
-          <select
-            value={selectedAccountId}
-            onChange={(e) => setSelectedAccountId(e.target.value)}
-            className="w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue transition-all"
-          >
-            <option value="">{t('transactions.form.selectAccount')}</option>
-            {accounts.map((account) => (
-              <option key={account.id} value={account.id}>{account.name} {account.isDefault ? `(${t('common.default')})` : ''}</option>
-            ))}
-          </select>
-        </div>
-        <Input
-          label={t('transactions.form.date')}
-          type="date"
-          value={formData.date}
-          onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-          required
-        />
       </div>
 
       {!isEditing && (

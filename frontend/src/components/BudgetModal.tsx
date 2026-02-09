@@ -128,7 +128,7 @@ export function BudgetModal({
       isRecording={voice.voiceState === 'recording'}
       onCancelRecording={voice.cancelRecording}
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <div>
           <label className="block text-sm font-medium text-ink mb-1">
             {t('common.category')}
@@ -156,8 +156,6 @@ export function BudgetModal({
           onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
           required
         />
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
         <div>
           <label className="block text-sm font-medium text-ink mb-1">
             {t('budgets.form.period')}
