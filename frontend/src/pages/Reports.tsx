@@ -28,7 +28,6 @@ import {
   CartesianGrid,
   LineChart,
   Line,
-  Area,
   ReferenceLine,
 } from 'recharts';
 import { Download, TrendingUp, TrendingDown, Calendar, PiggyBank, Calculator, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -105,42 +104,34 @@ export function Reports() {
     return maxBalance * WARNING_THRESHOLD_PERCENTAGE;
   }, [trendData]);
 
-  // Custom dot component with gradient effect
+  // Custom dot component with conditional coloring
   const CustomDot = (props: any) => {
     const { cx, cy, payload } = props;
     const value = payload.projectedBalance;
     
-    let fillColor = CHART_GRADIENT_COLORS.positive.start;
-    let strokeColor = CHART_GRADIENT_COLORS.positive.end;
+    // Default color (green for positive values above warning threshold)
+    let fillColor = '#10B981';
+    let strokeColor = '#059669';
     
     if (value < 0) {
-      fillColor = CHART_GRADIENT_COLORS.negative.start;
-      strokeColor = CHART_GRADIENT_COLORS.negative.end;
+      // Red for negative values
+      fillColor = '#EF4444';
+      strokeColor = '#DC2626';
     } else if (value < warningThreshold) {
-      fillColor = CHART_GRADIENT_COLORS.warning.start;
-      strokeColor = CHART_GRADIENT_COLORS.warning.end;
+      // Strong orange for warning (approaching zero)
+      fillColor = '#F97316';
+      strokeColor = '#EA580C';
     }
     
     return (
-      <g>
-        {/* Outer glow effect */}
-        <circle
-          cx={cx}
-          cy={cy}
-          r={6}
-          fill={fillColor}
-          fillOpacity={0.2}
-        />
-        {/* Main dot */}
-        <circle
-          cx={cx}
-          cy={cy}
-          r={4}
-          fill={fillColor}
-          stroke={strokeColor}
-          strokeWidth={2}
-        />
-      </g>
+      <circle
+        cx={cx}
+        cy={cy}
+        r={4}
+        fill={fillColor}
+        stroke={strokeColor}
+        strokeWidth={2}
+      />
     );
   };
 
@@ -814,17 +805,6 @@ export function Reports() {
         <CardContent className="pt-0">
           <ResponsiveContainer width="100%" height={250}>
             <LineChart data={trendData} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
-              <defs>
-                {/* Background gradient for chart area */}
-                <linearGradient id="balanceGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#10B981" stopOpacity={0.1} />
-                  <stop offset="40%" stopColor="#FEF3C7" stopOpacity={0.15} />
-                  <stop offset="50%" stopColor="#FEF3C7" stopOpacity={0.2} />
-                  <stop offset="60%" stopColor="#FEE2E2" stopOpacity={0.15} />
-                  <stop offset="100%" stopColor="#FEE2E2" stopOpacity={0.3} />
-                </linearGradient>
-              </defs>
-              
               <CartesianGrid strokeDasharray="3 3" stroke="var(--color-slate-light, #E2E8F0)" />
               
               {/* Zero reference line */}
@@ -895,15 +875,6 @@ export function Reports() {
               <Legend
                 wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }}
                 iconSize={8}
-              />
-              
-              {/* Background gradient area */}
-              <Area
-                type="monotone"
-                dataKey="projectedBalance"
-                stroke="none"
-                fill="url(#balanceGradient)"
-                fillOpacity={1}
               />
               
               {/* Income line */}
