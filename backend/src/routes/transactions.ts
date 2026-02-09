@@ -12,10 +12,11 @@ const MAX_INSTANCES_PER_REQUEST = 24;
 const transactionSchema = z.object({
   description: z.string().min(1),
   amount: z.number().positive(),
-  type: z.enum(['income', 'expense']),
+  type: z.enum(['income', 'expense', 'transfer']),
   categoryId: z.string(),
   date: z.string(),
   accountId: z.string().optional(),
+  toAccountId: z.string().optional(),
   // Recurring transaction fields
   isRecurring: z.boolean().optional(),
   recurrencePattern: z.enum(['monthly', 'weekly', 'yearly']).nullable().optional(),
@@ -56,6 +57,20 @@ app.post('/', async (c) => {
     
     // Extract recurringCount from validated data (not stored on transaction)
     const { recurringCount, ...transactionData } = validated;
+
+    // Auto-resolve toAccountId for transfers without a destination
+    if (transactionData.type === 'transfer' && !transactionData.toAccountId && transactionData.accountId) {
+      const sourceAccount = await firebase.getDocument('accounts', transactionData.accountId) as { currency?: string } | null;
+      if (sourceAccount?.currency) {
+        const allAccounts = await firebase.getDocuments('accounts', userId) as Array<{ id: string; currency?: string; isCash?: boolean }>;
+        const cashAccount = allAccounts.find(
+          a => a.isCash === true && a.currency === sourceAccount.currency
+        );
+        if (cashAccount) {
+          transactionData.toAccountId = cashAccount.id;
+        }
+      }
+    }
 
     // Calculate total installments for recurring transactions
     let totalInstallments: number | undefined;

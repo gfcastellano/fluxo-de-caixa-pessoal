@@ -82,10 +82,10 @@ app.post('/transactions/update', async (c) => {
     }
 
     // Step 2: Get user's accounts for parsing
-    let accounts: { id: string; name: string }[] = [];
+    let accounts: { id: string; name: string; isCash?: boolean }[] = [];
     try {
       const accountsData = await firebase.getDocuments('accounts', currentTransaction.userId);
-      accounts = (accountsData as { id: string; name: string }[]).map(acc => ({ id: acc.id, name: acc.name }));
+      accounts = (accountsData as { id: string; name: string; isCash?: boolean }[]).map(acc => ({ id: acc.id, name: acc.name, isCash: acc.isCash || false }));
     } catch (error) {
       // Continue without accounts - GPT will return empty accountId
     }
@@ -211,10 +211,10 @@ app.post('/transactions/update-pending', async (c) => {
     }
 
     // Step 2: Get user's accounts for parsing
-    let accounts: { id: string; name: string }[] = [];
+    let accounts: { id: string; name: string; isCash?: boolean }[] = [];
     try {
       const accountsData = await firebase.getDocuments('accounts', userId);
-      accounts = (accountsData as { id: string; name: string }[]).map(acc => ({ id: acc.id, name: acc.name }));
+      accounts = (accountsData as { id: string; name: string; isCash?: boolean }[]).map(acc => ({ id: acc.id, name: acc.name, isCash: acc.isCash || false }));
     } catch (error) {
       // Continue without accounts - GPT will return empty accountId
     }
@@ -317,7 +317,7 @@ app.post('/transactions', async (c) => {
 
     // Step 3: Get user's categories and accounts for parsing
     let categories: Category[] = [];
-    let accounts: { id: string; name: string }[] = [];
+    let accounts: { id: string; name: string; isCash?: boolean }[] = [];
     try {
       const categoriesData = await firebase.getDocuments('categories', userId);
       categories = categoriesData as Category[];
@@ -326,7 +326,7 @@ app.post('/transactions', async (c) => {
     }
     try {
       const accountsData = await firebase.getDocuments('accounts', userId);
-      accounts = (accountsData as { id: string; name: string }[]).map(acc => ({ id: acc.id, name: acc.name }));
+      accounts = (accountsData as { id: string; name: string; isCash?: boolean }[]).map(acc => ({ id: acc.id, name: acc.name, isCash: acc.isCash || false }));
     } catch (error) {
       // Continue without accounts - GPT will return empty accountId
     }
@@ -334,11 +334,12 @@ app.post('/transactions', async (c) => {
     // Step 4: Parse transcription into transaction data
     let parsedTransaction: {
       amount: number;
-      type: 'income' | 'expense';
+      type: 'income' | 'expense' | 'transfer';
       description: string;
       categoryId: string;
       date: string;
       accountId?: string;
+      toAccountId?: string;
       isRecurring?: boolean;
       recurrencePattern?: 'monthly' | 'weekly' | 'yearly' | null;
       recurrenceDay?: number | null;

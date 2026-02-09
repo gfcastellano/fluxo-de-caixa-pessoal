@@ -38,7 +38,7 @@ export function TransactionModal({
   const [formData, setFormData] = useState({
     description: '',
     amount: '',
-    type: 'expense' as 'income' | 'expense',
+    type: 'expense' as 'income' | 'expense' | 'transfer',
     categoryId: '',
     date: new Date().toISOString().split('T')[0],
   });
@@ -51,6 +51,7 @@ export function TransactionModal({
   const [recurringMode, setRecurringMode] = useState<'count' | 'date'>('date');
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
+  const [selectedToAccountId, setSelectedToAccountId] = useState<string>('');
 
   // Estados para edição em massa de transações recorrentes
   const [editMode, setEditMode] = useState<'single' | 'forward' | 'all'>('forward');
@@ -74,6 +75,9 @@ export function TransactionModal({
           } else {
             const defaultAccount = userAccounts.find(acc => acc.isDefault);
             if (defaultAccount) setSelectedAccountId(defaultAccount.id);
+          }
+          if (transaction?.toAccountId) {
+            setSelectedToAccountId(transaction.toAccountId);
           }
         } catch (error) {
           console.error('Error fetching accounts:', error);
@@ -112,6 +116,7 @@ export function TransactionModal({
       setRecurrenceEndDate('');
       setRecurringCount('');
       setRecurringMode('date');
+      setSelectedToAccountId('');
     }
     voice.resetVoice();
   }, [transaction, isOpen]);
@@ -184,6 +189,8 @@ export function TransactionModal({
 
     if (lowerType === 'receita' || lowerType === 'income' || lowerType === 'entrada') {
       validType = 'income';
+    } else if (lowerType === 'transfer' || lowerType === 'transferencia' || lowerType === 'transferência' || lowerType === 'saque') {
+      validType = 'transfer';
     } else {
       validType = 'expense';
     }
@@ -193,6 +200,7 @@ export function TransactionModal({
       type: validType,
       amount: parseFloat(formData.amount.toString().replace(',', '.')),
       accountId: selectedAccountId || undefined,
+      ...(validType === 'transfer' ? { toAccountId: selectedToAccountId || undefined } : {}),
     };
 
     if (isRecurring && !isEditing) {
@@ -350,18 +358,53 @@ export function TransactionModal({
             if (parsedTransaction.type) {
               const t = String(parsedTransaction.type).toLowerCase();
               if (t.includes('receita') || t.includes('income')) normalizedType = 'income';
+              else if (t.includes('transfer') || t.includes('transferencia') || t.includes('saque')) normalizedType = 'transfer';
               else if (t.includes('despesa') || t.includes('expense')) normalizedType = 'expense';
+            }
+
+            // For transfers: auto-fill missing toAccountId and categoryId
+            let finalCategoryId = parsedTransaction.categoryId;
+            let finalToAccountId = parsedTransaction.toAccountId || '';
+
+            if (normalizedType === 'transfer') {
+              // If GPT didn't return a toAccountId, auto-select cash account for the source currency
+              if (!finalToAccountId && parsedTransaction.accountId) {
+                const sourceAccount = accounts.find(a => a.id === parsedTransaction.accountId);
+                if (sourceAccount) {
+                  const cashAccount = accounts.find(a => a.isCash === true && a.currency === sourceAccount.currency);
+                  if (cashAccount) finalToAccountId = cashAccount.id;
+                }
+              }
+              // If GPT didn't return a categoryId, auto-select the best transfer category
+              if (!finalCategoryId) {
+                const desc = (parsedTransaction.description || '').toLowerCase();
+                const isWithdrawal = desc.includes('saque') || desc.includes('withdraw') || desc.includes('retir');
+                const withdrawalCategory = categories.find(c => c.type === 'transfer' && c.name === 'Withdrawal');
+                const genericTransferCategory = categories.find(c => c.type === 'transfer' && c.name === 'Transfer');
+                if (isWithdrawal && withdrawalCategory) {
+                  finalCategoryId = withdrawalCategory.id;
+                } else {
+                  finalCategoryId = (genericTransferCategory || categories.find(c => c.type === 'transfer'))?.id || '';
+                }
+              }
             }
 
             setFormData(prev => ({
               ...prev,
               description: parsedTransaction.description || prev.description,
               amount: parsedTransaction.amount?.toString() || prev.amount,
-              type: normalizedType as 'income' | 'expense',
-              categoryId: parsedTransaction.categoryId || prev.categoryId,
+              type: normalizedType as 'income' | 'expense' | 'transfer',
+              categoryId: finalCategoryId || prev.categoryId,
               date: parsedTransaction.date || prev.date,
             }));
-            if (parsedTransaction.accountId) setSelectedAccountId(parsedTransaction.accountId);
+            if (parsedTransaction.accountId) {
+              setSelectedAccountId(parsedTransaction.accountId);
+            } else {
+              // Fall back to the default account when voice doesn't specify one
+              const defaultAccount = accounts.find(a => a.isDefault);
+              if (defaultAccount) setSelectedAccountId(defaultAccount.id);
+            }
+            if (finalToAccountId) setSelectedToAccountId(finalToAccountId);
 
             if (parsedTransaction.isRecurring) {
               setIsRecurring(true);
@@ -386,7 +429,7 @@ export function TransactionModal({
       voice.clearFeedback();
       await voice.startRecording();
     }
-  }, [voice, i18n.language, t]);
+  }, [voice, i18n.language, t, accounts, categories]);
 
   const handleVoiceUpdate = useCallback(async () => {
     if (voice.voiceState === 'recording') {
@@ -422,6 +465,7 @@ export function TransactionModal({
           if (result.data.categoryId) { updates.categoryId = result.data.categoryId; setFormData(prev => ({ ...prev, categoryId: result.data!.categoryId! })); }
           if (result.data.date) { updates.date = result.data.date; setFormData(prev => ({ ...prev, date: result.data!.date! })); }
           if (result.data.accountId) { updates.accountId = result.data.accountId; setSelectedAccountId(result.data.accountId); }
+          if (result.data.toAccountId) { updates.toAccountId = result.data.toAccountId; setSelectedToAccountId(result.data.toAccountId); }
 
           if (onVoiceUpdate && Object.keys(updates).length > 0) onVoiceUpdate(updates);
         } else {
@@ -433,6 +477,22 @@ export function TransactionModal({
       await voice.startRecording();
     }
   }, [voice, i18n.language, transaction, categories, t, onVoiceUpdate, formData, userId, selectedAccountId]);
+
+  // Auto-select destination cash account only for withdrawal transfers
+  useEffect(() => {
+    if (formData.type === 'transfer' && selectedAccountId && accounts.length > 0 && formData.categoryId) {
+      const selectedCategory = categories.find(c => c.id === formData.categoryId);
+      if (selectedCategory?.name === 'Withdrawal') {
+        const sourceAccount = accounts.find(a => a.id === selectedAccountId);
+        if (sourceAccount) {
+          const cashAccount = accounts.find(a => a.isCash === true && a.currency === sourceAccount.currency && a.id !== selectedAccountId);
+          if (cashAccount && selectedToAccountId !== cashAccount.id) {
+            setSelectedToAccountId(cashAccount.id);
+          }
+        }
+      }
+    }
+  }, [formData.type, formData.categoryId, selectedAccountId, accounts, categories]);
 
   const filteredCategories = categories
     .filter(c => c.type === formData.type)
@@ -479,11 +539,12 @@ export function TransactionModal({
               <label className="block text-sm font-medium text-ink mb-1.5">{t('transactions.form.type')}</label>
               <select
                 value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value as 'income' | 'expense', categoryId: '' })}
+                onChange={(e) => setFormData({ ...formData, type: e.target.value as 'income' | 'expense' | 'transfer', categoryId: '' })}
                 className="w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue transition-all"
               >
                 <option value="expense">{t('common.expense')}</option>
                 <option value="income">{t('common.income')}</option>
+                <option value="transfer">{t('common.transfer')}</option>
               </select>
             </div>
             <div>
@@ -503,9 +564,11 @@ export function TransactionModal({
           </div>
         </div>
         <div className="col-span-1 sm:col-span-2">
-          <div className="grid grid-cols-2 gap-3">
+          <div className={`grid ${formData.type === 'transfer' ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-2'} gap-3`}>
             <div>
-              <label className="block text-sm font-medium text-ink mb-1.5">{t('transactions.form.account')}</label>
+              <label className="block text-sm font-medium text-ink mb-1.5">
+                {formData.type === 'transfer' ? t('transactions.form.sourceAccount') || t('transactions.form.account') : t('transactions.form.account')}
+              </label>
               <select
                 value={selectedAccountId}
                 onChange={(e) => setSelectedAccountId(e.target.value)}
@@ -517,6 +580,24 @@ export function TransactionModal({
                 ))}
               </select>
             </div>
+            {formData.type === 'transfer' && (
+              <div>
+                <label className="block text-sm font-medium text-ink mb-1.5">{t('transactions.form.destinationAccount')}</label>
+                <select
+                  value={selectedToAccountId}
+                  onChange={(e) => setSelectedToAccountId(e.target.value)}
+                  className="w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue transition-all"
+                  required
+                >
+                  <option value="">{t('transactions.form.selectDestinationAccount')}</option>
+                  {accounts
+                    .filter(acc => acc.id !== selectedAccountId)
+                    .map((account) => (
+                      <option key={account.id} value={account.id}>{account.name} {account.isCash ? `(${t('accounts.cashBadge')})` : ''}</option>
+                    ))}
+                </select>
+              </div>
+            )}
             <Input
               label={t('transactions.form.date')}
               type="date"

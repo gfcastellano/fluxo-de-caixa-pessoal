@@ -47,6 +47,7 @@ export const esTranslations = {
     all: 'Todos',
     income: 'Ingreso',
     expense: 'Gasto',
+    transfer: 'Transferencia',
     total: 'Total',
     balance: 'Saldo',
     period: 'Período',
@@ -137,6 +138,11 @@ export const esTranslations = {
       selectAccount: 'Selecciona una cuenta',
       income: 'Ingreso',
       expense: 'Gasto',
+      transfer: 'Transferencia',
+      sourceAccount: 'Cuenta Origen',
+      destinationAccount: 'Cuenta Destino',
+      selectDestinationAccount: 'Seleccione la cuenta destino',
+      sameAccountError: 'Origen y destino deben ser diferentes',
       isRecurring: 'Transacción Recurrente',
       recurrencePattern: 'Frecuencia',
       recurrenceDay: 'Día',
@@ -174,6 +180,7 @@ export const esTranslations = {
   // Categories
   categories: {
     title: 'Categorías',
+    subtitle: 'Gestione sus categorías de ingreso, gasto y transferencia',
     addNew: 'Añadir Categoría',
     editCategory: 'Editar Categoría',
     deleteCategory: 'Eliminar Categoría',
@@ -241,6 +248,8 @@ export const esTranslations = {
     deleteConfirm: '¿Estás seguro de que quieres eliminar esta cuenta?',
     setDefault: 'Establecer como Predeterminada',
     default: 'Predeterminada',
+    cashBadge: 'Efectivo',
+    cannotDeleteCash: 'Las cuentas de efectivo no se pueden eliminar',
     currentBalance: 'Saldo Actual',
     initialBalanceDate: 'Fecha del Saldo Inicial',
     noAccounts: 'No se encontraron cuentas',
@@ -306,6 +315,8 @@ export const esTranslations = {
     health: 'Salud',
     education: 'Educación',
     otherExpense: 'Otros Gastos',
+    transfer: 'Transferencia',
+    withdrawal: 'Retiro',
   },
 
   // Voice

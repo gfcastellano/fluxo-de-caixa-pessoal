@@ -10,7 +10,7 @@ export interface Category {
   id: string;
   userId: string;
   name: string;
-  type: 'income' | 'expense';
+  type: 'income' | 'expense' | 'transfer';
   color: string;
   icon?: string;
   createdAt: string;
@@ -20,7 +20,8 @@ export interface Transaction {
   id: string;
   userId: string;
   accountId?: string;
-  type: 'income' | 'expense';
+  toAccountId?: string;
+  type: 'income' | 'expense' | 'transfer';
   amount: number;
   categoryId: string;
   description: string;
@@ -61,6 +62,7 @@ export interface Account {
   initialBalance: number;
   balanceDate: string;
   isDefault: boolean;
+  isCash: boolean;
   color?: string;
   createdAt: string;
   updatedAt: string;

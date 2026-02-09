@@ -12,7 +12,7 @@ import { getTransactions } from '../services/transactionService';
 import { getAccounts, calculateAccountBalance } from '../services/accountService';
 import { getCategories } from '../services/categoryService';
 import type { Transaction, Account, Category } from '../types';
-import { TrendingUp, TrendingDown, Wallet, Plus, Calendar } from 'lucide-react';
+import { TrendingUp, TrendingDown, ArrowRightLeft, Wallet, Plus, Calendar } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface CurrencySummary {
@@ -79,9 +79,10 @@ export function Dashboard() {
 
         if (transaction.type === 'income') {
           summaries[currency].income += transaction.amount;
-        } else {
+        } else if (transaction.type === 'expense') {
           summaries[currency].expenses += transaction.amount;
         }
+        // transfers are internal movements and don't affect income/expense summaries
       });
 
       Object.keys(summaries).forEach((currency) => {
@@ -105,6 +106,7 @@ export function Dashboard() {
       const enrichedTransactions = transactions.map(t => ({
         ...t,
         account: t.accountId ? accountsMap[t.accountId] : undefined,
+        toAccount: t.toAccountId ? accountsMap[t.toAccountId] : undefined,
         category: t.categoryId ? categoriesMap[t.categoryId] : undefined,
       }));
 
@@ -265,10 +267,14 @@ export function Dashboard() {
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center shadow-sm flex-shrink-0 ${transaction.type === 'income'
                       ? 'bg-emerald/10 text-emerald'
-                      : 'bg-rose/10 text-rose'
+                      : transaction.type === 'transfer'
+                        ? 'bg-blue-100 text-blue-600'
+                        : 'bg-rose/10 text-rose'
                       }`}>
                       {transaction.type === 'income' ? (
                         <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
+                      ) : transaction.type === 'transfer' ? (
+                        <ArrowRightLeft className="h-4 w-4 sm:h-5 sm:w-5" />
                       ) : (
                         <TrendingDown className="h-4 w-4 sm:h-5 sm:w-5" />
                       )}
@@ -285,6 +291,12 @@ export function Dashboard() {
                           <>
                             <span className="text-slate/40 flex-shrink-0">•</span>
                             <span className="font-medium" style={{ color: transaction.account.color }}>{transaction.account.name}</span>
+                            {transaction.type === 'transfer' && transaction.toAccount && (
+                              <>
+                                <span className="text-slate/40 flex-shrink-0">→</span>
+                                <span className="font-medium" style={{ color: transaction.toAccount.color }}>{transaction.toAccount.name}</span>
+                              </>
+                            )}
                           </>
                         )}
                       </div>
@@ -295,10 +307,12 @@ export function Dashboard() {
                     <p
                       className={`font-bold tabular-nums text-sm sm:text-base whitespace-nowrap ${transaction.type === 'income'
                         ? 'text-emerald'
-                        : 'text-rose'
+                        : transaction.type === 'transfer'
+                          ? 'text-blue-600'
+                          : 'text-rose'
                         }`}
                     >
-                      {transaction.type === 'income' ? '+' : '-'}
+                      {transaction.type === 'income' ? '+' : transaction.type === 'transfer' ? '' : '-'}
                       {formatCurrency(transaction.amount, accountCurrencyMap[transaction.accountId || ''] || 'BRL')}
                     </p>
                     <p className="text-xs text-slate/80 mt-0.5 whitespace-nowrap">

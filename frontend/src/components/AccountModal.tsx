@@ -137,6 +137,7 @@ export function AccountModal({
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
           required
+          disabled={account?.isCash}
         />
 
         <div>
@@ -146,7 +147,11 @@ export function AccountModal({
           <select
             value={formData.currency}
             onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue"
+            disabled={account?.isCash}
+            className={cn(
+              "w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue",
+              account?.isCash && "opacity-50 cursor-not-allowed"
+            )}
           >
             {CURRENCIES.map((currency) => (
               <option key={currency.code} value={currency.code} className="text-neutral-900">
@@ -183,18 +188,20 @@ export function AccountModal({
           onChange={(color) => setFormData({ ...formData, color })}
         />
 
-        <div className="flex items-center gap-2 sm:col-span-2">
-          <input
-            type="checkbox"
-            id="isDefault"
-            checked={formData.isDefault}
-            onChange={(e) => setFormData({ ...formData, isDefault: e.target.checked })}
-            className="rounded border-gray-300 text-blue focus:ring-blue"
-          />
-          <label htmlFor="isDefault" className="text-sm text-slate">
-            {t('accounts.form.setAsDefault')}
-          </label>
-        </div>
+        {!account?.isCash && (
+          <div className="flex items-center gap-2 sm:col-span-2">
+            <input
+              type="checkbox"
+              id="isDefault"
+              checked={formData.isDefault}
+              onChange={(e) => setFormData({ ...formData, isDefault: e.target.checked })}
+              className="rounded border-gray-300 text-blue focus:ring-blue"
+            />
+            <label htmlFor="isDefault" className="text-sm text-slate">
+              {t('accounts.form.setAsDefault')}
+            </label>
+          </div>
+        )}
       </div>
 
       {/* Voice Input Section */}

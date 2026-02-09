@@ -31,7 +31,7 @@ interface RecurringGroup {
   occurrencesInPeriod: number;
   totalAmountInPeriod: number;
   transactions: Transaction[];
-  type: 'income' | 'expense';
+  type: 'income' | 'expense' | 'transfer';
   categoryId: string;
   category?: Category;
   accountId?: string;
@@ -136,7 +136,7 @@ export function Transactions() {
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
   const [currentDate, setCurrentDate] = useState(new Date()); // Reference date for month/week navigation
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
+  const [filterType, setFilterType] = useState<'all' | 'income' | 'expense' | 'transfer'>('all');
 
   /* New state for highlighting */
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
@@ -207,11 +207,12 @@ export function Transactions() {
 
       const transactionsData = await getTransactions(user.uid, dateRange);
 
-      // Enrich transactions with category and account info
+      // Enrich transactions with category, account, and toAccount info
       const enrichedTransactions = transactionsData.map((transaction) => ({
         ...transaction,
         category: categories.find((c) => c.id === transaction.categoryId),
         account: accounts.find((a) => a.id === transaction.accountId),
+        toAccount: transaction.toAccountId ? accounts.find((a) => a.id === transaction.toAccountId) : undefined,
       }));
 
       // Sort transactions by date (most recent first)
@@ -609,6 +610,7 @@ export function Transactions() {
                 <option value="all">{t('common.all')}</option>
                 <option value="income">{t('common.income')}</option>
                 <option value="expense">{t('common.expense')}</option>
+                <option value="transfer">{t('common.transfer')}</option>
               </select>
             </div>
           </div>
@@ -666,7 +668,7 @@ export function Transactions() {
                               </span>
                             </div>
                           </div>
-                          <div className={`text-right font-bold text-sm ${group.type === 'income' ? 'text-emerald' : 'text-rose'}`}>
+                          <div className={`text-right font-bold text-sm ${group.type === 'income' ? 'text-emerald' : group.type === 'transfer' ? 'text-blue' : 'text-rose'}`}>
                             {group.type === 'income' ? '+' : '-'}{formatCurrency(group.totalAmountInPeriod, group.account?.currency)}
                           </div>
                         </div>
@@ -723,7 +725,7 @@ export function Transactions() {
                                   <span>{formatDate(transaction.date)}</span>
                                 </div>
                               </div>
-                              <div className={`text-right font-bold text-sm ${transaction.type === 'income' ? 'text-emerald' : 'text-rose'}`}>
+                              <div className={`text-right font-bold text-sm ${transaction.type === 'income' ? 'text-emerald' : transaction.type === 'transfer' ? 'text-blue' : 'text-rose'}`}>
                                 {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount, transaction.account?.currency)}
                               </div>
                             </div>
@@ -779,7 +781,7 @@ export function Transactions() {
                           </p>
                           <p className="text-[10px] text-slate mt-0.5">{formatDate(transaction.date)}</p>
                         </div>
-                        <div className={`text-right font-bold text-sm ${transaction.type === 'income' ? 'text-emerald' : 'text-rose'}`}>
+                        <div className={`text-right font-bold text-sm ${transaction.type === 'income' ? 'text-emerald' : transaction.type === 'transfer' ? 'text-blue' : 'text-rose'}`}>
                           {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount, transaction.account?.currency)}
                         </div>
                       </div>
@@ -868,7 +870,7 @@ export function Transactions() {
                             <td className="py-3 px-4 text-sm text-slate hidden lg:table-cell" style={{ color: group.account?.color }}>
                               {group.account?.name || '-'}
                             </td>
-                            <td className={`py-3 px-4 text-right font-bold text-base ${group.type === 'income' ? 'text-emerald' : 'text-rose'}`}>
+                            <td className={`py-3 px-4 text-right font-bold text-base ${group.type === 'income' ? 'text-emerald' : group.type === 'transfer' ? 'text-blue' : 'text-rose'}`}>
                               {group.type === 'income' ? '+' : '-'}{formatCurrency(group.totalAmountInPeriod, group.account?.currency)}
                             </td>
                             <td className="py-3 px-4 text-right">
@@ -924,7 +926,7 @@ export function Transactions() {
                                 <td className="py-2 px-4 text-sm text-slate opacity-70 hidden lg:table-cell" style={{ color: transaction.account?.color }}>
                                   {transaction.account?.name}
                                 </td>
-                                <td className={`py-2 px-4 text-right text-sm ${transaction.type === 'income' ? 'text-emerald' : 'text-rose'}`}>
+                                <td className={`py-2 px-4 text-right text-sm ${transaction.type === 'income' ? 'text-emerald' : transaction.type === 'transfer' ? 'text-blue' : 'text-rose'}`}>
                                   {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount, transaction.account?.currency)}
                                 </td>
                                 <td className="py-2 px-4 text-right">
@@ -986,7 +988,7 @@ export function Transactions() {
                           </span>
                         </td>
                         <td className="py-3 px-4 text-sm text-slate hidden lg:table-cell" style={{ color: transaction.account?.color }}>{transaction.account?.name || '-'}</td>
-                        <td className={`py-3 px-4 text-right font-medium text-base ${transaction.type === 'income' ? 'text-emerald' : 'text-rose'}`}>
+                        <td className={`py-3 px-4 text-right font-medium text-base ${transaction.type === 'income' ? 'text-emerald' : transaction.type === 'transfer' ? 'text-blue' : 'text-rose'}`}>
                           {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount, transaction.account?.currency)}
                         </td>
                         <td className="py-3 px-4 text-right">

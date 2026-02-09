@@ -140,7 +140,7 @@ export async function calculateAccountBalance(
   try {
     // Fetch the account to get stored balance and balanceDate
     const account = await getAccount(accountId);
-    
+
     if (!account) {
       throw new Error('Account not found');
     }
@@ -160,19 +160,34 @@ export async function calculateAccountBalance(
       endDate: endDate,
     });
 
+    // Also fetch all user transactions to find incoming transfers (toAccountId === this account)
+    const allUserTransactions = await getTransactions(userId, {
+      startDate: account.balanceDate,
+      endDate: endDate,
+    });
+    const incomingTransfers = allUserTransactions.filter(
+      t => t.type === 'transfer' && t.toAccountId === accountId
+    );
+
     // Calculate the adjustment: income adds to balance, expenses subtract from balance
+    // Note: balance represents the starting balance at the START of balanceDate,
+    // so all transactions on balanceDate and after are applied.
     let adjustment = 0;
+
     for (const transaction of transactions) {
-      // Skip transactions exactly on the balance date (they're already included in the stored balance)
-      if (transaction.date === account.balanceDate) {
-        continue;
-      }
-      
       if (transaction.type === 'income') {
         adjustment += transaction.amount;
       } else if (transaction.type === 'expense') {
         adjustment -= transaction.amount;
+      } else if (transaction.type === 'transfer') {
+        // Outgoing transfer: money leaves this account
+        adjustment -= transaction.amount;
       }
+    }
+
+    // Add incoming transfers (money entering this account)
+    for (const transfer of incomingTransfers) {
+      adjustment += transfer.amount;
     }
 
     // Return the calculated balance

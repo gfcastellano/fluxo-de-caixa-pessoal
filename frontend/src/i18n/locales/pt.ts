@@ -52,6 +52,7 @@ export const ptTranslations = {
     all: 'Todos',
     income: 'Receita',
     expense: 'Despesa',
+    transfer: 'Transferência',
     total: 'Total',
     balance: 'Saldo',
     period: 'Período',
@@ -146,6 +147,11 @@ export const ptTranslations = {
       selectAccount: 'Selecione uma conta',
       income: 'Receita',
       expense: 'Despesa',
+      transfer: 'Transferência',
+      sourceAccount: 'Conta Origem',
+      destinationAccount: 'Conta Destino',
+      selectDestinationAccount: 'Selecione a conta destino',
+      sameAccountError: 'Conta origem e destino devem ser diferentes',
       isRecurring: 'Transação Recorrente',
       recurrencePattern: 'Frequência',
       recurrenceDay: 'Dia',
@@ -183,6 +189,7 @@ export const ptTranslations = {
   // Categories
   categories: {
     title: 'Categorias',
+    subtitle: 'Gerencie suas categorias de receita, despesa e transferência',
     addNew: 'Adicionar Categoria',
     editCategory: 'Editar Categoria',
     deleteCategory: 'Excluir Categoria',
@@ -250,6 +257,8 @@ export const ptTranslations = {
     deleteConfirm: 'Tem certeza que deseja excluir esta conta?',
     setDefault: 'Definir como Padrão',
     default: 'Padrão',
+    cashBadge: 'Dinheiro',
+    cannotDeleteCash: 'Contas dinheiro não podem ser excluídas',
     currentBalance: 'Saldo Inicial',
     initialBalanceDate: 'Data do Saldo Inicial',
     noAccounts: 'Nenhuma conta encontrada',
@@ -317,6 +326,8 @@ export const ptTranslations = {
     health: 'Saúde',
     education: 'Educação',
     otherExpense: 'Outra Despesa',
+    transfer: 'Transferência',
+    withdrawal: 'Saque',
   },
 
   // Voice
