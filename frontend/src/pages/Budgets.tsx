@@ -146,18 +146,19 @@ export function Budgets() {
   }
 
   return (
-    <div className="flex flex-col sm:gap-6 gap-4 sm:p-6 p-4 overflow-x-hidden">
+    <div className="flex flex-col h-[calc(100vh-var(--header-height)-var(--dock-height))] sm:h-auto sm:min-h-0 sm:gap-6 gap-4 sm:p-6 p-4 overflow-x-hidden">
       {/* Header - no add button, Hero handles it */}
-      <div className="flex items-center">
-        <h1 className="text-xl sm:text-2xl font-bold text-ink">{t('budgets.title')}</h1>
+      <div className="flex items-center flex-shrink-0">
+        <h1 className="text-lg sm:text-2xl font-bold text-ink">{t('budgets.title')}</h1>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="flex-1 min-h-0 overflow-y-auto sm:overflow-visible">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-6 pb-4 sm:pb-0">
         {budgets.length === 0 ? (
           <Card className="md:col-span-2 bg-white/40 backdrop-blur-xl border-white/60">
-            <CardContent className="text-center py-8">
-              <p className="text-neutral-500">{t('budgets.noBudgets')}</p>
-              <Button onClick={() => handleOpenModal()} className="mt-4 w-full sm:w-auto whitespace-nowrap" leftIcon={<Plus className="h-4 w-4 flex-shrink-0" />}>
+            <CardContent className="text-center py-6 sm:py-8 p-3 sm:p-6">
+              <p className="text-xs sm:text-sm text-neutral-500">{t('budgets.noBudgets')}</p>
+              <Button onClick={() => handleOpenModal()} className="mt-3 sm:mt-4 w-full sm:w-auto whitespace-nowrap text-xs sm:text-sm h-7 sm:h-9" leftIcon={<Plus className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />}>
                 {t('budgets.addNew')}
               </Button>
             </CardContent>
@@ -176,34 +177,34 @@ export function Budgets() {
                   highlightedId === budget.id ? "animate-highlight scale-[1.02]" : ""
                 )}
               >
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <div className="flex items-center gap-3">
+                <CardHeader className="flex flex-row items-center justify-between pb-1.5 sm:pb-2 p-3 sm:p-6">
+                  <div className="flex items-center gap-2 sm:gap-3">
                     <div
-                      className="w-4 h-4 rounded-full ring-2 ring-white shadow-sm"
+                      className="w-3 h-3 sm:w-4 sm:h-4 rounded-full ring-2 ring-white shadow-sm flex-shrink-0"
                       style={{ backgroundColor: getCategoryColor(budget.categoryId) }}
                     />
-                    <CardTitle className="text-lg font-bold text-ink">
+                    <CardTitle className="text-sm sm:text-lg font-bold text-ink truncate">
                       {getCategoryName(budget.categoryId)}
                     </CardTitle>
                   </div>
-                  <div className="flex flex-wrap gap-1">
+                  <div className="flex flex-wrap gap-0.5 sm:gap-1">
                     <button
                       onClick={() => handleOpenModal(budget)}
-                      className="p-2 text-neutral-600 hover:bg-white hover:shadow-sm rounded-lg transition-all"
+                      className="p-1.5 sm:p-2 text-neutral-600 hover:bg-white hover:shadow-sm rounded-lg transition-all"
                     >
-                      <Edit2 className="h-4 w-4" />
+                      <Edit2 className="h-3 w-3 sm:h-4 sm:w-4" />
                     </button>
                     <button
                       onClick={() => handleDelete(budget.id)}
-                      className="p-2 text-danger-600 hover:bg-danger-50 rounded-lg transition-colors"
+                      className="p-1.5 sm:p-2 text-danger-600 hover:bg-danger-50 rounded-lg transition-colors"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                     </button>
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex justify-between text-sm sm:text-base">
+                <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
+                  <div className="space-y-2 sm:space-y-4">
+                    <div className="flex justify-between text-xs sm:text-sm">
                       <span className="text-neutral-600 font-medium">
                         {t('budgets.spent')}: {formatCurrency(status?.spent || 0)}
                       </span>
@@ -211,13 +212,13 @@ export function Budgets() {
                         {t('budgets.form.amount')}: {formatCurrency(budget.amount)}
                       </span>
                     </div>
-                    <div className="relative h-4 bg-slate/10 rounded-full overflow-hidden">
+                    <div className="relative h-2.5 sm:h-4 bg-slate/10 rounded-full overflow-hidden">
                       <div
                         className={`absolute top-0 left-0 h-full transition-all ${isOverBudget ? 'bg-red-500' : 'bg-emerald-500'}`}
                         style={{ width: `${Math.min(percentage, 100)}%` }}
                       />
                     </div>
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between text-xs sm:text-sm">
                       <span className={`font-bold ${isOverBudget ? 'text-red-600' : 'text-emerald-600'}`}>
                         {percentage.toFixed(1)}% {t('budgets.spent').toLowerCase()}
                       </span>
@@ -226,7 +227,7 @@ export function Budgets() {
                       </span>
                     </div>
                     {isOverBudget && (
-                      <p className="text-sm text-red-600 bg-red-50 p-2 rounded-lg border border-red-100">
+                      <p className="text-xs sm:text-sm text-red-600 bg-red-50 p-1.5 sm:p-2 rounded-lg border border-red-100">
                         {t('budgets.overBudget')} {formatCurrency(Math.abs(status?.remaining || 0))}
                       </p>
                     )}
@@ -236,6 +237,7 @@ export function Budgets() {
             );
           })
         )}
+        </div>
       </div>
 
       {/* Budget Modal */}

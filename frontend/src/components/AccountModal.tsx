@@ -131,68 +131,70 @@ export function AccountModal({
       isRecording={voice.voiceState === 'recording'}
       onCancelRecording={voice.cancelRecording}
     >
-      <Input
-        label={t('accounts.form.name')}
-        value={formData.name}
-        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-        required
-      />
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          {t('accounts.form.currency')}
-        </label>
-        <select
-          value={formData.currency}
-          onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue"
-        >
-          {CURRENCIES.map((currency) => (
-            <option key={currency.code} value={currency.code} className="text-neutral-900">
-              {currency.code} - {currency.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {!isEditing && (
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <Input
-          label={t('accounts.form.initialBalance')}
-          type="number"
-          step="0.01"
-          value={formData.initialBalance}
-          onChange={(e) => setFormData({ ...formData, initialBalance: parseFloat(e.target.value) || 0 })}
+          label={t('accounts.form.name')}
+          value={formData.name}
+          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
           required
         />
-      )}
 
-      {isEditing && (
-        <Input
-          label={t('accounts.form.balance') || 'Saldo Atual'}
-          type="number"
-          step="0.01"
-          value={formData.balance}
-          onChange={(e) => setFormData({ ...formData, balance: parseFloat(e.target.value) || 0 })}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            {t('accounts.form.currency')}
+          </label>
+          <select
+            value={formData.currency}
+            onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue"
+          >
+            {CURRENCIES.map((currency) => (
+              <option key={currency.code} value={currency.code} className="text-neutral-900">
+                {currency.code} - {currency.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {!isEditing && (
+          <Input
+            label={t('accounts.form.initialBalance')}
+            type="number"
+            step="0.01"
+            value={formData.initialBalance}
+            onChange={(e) => setFormData({ ...formData, initialBalance: parseFloat(e.target.value) || 0 })}
+            required
+          />
+        )}
+
+        {isEditing && (
+          <Input
+            label={t('accounts.form.balance') || 'Saldo Atual'}
+            type="number"
+            step="0.01"
+            value={formData.balance}
+            onChange={(e) => setFormData({ ...formData, balance: parseFloat(e.target.value) || 0 })}
+          />
+        )}
+
+        <ColorPicker
+          label={t('accounts.form.color') || 'Cor da conta'}
+          value={formData.color}
+          onChange={(color) => setFormData({ ...formData, color })}
         />
-      )}
 
-      <ColorPicker
-        label={t('accounts.form.color') || 'Cor da conta'}
-        value={formData.color}
-        onChange={(color) => setFormData({ ...formData, color })}
-      />
-
-      <div className="flex items-center gap-2">
-        <input
-          type="checkbox"
-          id="isDefault"
-          checked={formData.isDefault}
-          onChange={(e) => setFormData({ ...formData, isDefault: e.target.checked })}
-          className="rounded border-gray-300 text-blue focus:ring-blue"
-        />
-        <label htmlFor="isDefault" className="text-sm text-slate">
-          {t('accounts.form.setAsDefault')}
-        </label>
+        <div className="flex items-center gap-2 sm:col-span-2">
+          <input
+            type="checkbox"
+            id="isDefault"
+            checked={formData.isDefault}
+            onChange={(e) => setFormData({ ...formData, isDefault: e.target.checked })}
+            className="rounded border-gray-300 text-blue focus:ring-blue"
+          />
+          <label htmlFor="isDefault" className="text-sm text-slate">
+            {t('accounts.form.setAsDefault')}
+          </label>
+        </div>
       </div>
 
       {/* Voice Input Section */}

@@ -28,7 +28,7 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
   const audioChunksRef = useRef<Blob[]>([]);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
-  const dataArrayRef = useRef<Uint8Array | null>(null);
+  const dataArrayRef = useRef<Uint8Array<ArrayBuffer> | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
   // Check if browser supports MediaRecorder

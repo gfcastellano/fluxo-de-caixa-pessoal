@@ -10,6 +10,9 @@ import { Categories } from './pages/Categories';
 import { Budgets } from './pages/Budgets';
 import { Reports } from './pages/Reports';
 import { Accounts } from './pages/Accounts';
+import { Settings } from './pages/Settings';
+import { PrivacyPolicy } from './pages/PrivacyPolicy';
+import { TermsOfService } from './pages/TermsOfService';
 
 function App() {
   return (
@@ -67,6 +70,17 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <Settings />
+                </ProtectedRoute>
+              }
+            />
+            {/* Public Legal Pages */}
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </VoiceProvider>

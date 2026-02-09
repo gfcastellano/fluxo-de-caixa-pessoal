@@ -1,10 +1,11 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useVoice } from '../context/VoiceContext';
 import { cn } from '../utils/cn';
 import { VoiceDock } from './VoiceDock';
 import { VoiceHeroButton } from './VoiceHeroButton';
-import { LogOut, LayoutDashboard, ArrowLeftRight, Tags, Landmark, PiggyBank, BarChart3 } from 'lucide-react';
+import { UserDropdown } from './UserDropdown';
+import { LayoutDashboard, ArrowLeftRight, Tags, Landmark, PiggyBank, BarChart3 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useScrollDirection } from '../hooks/useScrollDirection';
 
@@ -19,7 +20,7 @@ interface NavItem {
   voiceEnabled: boolean;
 }
 
-// Navigation items
+// Navigation items (without settings - moved to user dropdown)
 const navItems: NavItem[] = [
   { name: 'nav.dashboard', href: '/', icon: LayoutDashboard, voiceEnabled: true },
   { name: 'nav.transactions', href: '/transactions', icon: ArrowLeftRight, voiceEnabled: true },
@@ -30,18 +31,12 @@ const navItems: NavItem[] = [
 ];
 
 export function Layout({ children }: LayoutProps) {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { isVoiceEnabled } = useVoice();
-  const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
   const scrollDirection = useScrollDirection();
   const isHeaderVisible = scrollDirection === 'up';
-
-  const handleLogout = async () => {
-    await logout();
-    navigate('/login');
-  };
 
   // Render nav item for sidebar (tablet)
   const renderSidebarNavItem = (item: NavItem) => {
@@ -125,17 +120,7 @@ export function Layout({ children }: LayoutProps) {
 
         {/* Profile / Actions */}
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleLogout}
-            className="p-1.5 rounded-full text-slate hover:bg-slate/5 hover:text-ink transition-colors touch-target"
-            title={t('nav.logout')}
-          >
-            <LogOut size={16} />
-          </button>
-
-          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue/20 to-indigo/20 flex items-center justify-center border border-white/50 text-[10px] font-bold text-blue">
-            {user?.displayName?.[0] || user?.email?.[0] || 'U'}
-          </div>
+          <UserDropdown />
         </div>
       </header>
 
@@ -154,27 +139,9 @@ export function Layout({ children }: LayoutProps) {
           {navItems.map(renderSidebarNavItem)}
         </nav>
 
-
-
         {/* User Section */}
         <div className="px-3 py-4 border-t border-white/30">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue/20 to-indigo/20 flex items-center justify-center border border-white/50 text-sm font-bold text-blue flex-shrink-0">
-              {user?.displayName?.[0] || user?.email?.[0] || 'U'}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-ink truncate">
-                {user?.displayName || user?.email?.split('@')[0] || 'Usuário'}
-              </p>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="p-2 rounded-full text-slate hover:bg-rose/10 hover:text-rose transition-colors flex-shrink-0"
-              title={t('nav.logout')}
-            >
-              <LogOut size={18} />
-            </button>
-          </div>
+          <UserDropdown />
         </div>
       </aside>
 
@@ -205,20 +172,9 @@ export function Layout({ children }: LayoutProps) {
                 </div>
               )}
 
-              {/* User Menu */}
-              <div className="flex items-center gap-3 pl-4 border-l border-slate/10">
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center gap-2 px-3 py-2 rounded-xl text-slate hover:bg-rose/10 hover:text-rose transition-colors text-sm"
-                  title={t('nav.logout')}
-                >
-                  <LogOut size={18} />
-                  <span className="hidden xl:inline">{t('nav.logout')}</span>
-                </button>
-
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue/20 to-indigo/20 flex items-center justify-center border border-white/50 text-sm font-bold text-blue">
-                  {user?.displayName?.[0] || user?.email?.[0] || 'U'}
-                </div>
+              {/* User Dropdown */}
+              <div className="pl-4 border-l border-slate/10">
+                <UserDropdown />
               </div>
             </div>
           </div>
@@ -248,7 +204,7 @@ export function Layout({ children }: LayoutProps) {
       </main>
 
       {/* ============================================
-          MOBILE BOTTOM DOCK (sm- only)
+          MOBILE BOTTOM DOCK (sm-)
           ============================================ */}
       <VoiceDock />
     </div>

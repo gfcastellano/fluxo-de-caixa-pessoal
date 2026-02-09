@@ -1,6 +1,8 @@
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Mic, Square, Loader2, Check, AlertCircle } from 'lucide-react';
+import { VoiceConsentModal } from './VoiceConsentModal';
+import { useVoice } from '../context/VoiceContext';
 import { useVoiceRecorder } from '../hooks/useVoiceRecorder';
 import { sendVoiceTransaction } from '../services/voiceService';
 import { getCategories } from '../services/categoryService';
@@ -17,6 +19,7 @@ export function VoiceTransactionButton({
   const { t, i18n } = useTranslation();
   const { state, error, startRecording, stopRecording, reset, isSupported } = useVoiceRecorder();
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const { hasConsent, showConsentModal, requestConsent, acceptConsent, declineConsent } = useVoice();
 
   const handleClick = useCallback(async () => {
     if (state === 'recording') {
@@ -63,6 +66,11 @@ export function VoiceTransactionButton({
         }
       }
     } else if (state === 'idle' || state === 'error') {
+      // Check consent before starting recording
+      if (!hasConsent) {
+        requestConsent();
+        return;
+      }
       setFeedback(null);
       await startRecording();
     }
@@ -113,6 +121,13 @@ export function VoiceTransactionButton({
       )}>
         {feedback?.message}
       </div>
+
+      {/* Voice Consent Modal */}
+      <VoiceConsentModal
+        isOpen={showConsentModal}
+        onAccept={acceptConsent}
+        onDecline={declineConsent}
+      />
     </div>
   );
 }

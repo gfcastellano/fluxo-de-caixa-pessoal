@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, ArrowLeftRight, Tags, Landmark, PiggyBank, BarChart3 } from 'lucide-react';
 import { VoiceHeroButton } from './VoiceHeroButton';
+import { VoiceConsentModal } from './VoiceConsentModal';
 import { useVoice } from '../context/VoiceContext';
 import { cn } from '../utils/cn';
 
@@ -31,7 +32,7 @@ function Separator() {
 
 export function VoiceDock() {
     const location = useLocation();
-    const { isVoiceEnabled } = useVoice();
+    const { isVoiceEnabled, showConsentModal, acceptConsent, declineConsent } = useVoice();
 
     const renderNavItem = (item: NavItem) => {
         const isActive = location.pathname === item.href;
@@ -108,6 +109,13 @@ export function VoiceDock() {
                 {/* Relatórios (Reports) */}
                 {renderNavItem(reportsItem)}
             </nav>
+
+            {/* Voice Consent Modal */}
+            <VoiceConsentModal
+                isOpen={showConsentModal}
+                onAccept={acceptConsent}
+                onDecline={declineConsent}
+            />
         </div>
     );
 }

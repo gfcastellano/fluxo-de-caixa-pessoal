@@ -267,3 +267,74 @@ export const components = {
 } as const;
 
 export default { components, colors };
+
+// ============================================
+// LAYOUT STYLES
+// ============================================
+
+export const layout = {
+  container: {
+    sm: 'max-w-screen-sm mx-auto px-4',
+    md: 'max-w-screen-md mx-auto px-4',
+    lg: 'max-w-screen-lg mx-auto px-4',
+    xl: 'max-w-screen-xl mx-auto px-4',
+    '2xl': 'max-w-screen-2xl mx-auto px-4',
+    full: 'w-full px-4',
+  },
+  section: {
+    sm: 'py-4',
+    md: 'py-8',
+    lg: 'py-12',
+    xl: 'py-16',
+  },
+  gap: {
+    0: 'gap-0',
+    1: 'gap-1',
+    2: 'gap-2',
+    3: 'gap-3',
+    4: 'gap-4',
+    5: 'gap-5',
+    6: 'gap-6',
+    8: 'gap-8',
+    10: 'gap-10',
+    12: 'gap-12',
+  },
+  stack: {
+    0: 'space-y-0',
+    1: 'space-y-1',
+    2: 'space-y-2',
+    3: 'space-y-3',
+    4: 'space-y-4',
+    5: 'space-y-5',
+    6: 'space-y-6',
+    8: 'space-y-8',
+    10: 'space-y-10',
+    12: 'space-y-12',
+  },
+  inline: {
+    0: 'space-x-0',
+    1: 'space-x-1',
+    2: 'space-x-2',
+    3: 'space-x-3',
+    4: 'space-x-4',
+    5: 'space-x-5',
+    6: 'space-x-6',
+    8: 'space-x-8',
+    10: 'space-x-10',
+    12: 'space-x-12',
+  },
+} as const;
+
+// ============================================
+// TABLE STYLES
+// ============================================
+
+export const table = {
+  wrapper: 'w-full overflow-x-auto',
+  table: 'w-full text-left border-collapse',
+  thead: 'border-b border-slate/10',
+  th: 'py-3 px-4 text-sm font-medium text-slate uppercase tracking-wider',
+  tbody: 'divide-y divide-slate/5',
+  tr: 'hover:bg-slate/5 transition-colors',
+  td: 'py-3 px-4 text-sm text-ink',
+} as const;

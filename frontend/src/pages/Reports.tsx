@@ -492,19 +492,19 @@ export function Reports() {
 
   return (
     <div className="flex flex-col sm:gap-6 gap-4 sm:p-6 p-4 overflow-x-hidden">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-xl sm:text-2xl font-bold text-ink">{t('reports.title')}</h1>
-        <div className="flex flex-wrap gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 lg:gap-4">
+        <h1 className="text-lg lg:text-2xl font-bold text-ink">{t('reports.title')}</h1>
+        <div className="flex flex-wrap gap-2 lg:gap-3">
           {/* Currency Filter Toggle Buttons */}
           {availableCurrencies.length > 0 && (
-            <div className="flex items-center gap-1 bg-white/50 backdrop-blur-sm p-1 rounded-xl border border-white/40">
+            <div className="flex items-center gap-0.5 lg:gap-1 bg-white/50 backdrop-blur-sm p-0.5 lg:p-1 rounded-lg lg:rounded-xl border border-white/40">
               {availableCurrencies.map((currency) => (
                 <Button
                   key={currency}
                   variant={selectedCurrency === currency ? 'primary' : 'ghost'}
                   size="sm"
                   onClick={() => handleCurrencyChange(currency)}
-                  className="text-xs"
+                  className="text-[10px] lg:text-xs px-2 lg:px-3 py-1 h-7 lg:h-8"
                 >
                   {currency}
                 </Button>
@@ -514,7 +514,7 @@ export function Reports() {
           <select
             value={selectedAccountId}
             onChange={(e) => setSelectedAccountId(e.target.value)}
-            className="rounded-xl border border-white/40 bg-white/50 backdrop-blur-sm px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue"
+            className="rounded-lg lg:rounded-xl border border-white/40 bg-white/50 backdrop-blur-sm px-2 lg:px-3 py-1 lg:py-2 text-xs lg:text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue h-7 lg:h-auto"
           >
             <option value="" className="text-ink">{t('reports.allAccounts')}</option>
             {filteredAccounts.map((account) => (
@@ -526,7 +526,7 @@ export function Reports() {
           <select
             value={year}
             onChange={(e) => setYear(parseInt(e.target.value))}
-            className="rounded-xl border border-white/40 bg-white/50 backdrop-blur-sm px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue"
+            className="rounded-lg lg:rounded-xl border border-white/40 bg-white/50 backdrop-blur-sm px-2 lg:px-3 py-1 lg:py-2 text-xs lg:text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue h-7 lg:h-auto"
           >
             {[2023, 2024, 2025, 2026].map((y) => (
               <option key={y} value={y} className="text-ink">
@@ -534,24 +534,25 @@ export function Reports() {
               </option>
             ))}
           </select>
-          <div className="flex items-center gap-1 bg-white/50 backdrop-blur-sm p-1 rounded-xl border border-white/40">
+          <div className="flex items-center gap-0.5 lg:gap-1 bg-white/50 backdrop-blur-sm p-0.5 lg:p-1 rounded-lg lg:rounded-xl border border-white/40">
             <Button
               variant="ghost"
               size="icon-sm"
               onClick={handlePreviousMonth}
               aria-label={t('reports.previousMonth')}
+              className="h-6 w-6 lg:h-8 lg:w-8"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-3 w-3 lg:h-4 lg:w-4" />
             </Button>
             <select
               value={month}
               onChange={(e) => setMonth(parseInt(e.target.value))}
-              className="bg-transparent border-none text-sm text-ink focus:outline-none cursor-pointer py-1"
+              className="bg-transparent border-none text-xs lg:text-sm text-ink focus:outline-none cursor-pointer py-0.5 lg:py-1"
             >
               {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
                 <option key={m} value={m} className="text-ink">
                   {new Date(2000, m - 1).toLocaleString('default', {
-                    month: 'long',
+                    month: 'short',
                   })}
                 </option>
               ))}
@@ -561,56 +562,147 @@ export function Reports() {
               size="icon-sm"
               onClick={handleNextMonth}
               aria-label={t('reports.nextMonth')}
+              className="h-6 w-6 lg:h-8 lg:w-8"
             >
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-3 w-3 lg:h-4 lg:w-4" />
             </Button>
           </div>
-          <Button variant="secondary" onClick={handleExport} leftIcon={<Download className="h-4 w-4 flex-shrink-0" />}>
+          <Button 
+            variant="secondary" 
+            onClick={handleExport} 
+            leftIcon={<Download className="h-3 w-3 lg:h-4 lg:w-4 flex-shrink-0" />}
+            className="text-xs lg:text-sm px-2 lg:px-4 py-1 lg:py-2 h-7 lg:h-auto whitespace-nowrap"
+          >
             {t('common.save')}
           </Button>
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card hoverable className="border-l-4 border-l-emerald bg-white/40 backdrop-blur-xl border-white/60">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate">
-              {t('common.income')}
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-emerald" />
+      {/* Linha 1: Cards de Receita e Despesa com gráficos internos */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+        {/* Card de Receita com Composição */}
+        <Card className="bg-white/40 backdrop-blur-xl border-white/60 border-l-4 border-l-emerald">
+          <CardHeader className="pb-2 lg:pb-4">
+            <div className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-xs lg:text-sm font-medium text-slate">
+                  {t('common.income')}
+                </CardTitle>
+                <div className="text-lg lg:text-2xl font-bold text-emerald mt-1">
+                  {formatCurrency(summary?.income || 0, selectedCurrency || 'BRL')}
+                </div>
+              </div>
+              <TrendingUp className="h-5 w-5 lg:h-6 lg:w-6 text-emerald flex-shrink-0" />
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-emerald">
-              {formatCurrency(summary?.income || 0, selectedCurrency || 'BRL')}
+          <CardContent className="pt-0">
+            <div className="border-t border-white/30 pt-4 mt-2">
+              <h4 className="text-xs lg:text-sm font-medium text-ink mb-3">{t('reports.incomeComposition')}</h4>
+              {incomeBreakdown.length === 0 ? (
+                <p className="text-slate text-center py-4 lg:py-6 text-xs lg:text-sm">{t('reports.noData')}</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={180}>
+                  <BarChart data={incomeBreakdown.slice(0, 5)} layout="vertical" margin={{ left: -20, right: 20, top: 5, bottom: 5 }} barSize={24}>
+                    <XAxis type="number" hide />
+                    <YAxis 
+                      type="category" 
+                      dataKey="categoryName" 
+                      width={90}
+                      tick={{ fontSize: 10 }}
+                      tickFormatter={(value) => {
+                        const translated = getTranslatedCategoryName(value);
+                        return translated.length > 14 ? translated.slice(0, 14) + '...' : translated;
+                      }}
+                      interval={0}
+                    />
+                    <Tooltip
+                      formatter={(value, name, props) => {
+                        const categoryName = props?.payload?.categoryName || name;
+                        const translatedName = getTranslatedCategoryName(categoryName);
+                        return [formatCurrency(Number(value), selectedCurrency || 'BRL'), translatedName];
+                      }}
+                      contentStyle={{ backgroundColor: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(8px)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.5)', fontSize: '12px' }}
+                    />
+                    <Bar dataKey="amount" radius={[0, 4, 4, 0]}>
+                      {incomeBreakdown.slice(0, 5).map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.categoryColor} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </CardContent>
         </Card>
 
-        <Card hoverable className="border-l-4 border-l-rose bg-white/40 backdrop-blur-xl border-white/60">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate">
-              {t('common.expense')}
-            </CardTitle>
-            <TrendingDown className="h-4 w-4 text-rose" />
+        {/* Card de Despesas com Categorias */}
+        <Card className="bg-white/40 backdrop-blur-xl border-white/60 border-l-4 border-l-rose">
+          <CardHeader className="pb-2 lg:pb-4">
+            <div className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-xs lg:text-sm font-medium text-slate">
+                  {t('common.expense')}
+                </CardTitle>
+                <div className="text-lg lg:text-2xl font-bold text-rose mt-1">
+                  {formatCurrency(summary?.expenses || 0, selectedCurrency || 'BRL')}
+                </div>
+              </div>
+              <TrendingDown className="h-5 w-5 lg:h-6 lg:w-6 text-rose flex-shrink-0" />
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-rose">
-              {formatCurrency(summary?.expenses || 0, selectedCurrency || 'BRL')}
+          <CardContent className="pt-0">
+            <div className="border-t border-white/30 pt-4 mt-2">
+              <h4 className="text-xs lg:text-sm font-medium text-ink mb-3">{t('reports.expensesByCategory')}</h4>
+              {expenseBreakdown.length === 0 ? (
+                <p className="text-slate text-center py-4 lg:py-6 text-xs lg:text-sm">{t('reports.noData')}</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={180}>
+                  <BarChart data={expenseBreakdown.slice(0, 5)} layout="vertical" margin={{ left: -20, right: 20, top: 5, bottom: 5 }} barSize={24}>
+                    <XAxis type="number" hide />
+                    <YAxis 
+                      type="category" 
+                      dataKey="categoryName" 
+                      width={90}
+                      tick={{ fontSize: 10 }}
+                      tickFormatter={(value) => {
+                        const translated = getTranslatedCategoryName(value);
+                        return translated.length > 14 ? translated.slice(0, 14) + '...' : translated;
+                      }}
+                      interval={0}
+                    />
+                    <Tooltip
+                      formatter={(value, name, props) => {
+                        const categoryName = props?.payload?.categoryName || name;
+                        const translatedName = getTranslatedCategoryName(categoryName);
+                        return [formatCurrency(Number(value), selectedCurrency || 'BRL'), translatedName];
+                      }}
+                      contentStyle={{ backgroundColor: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(8px)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.5)', fontSize: '12px' }}
+                    />
+                    <Bar dataKey="amount" radius={[0, 4, 4, 0]}>
+                      {expenseBreakdown.slice(0, 5).map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.categoryColor} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </CardContent>
         </Card>
+      </div>
 
-        <Card hoverable className="border-l-4 border-l-blue bg-white/40 backdrop-blur-xl border-white/60">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate">
+      {/* Linha 2: Cards de Saldo */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 lg:gap-4">
+        <Card hoverable className="bg-white/40 backdrop-blur-xl border-white/60" style={{ borderLeftWidth: '4px', borderLeftColor: monthlyBalance >= 0 ? `rgba(34, 197, 94, ${Math.min(Math.abs(monthlyBalance) / 10000 + 0.3, 1)})` : `rgba(255, 92, 138, ${Math.min(Math.abs(monthlyBalance) / 10000 + 0.3, 1)})` }}>
+          <CardHeader className="flex flex-row items-center justify-between pb-1 lg:pb-2">
+            <CardTitle className="text-xs lg:text-sm font-medium text-slate truncate">
               {t('reports.monthlyBalance')}
             </CardTitle>
-            <Calendar className="h-4 w-4 text-blue" />
+            <Calendar className={`h-3 w-3 lg:h-4 lg:w-4 flex-shrink-0 ${monthlyBalance >= 0 ? 'text-emerald' : 'text-rose'}`} />
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             <div
-              className={`text-xl sm:text-2xl font-bold ${monthlyBalance >= 0 ? 'text-emerald' : 'text-rose'
+              className={`text-base lg:text-xl font-bold truncate ${monthlyBalance >= 0 ? 'text-emerald' : 'text-rose'
                 }`}
             >
               {formatCurrency(monthlyBalance, selectedCurrency || 'BRL')}
@@ -618,157 +710,82 @@ export function Reports() {
           </CardContent>
         </Card>
 
-        <Card hoverable className="border-l-4 border-l-slate-light bg-white/40 backdrop-blur-xl border-white/60">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate">
+        <Card hoverable className="bg-white/40 backdrop-blur-xl border-white/60" style={{ borderLeftWidth: '4px', borderLeftColor: `rgba(141, 153, 174, ${Math.min(Math.abs(totalAccountBalance) / 20000 + 0.3, 1)})` }}>
+          <CardHeader className="flex flex-row items-center justify-between pb-1 lg:pb-2">
+            <CardTitle className="text-xs lg:text-sm font-medium text-slate truncate">
               {t('reports.totalBalance')}
             </CardTitle>
-            <PiggyBank className="h-4 w-4 text-slate" />
+            <PiggyBank className="h-3 w-3 lg:h-4 lg:w-4 text-slate flex-shrink-0" />
           </CardHeader>
-          <CardContent>
-            <div
-              className={`text-xl sm:text-2xl font-bold ${totalAccountBalance >= 0 ? 'text-emerald' : 'text-rose'
-                }`}
-            >
+          <CardContent className="pt-0">
+            <div className="text-base lg:text-xl font-bold text-slate truncate">
               {formatCurrency(totalAccountBalance, selectedCurrency || 'BRL')}
             </div>
           </CardContent>
         </Card>
 
-        <Card hoverable className="border-l-4 border-l-amber bg-white/40 backdrop-blur-xl border-white/60">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate">
+        <Card hoverable className="bg-white/40 backdrop-blur-xl border-white/60" style={{ borderLeftWidth: '4px', borderLeftColor: `rgba(255, 190, 11, ${Math.min(Math.abs(calculatedBalance) / 20000 + 0.3, 1)})` }}>
+          <CardHeader className="flex flex-row items-center justify-between pb-1 lg:pb-2">
+            <CardTitle className="text-xs lg:text-sm font-medium text-slate truncate">
               {t('reports.calculatedBalance')}
             </CardTitle>
-            <Calculator className="h-4 w-4 text-amber" />
+            <Calculator className="h-3 w-3 lg:h-4 lg:w-4 text-amber flex-shrink-0" />
           </CardHeader>
-          <CardContent>
-            <div
-              className={`text-xl sm:text-2xl font-bold ${calculatedBalance >= 0 ? 'text-emerald' : 'text-rose'
-                }`}
-            >
+          <CardContent className="pt-0">
+            <div className="text-base lg:text-xl font-bold text-amber truncate">
               {formatCurrency(calculatedBalance, selectedCurrency || 'BRL')}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Expense Breakdown */}
-        <Card className="bg-white/40 backdrop-blur-xl border-white/60">
-          <CardHeader>
-            <CardTitle className="text-ink">{t('reports.expensesByCategory')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {expenseBreakdown.length === 0 ? (
-              <p className="text-slate text-center py-8">{t('reports.noData')}</p>
-            ) : (
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={expenseBreakdown}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={(entry) =>
-                      `${getTranslatedCategoryName((entry as unknown as CategoryBreakdown).categoryName)}: ${(entry as unknown as CategoryBreakdown).percentage.toFixed(0)}%`
-                    }
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="amount"
-                  >
-                    {expenseBreakdown.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.categoryColor} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value, name, props) => {
-                      const categoryName = props?.payload?.categoryName || name;
-                      const translatedName = getTranslatedCategoryName(categoryName);
-                      return [formatCurrency(Number(value), selectedCurrency || 'BRL'), translatedName];
-                    }}
-                    contentStyle={{ backgroundColor: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(8px)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.5)' }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Income Composition */}
-        <Card className="bg-white/40 backdrop-blur-xl border-white/60">
-          <CardHeader>
-            <CardTitle className="text-ink">{t('reports.incomeComposition')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {incomeBreakdown.length === 0 ? (
-              <p className="text-slate text-center py-8">{t('reports.noData')}</p>
-            ) : (
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={incomeBreakdown}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={(entry) =>
-                      `${getTranslatedCategoryName((entry as unknown as CategoryBreakdown).categoryName)}: ${(entry as unknown as CategoryBreakdown).percentage.toFixed(0)}%`
-                    }
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="amount"
-                  >
-                    {incomeBreakdown.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.categoryColor} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value, name, props) => {
-                      const categoryName = props?.payload?.categoryName || name;
-                      const translatedName = getTranslatedCategoryName(categoryName);
-                      return [formatCurrency(Number(value), selectedCurrency || 'BRL'), translatedName];
-                    }}
-                    contentStyle={{ backgroundColor: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(8px)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.5)' }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Trend Chart */}
       <Card className="bg-white/40 backdrop-blur-xl border-white/60">
-        <CardHeader>
-          <CardTitle className="text-ink">{t('reports.monthlyTrend')}</CardTitle>
+        <CardHeader className="pb-2 lg:pb-4">
+          <CardTitle className="text-sm lg:text-base text-ink">{t('reports.monthlyTrend')}</CardTitle>
         </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={trendData}>
+        <CardContent className="pt-0">
+          <ResponsiveContainer width="100%" height={250}>
+            <LineChart data={trendData} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--color-slate-light, #E2E8F0)" />
-              <XAxis dataKey="month" stroke="var(--color-slate, #64748B)" />
+              <XAxis 
+                dataKey="month" 
+                stroke="var(--color-slate, #64748B)"
+                tick={{ fontSize: 10 }}
+                tickFormatter={(value) => {
+                  const [year, month] = value.split('-');
+                  return `${month}/${year.slice(2)}`;
+                }}
+                interval="preserveStartEnd"
+              />
               <YAxis
                 stroke="var(--color-slate, #64748B)"
+                tick={{ fontSize: 10 }}
+                width={50}
                 tickFormatter={(value) =>
                   new Intl.NumberFormat('pt-BR', {
-                    style: 'currency',
-                    currency: selectedCurrency || 'BRL',
                     notation: 'compact',
+                    maximumFractionDigits: 0,
                   }).format(value)
                 }
               />
               <Tooltip
                 formatter={(value) => formatCurrency(Number(value), selectedCurrency || 'BRL')}
-                contentStyle={{ backgroundColor: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(8px)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.5)' }}
+                contentStyle={{ backgroundColor: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(8px)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.5)', fontSize: '12px' }}
+                labelStyle={{ fontSize: '12px' }}
               />
-              <Legend />
+              <Legend 
+                wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }}
+                iconSize={8}
+              />
               <Line
                 type="monotone"
                 dataKey="income"
                 stroke="#10B981"
                 name={t('common.income')}
                 strokeWidth={2}
+                dot={{ r: 3 }}
+                activeDot={{ r: 5 }}
               />
               <Line
                 type="monotone"
@@ -776,13 +793,17 @@ export function Reports() {
                 stroke="#F43F5E"
                 name={t('common.expense')}
                 strokeWidth={2}
+                dot={{ r: 3 }}
+                activeDot={{ r: 5 }}
               />
               <Line
                 type="monotone"
                 dataKey="projectedBalance"
                 stroke="#F59E0B"
-                strokeWidth={3}
+                strokeWidth={2}
                 name={t('reports.projectedBalance')}
+                dot={{ r: 3 }}
+                activeDot={{ r: 5 }}
               />
             </LineChart>
           </ResponsiveContainer>

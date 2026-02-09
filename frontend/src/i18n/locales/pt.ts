@@ -12,7 +12,9 @@ export const ptTranslations = {
     budgets: 'Orçamentos',
     reports: 'Relatórios',
     accounts: 'Contas',
+    settings: 'Configurações',
     logout: 'Sair',
+    user: 'Usuário',
   },
 
   // Common
@@ -64,6 +66,12 @@ export const ptTranslations = {
     customColor: 'Cor personalizada',
   },
 
+  // Logout Confirmation
+  logoutConfirm: {
+    title: 'Deseja realmente sair?',
+    description: 'Você precisará fazer login novamente para acessar seus dados.',
+  },
+
   // Auth
   auth: {
     login: 'Entrar',
@@ -88,7 +96,7 @@ export const ptTranslations = {
     summary: 'Resumo Financeiro',
     totalIncome: 'Total de Receitas',
     totalExpenses: 'Total de Despesas',
-    currentBalance: 'Saldo Inicial',
+    currentBalance: 'Saldo do Mês',
     recentTransactions: 'Transações Recentes',
     budgetOverview: 'Visão Geral do Orçamento',
     noTransactions: 'Nenhuma transação encontrada',
@@ -310,6 +318,250 @@ export const ptTranslations = {
     budgetHint: 'Diga algo como: "Criar orçamento de 500 reais para Alimentação mensal"',
     categoryHint: 'Diga algo como: "Criar categoria Alimentação do tipo despesa com cor verde"',
     backendIntegrationNeeded: 'Integração com backend necessária para processamento de voz',
+    consent: {
+      title: 'Permissão de Uso de Voz',
+      subtitle: 'Transcrição de áudio com OpenAI',
+      processingTitle: 'Processamento de Áudio',
+      processingDescription: 'Seu áudio será enviado para a OpenAI para transcrição em texto. Isso nos permite converter seus comandos de voz em transações e outros dados.',
+      retentionTitle: 'Retenção de Dados',
+      retentionDescription: 'A OpenAI pode reter os dados de áudio por até 30 dias conforme sua política de privacidade. Após esse período, os dados são permanentemente excluídos.',
+      usageTitle: 'Uso dos Dados',
+      usageDescription: 'Seus dados de áudio são usados exclusivamente para transcrição e não são utilizados para treinar modelos de IA. A OpenAI não utiliza seus dados para melhorar seus serviços.',
+      termsTitle: 'Termos de Serviço',
+      termsDescription: 'Ao utilizar o recurso de voz, você concorda com os termos de serviço da OpenAI e reconhece que seus dados serão processados de acordo com sua política de privacidade.',
+      checkboxLabel: 'Li e concordo com os termos acima sobre o uso do recurso de voz',
+      accept: 'Aceitar',
+      decline: 'Recusar',
+    },
+  },
+
+  // Settings
+  settings: {
+    title: 'Configurações',
+    subtitle: 'Gerencie suas preferências e privacidade',
+    account: {
+      title: 'Conta',
+      description: 'Gerencie sua conta e dados',
+      dangerZone: 'Zona de Perigo',
+      logoutConfirmTitle: 'Deseja realmente sair?',
+      logoutConfirmDescription: 'Você precisará fazer login novamente para acessar seus dados.',
+      deleteConfirmTitle: 'Tem certeza que deseja deletar todos os seus dados?',
+      deleteConfirmDescription: 'Esta ação não pode ser desfeita. Todas as suas transações, contas, categorias e orçamentos serão permanentemente excluídos.',
+      deleteAllData: 'Deletar Todos os Dados',
+      deleteError: 'Erro ao deletar dados. Tente novamente.',
+    },
+    preferences: {
+      title: 'Preferências',
+      description: 'Personalize sua experiência no aplicativo',
+      language: 'Idioma',
+    },
+    privacy: {
+      title: 'Privacidade e Dados',
+      description: 'Gerencie suas configurações de privacidade e consentimentos',
+    },
+    voice: {
+      title: 'Consentimento de Voz',
+      loading: 'Carregando status...',
+      granted: 'Você concedeu permissão para usar o recurso de voz. Seus áudios são processados pela OpenAI para transcrição.',
+      revoked: 'Você não concedeu permissão para usar o recurso de voz. O recurso de adição por voz não está disponível.',
+      statusGranted: 'Ativo',
+      statusRevoked: 'Inativo',
+      revoke: 'Revogar',
+      revokeConsent: 'Revogar Consentimento de Voz',
+      grantConsent: 'Conceder Consentimento de Voz',
+      revokeConfirmTitle: 'Tem certeza que deseja revogar?',
+      revokeConfirmDescription: 'Você não poderá mais usar o recurso de adição por voz.',
+    },
+    legal: {
+      title: 'Documentos Legais',
+      description: 'Leia nossos termos e políticas de privacidade',
+      privacyPolicy: 'Política de Privacidade',
+      privacyPolicyDescription: 'Como coletamos, usamos e protegemos seus dados',
+      termsOfService: 'Termos de Uso',
+      termsOfServiceDescription: 'Regras e condições para uso do aplicativo',
+    },
+    about: {
+      title: 'Sobre o Aplicativo',
+      version: 'Versão',
+      developedBy: 'Desenvolvido por',
+      copyright: '© 2024 Assist. Todos os direitos reservados.',
+    },
+  },
+
+  // Privacy Policy
+  privacyPolicy: {
+    title: 'Política de Privacidade',
+    lastUpdated: 'Última atualização',
+    date: 'Janeiro de 2025',
+    introduction: 'Esta Política de Privacidade descreve como coletamos, usamos, armazenamos e protegemos suas informações quando você utiliza nosso aplicativo de Fluxo de Caixa Pessoal. Estamos comprometidos em proteger sua privacidade e garantir a segurança dos seus dados pessoais e financeiros.',
+    sections: {
+      information: {
+        title: 'Informações Coletadas',
+        transactions: {
+          title: 'Dados de Transações',
+          text: 'Coletamos informações sobre suas transações financeiras, incluindo valores, datas, categorias, contas e descrições. Esses dados são essenciais para o funcionamento do aplicativo e são armazenados de forma segura em nossa infraestrutura.',
+        },
+        voice: {
+          title: 'Dados de Áudio para Transcrição',
+          text: 'Quando você utiliza o recurso de adição por voz, gravamos áudios que são enviados para processamento de transcrição. Esses áudios são convertidos em texto para criar transações e outros dados no aplicativo.',
+        },
+        account: {
+          title: 'Dados da Conta',
+          text: 'Coletamos seu endereço de e-mail, nome de exibição e identificador de usuário fornecidos pelo Google durante o login. Não temos acesso à sua senha do Google.',
+        },
+      },
+      openai: {
+        title: 'Uso da OpenAI e Retenção de Dados',
+        processing: {
+          title: 'Processamento de Áudio',
+          text: 'Utilizamos a API da OpenAI (Whisper) para transcrever seus áudios em texto. Os áudios são enviados diretamente para a OpenAI de forma segura e criptografada.',
+        },
+        retention: {
+          title: 'Retenção de 30 Dias',
+          text: 'Conforme a política de privacidade da OpenAI, os dados de áudio podem ser retidos por até 30 dias para fins de processamento e melhoria dos serviços. Após esse período, os dados são permanentemente excluídos dos servidores da OpenAI.',
+        },
+        usage: {
+          title: 'Uso dos Dados pela OpenAI',
+          text: 'A OpenAI não utiliza seus dados de áudio para treinar seus modelos de IA. Os dados são processados exclusivamente para fornecer o serviço de transcrição solicitado.',
+        },
+      },
+      security: {
+        title: 'Como Seus Dados São Protegidos',
+        encryption: {
+          title: 'Criptografia',
+          text: 'Todos os dados são transmitidos usando criptografia SSL/TLS. Os dados armazenados em nosso banco de dados são protegidos por criptografia em repouso.',
+        },
+        access: {
+          title: 'Controle de Acesso',
+          text: 'Seus dados são acessíveis apenas por você através de sua conta autenticada. Utilizamos autenticação OAuth 2.0 via Google para garantir a segurança do login.',
+        },
+        firebase: {
+          title: 'Infraestrutura Segura',
+          text: 'Utilizamos o Firebase, plataforma da Google, para armazenamento de dados. A infraestrutura é certificada e atende aos mais rigorosos padrões de segurança da indústria.',
+        },
+      },
+      rights: {
+        title: 'Seus Direitos (LGPD/GDPR)',
+        access: {
+          title: 'Direito de Acesso',
+          text: 'Você tem o direito de acessar todos os dados que possuímos sobre você através do aplicativo.',
+        },
+        correction: {
+          title: 'Direito de Correção',
+          text: 'Você pode corrigir ou atualizar seus dados a qualquer momento através das funcionalidades do aplicativo.',
+        },
+        deletion: {
+          title: 'Direito de Exclusão',
+          text: 'Você pode excluir sua conta e todos os dados associados a qualquer momento. A exclusão é irreversível e todos os dados são removidos permanentemente.',
+        },
+        portability: {
+          title: 'Direito à Portabilidade',
+          text: 'Você tem o direito de solicitar uma cópia dos seus dados em formato estruturado e legível por máquina.',
+        },
+        consent: {
+          title: 'Direito de Revogar Consentimento',
+          text: 'Você pode revogar seu consentimento para o processamento de dados de voz a qualquer momento nas configurações do aplicativo.',
+        },
+      },
+      contact: {
+        title: 'Contato para Dúvidas',
+        text: 'Se você tiver dúvidas sobre esta Política de Privacidade ou sobre como tratamos seus dados, entre em contato conosco através do e-mail:',
+        response: 'Responderemos às suas solicitações em até 30 dias, conforme exigido pela legislação aplicável.',
+      },
+    },
+    footer: 'Ao utilizar nosso aplicativo, você concorda com esta Política de Privacidade.',
+    termsLink: 'Termos de Uso',
+    backToApp: 'Voltar ao Aplicativo',
+  },
+
+  // Terms of Service
+  termsOfService: {
+    title: 'Termos de Uso',
+    lastUpdated: 'Última atualização',
+    date: 'Janeiro de 2025',
+    introduction: 'Bem-vindo ao Assist - Fluxo de Caixa Pessoal. Estes Termos de Uso estabelecem as regras e condições para o uso de nosso aplicativo. Por favor, leia atentamente antes de usar nossos serviços.',
+    sections: {
+      acceptance: {
+        title: 'Aceitação dos Termos',
+        text1: 'Ao acessar e usar o Assist - Fluxo de Caixa Pessoal, você concorda em cumprir e estar vinculado a estes Termos de Uso. Se você não concordar com qualquer parte destes termos, não poderá usar nosso aplicativo.',
+        text2: 'Estes termos constituem um acordo legal entre você e o Assist. O uso continuado do aplicativo após quaisquer alterações a estes termos significa que você aceita tais alterações.',
+        eligibility: {
+          title: 'Elegibilidade',
+          text: 'Você deve ter pelo menos 18 anos de idade para usar este aplicativo. Ao usar o Assist, você declara e garante que tem capacidade legal para celebrar um contrato vinculativo.',
+        },
+      },
+      voice: {
+        title: 'Uso do Serviço de Voz',
+        text1: 'O Assist oferece um recurso de adição por voz que utiliza a API da OpenAI para transcrever áudios em texto. Ao usar este recurso, você concorda com os seguintes termos:',
+        consent: {
+          title: 'Consentimento Explícito',
+          text: 'Você deve conceder consentimento explícito antes de usar o recurso de voz. Este consentimento pode ser revogado a qualquer momento nas configurações do aplicativo.',
+        },
+        dataProcessing: {
+          title: 'Processamento de Dados de Áudio',
+          text: 'Você entende e concorda que seus áudios serão enviados para processamento pela OpenAI. Os áudios são convertidos em texto e os dados de áudio originais são retidos pela OpenAI por até 30 dias conforme sua política de privacidade.',
+        },
+        accuracy: {
+          title: 'Precisão da Transcrição',
+          text: 'Embora nos esforcemos para fornecer transcrições precisas, não garantimos que todas as transcrições serão perfeitas. Você é responsável por verificar e corrigir as informações transcritas antes de salvá-las.',
+        },
+        prohibited: {
+          title: 'Uso Proibido',
+          text: 'Você concorda em não usar o recurso de voz para gravar ou transmitir conteúdo ilegal, difamatório, obsceno ou que viole os direitos de terceiros.',
+        },
+      },
+      liability: {
+        title: 'Limitações de Responsabilidade',
+        text1: 'O Assist é fornecido "como está" e "conforme disponível", sem garantias de qualquer tipo, expressas ou implícitas.',
+        financial: {
+          title: 'Decisões Financeiras',
+          text: 'O Assist é uma ferramenta para ajudar no acompanhamento de suas finanças pessoais. Não somos responsáveis por quaisquer decisões financeiras que você tome com base nas informações fornecidas pelo aplicativo. Recomendamos consultar um profissional financeiro qualificado para conselhos financeiros personalizados.',
+        },
+        dataLoss: {
+          title: 'Perda de Dados',
+          text: 'Embora implementemos medidas para proteger seus dados, não garantimos que os dados estarão sempre disponíveis ou livres de perda. Recomendamos que você mantenha registros alternativos de informações financeiras importantes.',
+        },
+        damages: {
+          title: 'Limitação de Danos',
+          text: 'Em nenhuma circunstância seremos responsáveis por danos indiretos, incidentais, especiais, consequenciais ou punitivos, incluindo perda de lucros, dados ou uso, decorrentes do uso ou incapacidade de usar o aplicativo.',
+        },
+      },
+      intellectual: {
+        title: 'Propriedade Intelectual',
+        text1: 'Todo o conteúdo, recursos e funcionalidades do Assist, incluindo mas não se limitando a código, design, logotipos, textos, gráficos e interfaces, são propriedade exclusiva do Assist e estão protegidos por leis de direitos autorais, marcas registradas e outras leis de propriedade intelectual.',
+        license: {
+          title: 'Licença de Uso',
+          text: 'Concedemos a você uma licença limitada, não exclusiva, não transferível e revogável para usar o aplicativo para fins pessoais e não comerciais. Esta licença não inclui o direito de modificar, copiar, distribuir, transmitir, exibir, reproduzir ou criar trabalhos derivados do aplicativo.',
+        },
+        restrictions: {
+          title: 'Restrições',
+          text: 'Você concorda em não: (a) descompilar, fazer engenharia reversa ou tentar obter o código-fonte do aplicativo; (b) remover quaisquer avisos de direitos autorais ou propriedade; (c) transferir, sublicenciar ou vender o aplicativo; (d) usar o aplicativo para fins ilegais ou não autorizados.',
+        },
+      },
+      changes: {
+        title: 'Alterações nos Termos',
+        text1: 'Reservamos o direito de modificar ou substituir estes Termos de Uso a qualquer momento, a nosso critério exclusivo. Alterações significativas serão notificadas através do aplicativo ou por e-mail.',
+        notification: {
+          title: 'Notificação de Alterações',
+          text: 'Quando fizermos alterações materiais a estes termos, atualizaremos a data da "última atualização" no topo desta página e notificaremos os usuários através de uma notificação no aplicativo.',
+        },
+        continuedUse: {
+          title: 'Uso Continuado',
+          text: 'Seu uso continuado do Assist após a publicação de quaisquer alterações a estes termos constitui aceitação dessas alterações. Se você não concordar com os novos termos, deve parar de usar o aplicativo.',
+        },
+        severability: {
+          title: 'Divisibilidade',
+          text: 'Se qualquer disposição destes termos for considerada inválida ou inexequível, essa disposição será limitada ou eliminada na menor extensão necessária, e as disposições restantes permanecerão em pleno vigor e efeito.',
+        },
+      },
+    },
+    contact: {
+      title: 'Contato',
+      text: 'Se você tiver alguma dúvida sobre estes Termos de Uso, entre em contato conosco:',
+    },
+    footer: 'Ao utilizar nosso aplicativo, você concorda com estes Termos de Uso.',
+    privacyLink: 'Política de Privacidade',
+    backToApp: 'Voltar ao Aplicativo',
   },
 
   // Errors

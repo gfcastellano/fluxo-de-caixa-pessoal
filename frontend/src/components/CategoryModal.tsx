@@ -144,47 +144,49 @@ export function CategoryModal({
       isRecording={voice.voiceState === 'recording'}
       onCancelRecording={voice.cancelRecording}
     >
-      <Input
-        label={t('common.name')}
-        value={formData.name}
-        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-        required
-      />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+        <Input
+          label={t('common.name')}
+          value={formData.name}
+          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          required
+        />
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          {t('common.type')}
-        </label>
-        <select
-          value={formData.type}
-          onChange={(e) => setFormData({
-            ...formData,
-            type: e.target.value as 'income' | 'expense',
-          })}
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue"
-        >
-          <option value="expense" className="text-neutral-900">{t('common.expense')}</option>
-          <option value="income" className="text-neutral-900">{t('common.income')}</option>
-        </select>
-      </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            {t('common.type')}
+          </label>
+          <select
+            value={formData.type}
+            onChange={(e) => setFormData({
+              ...formData,
+              type: e.target.value as 'income' | 'expense',
+            })}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue"
+          >
+            <option value="expense" className="text-neutral-900">{t('common.expense')}</option>
+            <option value="income" className="text-neutral-900">{t('common.income')}</option>
+          </select>
+        </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          {t('categories.form.color')}
-        </label>
-        <div className="flex flex-wrap gap-2">
-          {CATEGORY_COLORS.map((color) => (
-            <button
-              key={color}
-              type="button"
-              onClick={() => setFormData({ ...formData, color })}
-              className={`w-8 h-8 rounded-full border-2 ${formData.color === color
-                ? 'border-gray-900'
-                : 'border-transparent'
-                }`}
-              style={{ backgroundColor: color }}
-            />
-          ))}
+        <div className="sm:col-span-2">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            {t('categories.form.color')}
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {CATEGORY_COLORS.map((color) => (
+              <button
+                key={color}
+                type="button"
+                onClick={() => setFormData({ ...formData, color })}
+                className={`w-8 h-8 rounded-full border-2 ${formData.color === color
+                  ? 'border-gray-900'
+                  : 'border-transparent'
+                  }`}
+                style={{ backgroundColor: color }}
+              />
+            ))}
+          </div>
         </div>
       </div>
 

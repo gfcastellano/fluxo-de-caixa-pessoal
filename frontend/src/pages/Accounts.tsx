@@ -129,10 +129,10 @@ export function Accounts() {
   }
 
   return (
-    <div className="flex flex-col sm:gap-6 gap-4 sm:p-6 p-4 overflow-x-hidden">
+    <div className="flex flex-col h-[calc(100vh-var(--header-height)-var(--dock-height))] sm:h-auto sm:min-h-0 sm:gap-6 gap-4 sm:p-6 p-4 overflow-x-hidden">
       {/* Header - no add button, Hero handles it */}
-      <div className="flex items-center">
-        <h1 className="text-xl sm:text-2xl font-bold text-ink">{t('accounts.title')}</h1>
+      <div className="flex items-center flex-shrink-0">
+        <h1 className="text-lg sm:text-2xl font-bold text-ink">{t('accounts.title')}</h1>
       </div>
 
       <AccountModal
@@ -144,14 +144,15 @@ export function Accounts() {
         autoStartRecording={modal.autoStartRecording}
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="flex-1 min-h-0 overflow-y-auto sm:overflow-visible">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 pb-4 sm:pb-0">
         {accounts.length === 0 ? (
           <div className="col-span-full">
             <Card className="bg-white/40 backdrop-blur-xl border-white/60">
-              <CardContent className="py-12">
+              <CardContent className="py-8 sm:py-12">
                 <div className="text-center">
-                  <Wallet className="mx-auto h-12 w-12 text-neutral-400" />
-                  <p className="mt-4 text-neutral-500">{t('accounts.noAccounts')}</p>
+                  <Wallet className="mx-auto h-8 w-8 sm:h-12 sm:w-12 text-neutral-400" />
+                  <p className="mt-2 sm:mt-4 text-sm sm:text-base text-neutral-500">{t('accounts.noAccounts')}</p>
                 </div>
               </CardContent>
             </Card>
@@ -166,47 +167,47 @@ export function Accounts() {
                 highlightedId === account.id ? "animate-highlight scale-[1.02]" : ""
               )}
             >
-              <CardHeader className="pb-3">
+              <CardHeader className="pb-2 sm:pb-3">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2">
                     <div
-                      className="p-2 rounded-lg"
+                      className="p-1.5 sm:p-2 rounded-lg"
                       style={{
                         backgroundColor: account.color ? `${account.color}20` : '#EEF2FF',
                       }}
                     >
                       <Wallet
-                        className="h-5 w-5"
+                        className="h-4 w-4 sm:h-5 sm:w-5"
                         style={{ color: account.color || '#4F46E5' }}
                       />
                     </div>
                     <div>
-                      <CardTitle className="text-base text-neutral-900">{account.name}</CardTitle>
-                      <p className="text-sm text-neutral-500">{account.currency}</p>
+                      <CardTitle className="text-sm sm:text-base text-neutral-900">{account.name}</CardTitle>
+                      <p className="text-xs sm:text-sm text-neutral-500">{account.currency}</p>
                     </div>
                   </div>
                   {account.isDefault && (
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
-                      <Star className="h-3 w-3 mr-1 fill-current" />
+                    <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium bg-primary-100 text-primary-800">
+                      <Star className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1 fill-current" />
                       {t('accounts.default')}
                     </span>
                   )}
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="mb-4">
-                  <p className="text-sm text-neutral-500">{t('accounts.currentBalance')}</p>
-                  <p className={`text-xl sm:text-2xl font-bold ${(accountBalances[account.id] ?? account.balance) >= 0 ? 'text-neutral-900' : 'text-red-600'}`}>
+              <CardContent className="p-3 sm:p-6">
+                <div className="mb-2 sm:mb-4">
+                  <p className="text-xs sm:text-sm text-neutral-500">{t('accounts.currentBalance')}</p>
+                  <p className={`text-base sm:text-xl lg:text-2xl font-bold truncate ${(accountBalances[account.id] ?? account.balance) >= 0 ? 'text-neutral-900' : 'text-red-600'}`}>
                     {formatCurrency(accountBalances[account.id] ?? account.balance, account.currency)}
                   </p>
                 </div>
-                <div className="mb-4">
-                  <p className="text-sm text-neutral-500">{t('accounts.initialBalanceDate')}</p>
-                  <p className="text-sm font-medium text-neutral-700">
+                <div className="mb-2 sm:mb-4">
+                  <p className="text-xs sm:text-sm text-neutral-500">{t('accounts.initialBalanceDate')}</p>
+                  <p className="text-xs sm:text-sm font-medium text-neutral-700">
                     {account.balanceDate ? formatDate(account.balanceDate) : '-'}
                   </p>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5 sm:gap-2">
                   {!account.isDefault && (
                     <Button
                       type="button"
@@ -214,6 +215,7 @@ export function Accounts() {
                       size="sm"
                       onClick={() => handleSetDefault(account.id)}
                       leftIcon={<Star className="h-3 w-3 flex-shrink-0" />}
+                      className="text-xs sm:text-sm h-7 sm:h-8 px-2 sm:px-3"
                     >
                       {t('accounts.setDefault')}
                     </Button>
@@ -224,6 +226,7 @@ export function Accounts() {
                     size="sm"
                     onClick={() => modal.openEdit(account)}
                     leftIcon={<Edit2 className="h-3 w-3 flex-shrink-0" />}
+                    className="text-xs sm:text-sm h-7 sm:h-8 px-2 sm:px-3"
                   >
                     {t('common.edit')}
                   </Button>
@@ -232,7 +235,7 @@ export function Accounts() {
                     variant="ghost"
                     size="sm"
                     onClick={() => handleDelete(account.id)}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50 text-xs sm:text-sm h-7 sm:h-8 px-2 sm:px-3"
                     leftIcon={<Trash2 className="h-3 w-3 flex-shrink-0" />}
                   >
                     {t('common.delete')}
@@ -242,6 +245,7 @@ export function Accounts() {
             </Card>
           ))
         )}
+        </div>
       </div>
     </div>
   );

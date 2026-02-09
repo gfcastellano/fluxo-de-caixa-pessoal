@@ -117,11 +117,11 @@ export function Categories() {
   }
 
   return (
-    <div className="flex flex-col sm:gap-6 gap-4 sm:p-6 p-4 overflow-x-hidden">
+    <div className="flex flex-col h-[calc(100vh-var(--header-height)-var(--dock-height))] sm:h-auto sm:min-h-0 sm:gap-6 gap-4 sm:p-6 p-4 overflow-x-hidden">
       {/* Header - no add button, Hero handles it */}
-      <div className="flex flex-col gap-2">
-        <h1 className="text-xl sm:text-2xl font-bold text-ink">{t('categories.title')}</h1>
-        <p className="text-neutral-500">Manage your income and expense categories</p>
+      <div className="flex flex-col gap-1 sm:gap-2 flex-shrink-0">
+        <h1 className="text-lg sm:text-2xl font-bold text-ink">{t('categories.title')}</h1>
+        <p className="text-xs sm:text-sm text-neutral-500">Manage your income and expense categories</p>
       </div>
 
       <CategoryModal
@@ -133,59 +133,60 @@ export function Categories() {
         autoStartRecording={autoRecordOnOpen}
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="flex-1 min-h-0 overflow-y-auto sm:overflow-visible">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-6 pb-4 sm:pb-0">
         {/* Income Categories */}
         <Card className="bg-white/40 backdrop-blur-xl border-white/60">
-          <CardHeader className="pb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-success-100 rounded-lg">
-                <TrendingUp className="h-5 w-5 text-success-600" />
+          <CardHeader className="pb-2 sm:pb-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-1.5 sm:p-2 bg-success-100 rounded-lg">
+                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-success-600" />
               </div>
               <div>
-                <CardTitle>{t('common.income')} {t('categories.title')}</CardTitle>
-                <CardDescription>{incomeCategories.length} categories</CardDescription>
+                <CardTitle className="text-sm sm:text-base">{t('common.income')} {t('categories.title')}</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">{incomeCategories.length} categories</CardDescription>
               </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 sm:p-6">
             {incomeCategories.length === 0 ? (
-              <div className="text-center py-8">
-                <div className="mx-auto w-12 h-12 bg-neutral-100 rounded-full flex items-center justify-center mb-3">
-                  <Tag className="h-6 w-6 text-neutral-400" />
+              <div className="text-center py-6 sm:py-8">
+                <div className="mx-auto w-8 h-8 sm:w-12 sm:h-12 bg-neutral-100 rounded-full flex items-center justify-center mb-2 sm:mb-3">
+                  <Tag className="h-4 w-4 sm:h-6 sm:w-6 text-neutral-400" />
                 </div>
-                <p className="text-neutral-500">{t('categories.noCategories')}</p>
+                <p className="text-xs sm:text-sm text-neutral-500">{t('categories.noCategories')}</p>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-1.5 sm:space-y-2">
                 {incomeCategories.map((category) => (
                   <div
                     key={category.id}
                     className={cn(
-                      "flex items-center justify-between p-3 rounded-xl transition-all duration-1000 group",
+                      "flex items-center justify-between p-2 sm:p-3 rounded-lg sm:rounded-xl transition-all duration-1000 group",
                       highlightedId === category.id
                         ? "animate-highlight shadow-lg scale-[1.02]"
                         : "bg-white/40 hover:bg-white/60 backdrop-blur-sm"
                     )}
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3">
                       <div
-                        className="w-4 h-4 rounded-full ring-2 ring-white shadow-sm"
+                        className="w-3 h-3 sm:w-4 sm:h-4 rounded-full ring-2 ring-white shadow-sm flex-shrink-0"
                         style={{ backgroundColor: category.color }}
                       />
-                      <span className="font-medium text-neutral-900 text-sm">{t(getTranslatedCategoryName(category.name))}</span>
+                      <span className="font-medium text-neutral-900 text-xs sm:text-sm">{t(getTranslatedCategoryName(category.name))}</span>
                     </div>
-                    <div className="flex flex-wrap gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex flex-wrap gap-0.5 sm:gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => handleOpenModal(category)}
-                        className="p-2 text-neutral-600 hover:bg-white hover:shadow-sm rounded-lg transition-all"
+                        className="p-1.5 sm:p-2 text-neutral-600 hover:bg-white hover:shadow-sm rounded-lg transition-all"
                       >
-                        <Edit2 className="h-4 w-4" />
+                        <Edit2 className="h-3 w-3 sm:h-4 sm:w-4" />
                       </button>
                       <button
                         onClick={() => handleDelete(category.id)}
-                        className="p-2 text-danger-600 hover:bg-danger-50 rounded-lg transition-colors"
+                        className="p-1.5 sm:p-2 text-danger-600 hover:bg-danger-50 rounded-lg transition-colors"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                       </button>
                     </div>
                   </div>
@@ -197,56 +198,56 @@ export function Categories() {
 
         {/* Expense Categories */}
         <Card className="bg-white/40 backdrop-blur-xl border-white/60">
-          <CardHeader className="pb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-danger-100 rounded-lg">
-                <TrendingDown className="h-5 w-5 text-danger-600" />
+          <CardHeader className="pb-2 sm:pb-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-1.5 sm:p-2 bg-danger-100 rounded-lg">
+                <TrendingDown className="h-4 w-4 sm:h-5 sm:w-5 text-danger-600" />
               </div>
               <div>
-                <CardTitle>{t('common.expense')} {t('categories.title')}</CardTitle>
-                <CardDescription>{expenseCategories.length} categories</CardDescription>
+                <CardTitle className="text-sm sm:text-base">{t('common.expense')} {t('categories.title')}</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">{expenseCategories.length} categories</CardDescription>
               </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 sm:p-6">
             {expenseCategories.length === 0 ? (
-              <div className="text-center py-8">
-                <div className="mx-auto w-12 h-12 bg-neutral-100 rounded-full flex items-center justify-center mb-3">
-                  <Tag className="h-6 w-6 text-neutral-400" />
+              <div className="text-center py-6 sm:py-8">
+                <div className="mx-auto w-8 h-8 sm:w-12 sm:h-12 bg-neutral-100 rounded-full flex items-center justify-center mb-2 sm:mb-3">
+                  <Tag className="h-4 w-4 sm:h-6 sm:w-6 text-neutral-400" />
                 </div>
-                <p className="text-neutral-500">{t('categories.noCategories')}</p>
+                <p className="text-xs sm:text-sm text-neutral-500">{t('categories.noCategories')}</p>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-1.5 sm:space-y-2">
                 {expenseCategories.map((category) => (
                   <div
                     key={category.id}
                     className={cn(
-                      "flex items-center justify-between p-3 rounded-xl transition-all duration-1000 group",
+                      "flex items-center justify-between p-2 sm:p-3 rounded-lg sm:rounded-xl transition-all duration-1000 group",
                       highlightedId === category.id
                         ? "animate-highlight shadow-lg scale-[1.02]"
                         : "bg-white/40 hover:bg-white/60 backdrop-blur-sm"
                     )}
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3">
                       <div
-                        className="w-4 h-4 rounded-full ring-2 ring-white shadow-sm"
+                        className="w-3 h-3 sm:w-4 sm:h-4 rounded-full ring-2 ring-white shadow-sm flex-shrink-0"
                         style={{ backgroundColor: category.color }}
                       />
-                      <span className="font-medium text-neutral-900 text-sm">{t(getTranslatedCategoryName(category.name))}</span>
+                      <span className="font-medium text-neutral-900 text-xs sm:text-sm">{t(getTranslatedCategoryName(category.name))}</span>
                     </div>
-                    <div className="flex flex-wrap gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex flex-wrap gap-0.5 sm:gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => handleOpenModal(category)}
-                        className="p-2 text-neutral-600 hover:bg-white hover:shadow-sm rounded-lg transition-all"
+                        className="p-1.5 sm:p-2 text-neutral-600 hover:bg-white hover:shadow-sm rounded-lg transition-all"
                       >
-                        <Edit2 className="h-4 w-4" />
+                        <Edit2 className="h-3 w-3 sm:h-4 sm:w-4" />
                       </button>
                       <button
                         onClick={() => handleDelete(category.id)}
-                        className="p-2 text-danger-600 hover:bg-danger-50 rounded-lg transition-colors"
+                        className="p-1.5 sm:p-2 text-danger-600 hover:bg-danger-50 rounded-lg transition-colors"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                       </button>
                     </div>
                   </div>
@@ -255,6 +256,7 @@ export function Categories() {
             )}
           </CardContent>
         </Card>
+        </div>
       </div>
 
     </div>

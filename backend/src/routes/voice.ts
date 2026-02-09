@@ -740,4 +740,68 @@ app.post('/accounts', async (c) => {
   }
 });
 
+/**
+ * GET /api/voice/consent
+ * Get voice consent status for the authenticated user
+ */
+app.get('/consent', async (c) => {
+  try {
+    const userId = c.get('userId');
+    const firebase = new FirebaseService(c.env);
+
+    const consent = await firebase.getVoiceConsent(userId);
+
+    return c.json({
+      success: true,
+      data: consent || {
+        voiceConsent: false,
+        voiceConsentDate: null,
+        voiceConsentVersion: null,
+      },
+    }, 200);
+  } catch (error) {
+    console.error('Get voice consent error:', error);
+    return c.json(
+      { success: false, error: 'Failed to get voice consent' },
+      500
+    );
+  }
+});
+
+/**
+ * POST /api/voice/consent
+ * Save voice consent for the authenticated user
+ * Expects JSON body with:
+ * - voiceConsent: boolean
+ * - voiceConsentVersion: string (optional, defaults to '1.0')
+ */
+app.post('/consent', async (c) => {
+  try {
+    const userId = c.get('userId');
+    const body = await c.req.json() as {
+      voiceConsent: boolean;
+      voiceConsentVersion?: string;
+    };
+
+    const firebase = new FirebaseService(c.env);
+
+    await firebase.saveVoiceConsent(userId, {
+      voiceConsent: body.voiceConsent,
+      voiceConsentDate: new Date(),
+      voiceConsentVersion: body.voiceConsentVersion || '1.0',
+    });
+
+    return c.json({
+      success: true,
+      message: 'Voice consent saved successfully',
+    }, 200);
+  } catch (error) {
+    console.error('Save voice consent error:', error);
+    return c.json(
+      { success: false, error: 'Failed to save voice consent' },
+      500
+    );
+  }
+});
+
 export default app;
