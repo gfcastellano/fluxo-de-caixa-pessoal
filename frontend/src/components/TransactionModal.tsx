@@ -56,7 +56,10 @@ export function TransactionModal({
       const fetchAccounts = async () => {
         try {
           const userAccounts = await getAccounts(userId);
-          setAccounts(userAccounts);
+          const sortedAccounts = userAccounts.sort((a, b) =>
+            a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+          );
+          setAccounts(sortedAccounts);
 
           if (transaction?.accountId) {
             setSelectedAccountId(transaction.accountId);
@@ -248,7 +251,9 @@ export function TransactionModal({
     }
   }, [voice, i18n.language, transaction, categories, t, onVoiceUpdate, formData, userId, selectedAccountId]);
 
-  const filteredCategories = categories.filter(c => c.type === formData.type);
+  const filteredCategories = categories
+    .filter(c => c.type === formData.type)
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
 
   return (
     <BaseModal

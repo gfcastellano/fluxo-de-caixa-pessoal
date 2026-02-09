@@ -154,7 +154,12 @@ export function Transactions() {
         account: accounts.find((a) => a.id === transaction.accountId),
       }));
 
-      setTransactions(enrichedTransactions);
+      // Sort transactions by date (most recent first)
+      const sortedTransactions = enrichedTransactions.sort((a, b) =>
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+
+      setTransactions(sortedTransactions);
     } catch (error) {
       console.error('Error loading transactions:', error);
     } finally {

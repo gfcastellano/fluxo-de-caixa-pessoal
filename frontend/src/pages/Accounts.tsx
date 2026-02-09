@@ -41,7 +41,10 @@ export function Accounts() {
     setLoading(true);
     try {
       const data = await getAccounts(user!.uid);
-      setAccounts(data);
+      const sortedData = data.sort((a, b) =>
+        a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+      );
+      setAccounts(sortedData);
 
       const balances: Record<string, number> = {};
       for (const account of data) {

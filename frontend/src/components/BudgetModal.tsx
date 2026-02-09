@@ -40,7 +40,9 @@ export function BudgetModal({
 
   const voice = useVoiceForm({ autoStartRecording });
 
-  const expenseCategories = categories.filter((c) => c.type === 'expense');
+  const expenseCategories = categories
+    .filter((c) => c.type === 'expense')
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
 
   useEffect(() => {
     if (budget) {

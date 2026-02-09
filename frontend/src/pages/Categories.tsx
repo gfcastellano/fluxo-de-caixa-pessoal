@@ -105,8 +105,12 @@ export function Categories() {
     setEditingCategory(null);
   };
 
-  const incomeCategories = categories.filter((c) => c.type === 'income');
-  const expenseCategories = categories.filter((c) => c.type === 'expense');
+  const incomeCategories = categories
+    .filter((c) => c.type === 'income')
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+  const expenseCategories = categories
+    .filter((c) => c.type === 'expense')
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
 
   if (loading) {
     return (

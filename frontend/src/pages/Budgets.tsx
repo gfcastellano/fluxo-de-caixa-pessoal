@@ -63,7 +63,15 @@ export function Budgets() {
         getBudgets(user!.uid),
         getCategories(user!.uid),
       ]);
-      setBudgets(budgetsData);
+      // Sort budgets by category name alphabetically
+      const sortedBudgets = budgetsData.sort((a, b) => {
+        const categoryA = categoriesData.find((c) => c.id === a.categoryId);
+        const categoryB = categoriesData.find((c) => c.id === b.categoryId);
+        const nameA = categoryA?.name || '';
+        const nameB = categoryB?.name || '';
+        return nameA.localeCompare(nameB, undefined, { sensitivity: 'base' });
+      });
+      setBudgets(sortedBudgets);
       setCategories(categoriesData);
 
       // Load budget statuses
