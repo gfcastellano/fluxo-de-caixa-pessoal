@@ -107,11 +107,11 @@ export function VoiceConsentModal({ isOpen, onAccept, onDecline }: VoiceConsentM
         <Portal>
             <div
                 className={cn(
-                    'fixed inset-0 z-[1500] flex items-center justify-center p-2 sm:p-4 overflow-hidden',
-                'transition-opacity duration-200',
-                isOpen ? 'opacity-100' : 'opacity-0'
-            )}
-        >
+                    'fixed inset-0 z-[1500] flex items-center justify-center p-2 sm:p-3 md:p-4 overflow-hidden',
+                    'transition-opacity duration-200',
+                    isOpen ? 'opacity-100' : 'opacity-0'
+                )}
+            >
             {/* Backdrop */}
             <div
                 className="absolute inset-0 bg-ink/30 backdrop-blur-sm"
@@ -121,17 +121,19 @@ export function VoiceConsentModal({ isOpen, onAccept, onDecline }: VoiceConsentM
             {/* Modal Container */}
             <div
                 className={cn(
-                    'relative w-full max-w-md flex flex-col',
+                    'relative w-[calc(100%-0.5rem)] sm:w-full max-w-md flex flex-col',
+                    'max-h-[92vh] sm:max-h-[90vh]',
                     'bg-mist/95 backdrop-blur-xl',
                     'border border-white/50',
-                    'rounded-2xl sm:rounded-3xl',
+                    'rounded-xl sm:rounded-2xl',
                     'shadow-2xl',
                     'transition-all duration-200',
+                    'overflow-hidden',
                     isOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
                 )}
             >
                 {/* Header */}
-                <div className="flex items-center gap-3 px-4 py-4 sm:px-6 sm:py-5 border-b border-slate/10">
+                <div className="flex items-center gap-2 sm:gap-3 px-3 py-3 sm:px-4 sm:py-4 md:px-6 md:py-5 border-b border-slate/10 flex-shrink-0">
                     <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue/10 text-blue">
                         <Mic className="h-5 w-5" />
                     </div>
@@ -146,9 +148,9 @@ export function VoiceConsentModal({ isOpen, onAccept, onDecline }: VoiceConsentM
                 </div>
 
                 {/* Content */}
-                <div className="px-4 py-4 sm:px-6 sm:py-5 space-y-4">
+                <div className="px-3 py-3 sm:px-4 sm:py-4 md:px-6 md:py-5 space-y-3 sm:space-y-4 overflow-y-auto flex-1">
                     {/* Explanation */}
-                    <div className="space-y-3">
+                    <div className="space-y-2 sm:space-y-3">
                         <ConsentItem
                             icon={<Mic className="h-4 w-4" />}
                             title={t('voice.consent.processingTitle')}
@@ -211,7 +213,7 @@ export function VoiceConsentModal({ isOpen, onAccept, onDecline }: VoiceConsentM
                 </div>
 
                 {/* Footer */}
-                <div className="flex flex-row gap-3 px-4 py-4 sm:px-6 sm:py-5 border-t border-slate/10 bg-white/30 rounded-b-2xl sm:rounded-b-3xl">
+                <div className="flex flex-row gap-2 sm:gap-3 px-3 py-3 sm:px-4 sm:py-4 md:px-6 md:py-5 border-t border-slate/10 bg-white/30 rounded-b-xl sm:rounded-b-2xl flex-shrink-0">
                     <Button
                         type="button"
                         variant="ghost"
@@ -244,13 +246,13 @@ interface ConsentItemProps {
 
 function ConsentItem({ icon, title, description }: ConsentItemProps) {
     return (
-        <div className="flex gap-3">
-            <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-slate/5 flex items-center justify-center text-slate">
+        <div className="flex gap-2 sm:gap-3">
+            <div className="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-slate/5 flex items-center justify-center text-slate">
                 {icon}
             </div>
             <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-medium text-ink mb-0.5">{title}</h3>
-                <p className="text-xs sm:text-sm text-slate leading-relaxed">{description}</p>
+                <h3 className="text-xs sm:text-sm font-medium text-ink mb-0">{title}</h3>
+                <p className="text-xs text-slate leading-snug sm:leading-relaxed">{description}</p>
             </div>
         </div>
     );

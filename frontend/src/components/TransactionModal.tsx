@@ -263,12 +263,13 @@ export function TransactionModal({
       isRecording={voice.voiceState === 'recording'}
       onCancelRecording={voice.cancelRecording}
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4">
         <Input
           label={t('transactions.form.title')}
           value={formData.description}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
           required
+          className="col-span-2 sm:col-span-1"
         />
         <Input
           label={t('transactions.form.amount')}
@@ -280,7 +281,7 @@ export function TransactionModal({
           required
         />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
         <div>
           <label className="block text-sm font-medium text-ink mb-1.5">{t('transactions.form.type')}</label>
           <select
@@ -346,7 +347,7 @@ export function TransactionModal({
 
           {isRecurring && (
             <div className="space-y-3 sm:space-y-4 pl-4 sm:pl-6 border-l-2 border-blue/20">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+              <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4">
                 <div>
                   <label className="block text-sm font-medium text-ink mb-1.5">{t('transactions.form.recurrencePattern') || 'Frequency'}</label>
                   <select

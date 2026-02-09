@@ -88,28 +88,28 @@ export function BaseModal({
 
     return (
         <Portal>
-            <div className="fixed inset-0 z-[1400] flex items-center justify-center p-2 sm:p-4 overflow-hidden">
+            <div className="fixed inset-0 z-[1400] flex items-end sm:items-center justify-center p-2 sm:p-3 md:p-4 overflow-hidden">
             {/* Backdrop */}
             <div
                 className="absolute inset-0 bg-ink/20 backdrop-blur-sm animate-fade-in"
                 onClick={handleCancel}
             />
 
-            {/* Modal Container - Always centered, with max height to fit viewport */}
-            <div className="relative w-full max-w-lg max-h-[95vh] sm:max-h-[85vh] flex flex-col bg-mist/95 backdrop-blur-xl border border-white/50 rounded-2xl sm:rounded-3xl shadow-2xl animate-scale-in">
+            {/* Modal Container - Card floating style on mobile */}
+            <div className="relative w-full sm:w-[calc(100%-2rem)] md:w-full max-w-lg h-[calc(100dvh-1rem)] sm:h-auto sm:max-h-[90dvh] md:max-h-[85dvh] flex flex-col bg-mist/95 backdrop-blur-xl border border-white/50 rounded-2xl shadow-2xl animate-scale-in">
                 {/* Header - Fixed at top */}
-                <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-slate/5 flex-shrink-0">
-                    <h2 className="text-base sm:text-lg font-semibold text-ink">{title}</h2>
+                <div className="flex items-center justify-between px-3 py-2.5 sm:px-4 sm:py-3 md:px-6 md:py-4 border-b border-slate/5 flex-shrink-0">
+                    <h2 className="text-sm sm:text-base md:text-lg font-semibold text-ink truncate pr-2">{title}</h2>
                     <button
                         onClick={handleCancel}
-                        className="p-1.5 sm:p-2 text-slate hover:text-ink hover:bg-slate/10 rounded-full transition-colors"
+                        className="p-1 sm:p-1.5 md:p-2 text-slate hover:text-ink hover:bg-slate/10 rounded-full transition-colors flex-shrink-0"
                     >
-                        <X className="h-5 w-5" />
+                        <X className="h-4 w-4 sm:h-5 sm:w-5" />
                     </button>
                 </div>
 
-                {/* Content - Scrollable */}
-                <div className="px-4 py-3 sm:px-6 sm:py-4 overflow-y-auto flex-1 custom-scrollbar">
+                {/* Content - Scrollable with safe area support */}
+                <div className="px-3 py-2.5 sm:px-4 sm:py-3 md:px-6 md:py-4 pb-[env(safe-area-inset-bottom,0px)] overflow-y-auto flex-1 custom-scrollbar">
                     {onSubmit ? (
                         <form onSubmit={onSubmit} className="space-y-4">
                             {children}
