@@ -16,6 +16,9 @@ const DEFAULT_CATEGORY_MAP: Record<string, string> = {
   'Health': 'defaultCategories.health',
   'Education': 'defaultCategories.education',
   'Other Expense': 'defaultCategories.otherExpense',
+  // Transfer categories
+  'Transfer': 'defaultCategories.transfer',
+  'Withdrawal': 'defaultCategories.withdrawal',
 };
 
 /**

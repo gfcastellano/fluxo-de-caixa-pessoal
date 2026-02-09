@@ -47,6 +47,7 @@ export const enTranslations = {
     all: 'All',
     income: 'Income',
     expense: 'Expense',
+    transfer: 'Transfer',
     total: 'Total',
     balance: 'Balance',
     period: 'Period',
@@ -137,6 +138,11 @@ export const enTranslations = {
       selectAccount: 'Select an account',
       income: 'Income',
       expense: 'Expense',
+      transfer: 'Transfer',
+      sourceAccount: 'Source Account',
+      destinationAccount: 'Destination Account',
+      selectDestinationAccount: 'Select destination account',
+      sameAccountError: 'Source and destination must be different',
       isRecurring: 'Recurring Transaction',
       recurrencePattern: 'Frequency',
       recurrenceDay: 'Day',
@@ -174,6 +180,7 @@ export const enTranslations = {
   // Categories
   categories: {
     title: 'Categories',
+    subtitle: 'Manage your income, expense and transfer categories',
     addNew: 'Add Category',
     editCategory: 'Edit Category',
     deleteCategory: 'Delete Category',
@@ -241,6 +248,8 @@ export const enTranslations = {
     deleteConfirm: 'Are you sure you want to delete this account?',
     setDefault: 'Set as Default',
     default: 'Default',
+    cashBadge: 'Cash',
+    cannotDeleteCash: 'Cash accounts cannot be deleted',
     currentBalance: 'Current Balance',
     initialBalanceDate: 'Initial Balance Date',
     noAccounts: 'No accounts found',
@@ -306,6 +315,8 @@ export const enTranslations = {
     health: 'Health',
     education: 'Education',
     otherExpense: 'Other Expense',
+    transfer: 'Transfer',
+    withdrawal: 'Withdrawal',
   },
 
   // Voice

@@ -10,6 +10,7 @@ const accountSchema = z.object({
   balance: z.number(),
   initialBalance: z.number(),
   isDefault: z.boolean().optional(),
+  isCash: z.boolean().default(false),
   color: z.string().optional(),
 });
 
@@ -66,6 +67,29 @@ app.post('/', async (c) => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
+
+    // Auto-create cash account for this currency if it doesn't exist yet
+    if (!validated.isCash) {
+      const allAccounts = await firebase.getDocuments('accounts', userId) as Array<{ id: string; currency?: string; isCash?: boolean }>;
+      const hasCashForCurrency = allAccounts.some(
+        acc => acc.isCash === true && acc.currency === validated.currency
+      );
+
+      if (!hasCashForCurrency) {
+        await firebase.createDocument('accounts', {
+          name: `Dinheiro (${validated.currency})`,
+          currency: validated.currency,
+          balance: 0,
+          initialBalance: 0,
+          isDefault: false,
+          isCash: true,
+          color: '#16a34a',
+          userId,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+      }
+    }
 
     return c.json({ success: true, data: account }, 201);
   } catch (error) {
@@ -142,6 +166,16 @@ app.put('/:id', async (c) => {
       );
     }
 
+    // Proteger campos imutaveis em contas cash
+    if ((existingAccount as { isCash?: boolean }).isCash) {
+      if (validated.currency || validated.isCash === false) {
+        return c.json(
+          { success: false, error: 'Cannot modify currency or cash status of cash accounts.' },
+          400
+        );
+      }
+    }
+
     // Se isDefault estiver sendo atualizado para true
     if (validated.isDefault === true) {
       const accounts = await firebase.getDocuments('accounts', userId) as Array<{ id: string; isDefault?: boolean }>;
@@ -192,6 +226,14 @@ app.delete('/:id', async (c) => {
       return c.json(
         { success: false, error: 'Unauthorized' },
         403
+      );
+    }
+
+    // Impedir exclusao de contas cash
+    if ((existingAccount as { isCash?: boolean }).isCash) {
+      return c.json(
+        { success: false, error: 'Cash accounts cannot be deleted.' },
+        400
       );
     }
 

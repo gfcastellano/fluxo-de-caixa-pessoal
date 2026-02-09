@@ -206,11 +206,17 @@ export function Reports() {
           getCategories(user!.uid),
         ]);
 
+        // Fetch all user transactions to find incoming transfers to these accounts
+        const allUserTransactions = await getTransactions(user!.uid, { startDate, endDate });
+        const incomingTransfers = allUserTransactions.filter(
+          t => t.type === 'transfer' && t.toAccountId && accountIdsInCurrency.has(t.toAccountId)
+        );
+
         // Create category map for lookup
         const categoryMap = new Map(categories.map(c => [c.id, c]));
 
-        // Calculate expense breakdown from filtered transactions
-        const expenseTransactions = allTransactions.filter(t => t.type === 'expense');
+        // Calculate expense breakdown from filtered transactions (expenses + outgoing transfers)
+        const expenseTransactions = allTransactions.filter(t => t.type === 'expense' || t.type === 'transfer');
         const expenseCategoryTotals = new Map<string, number>();
         expenseTransactions.forEach(t => {
           const current = expenseCategoryTotals.get(t.categoryId) || 0;
@@ -230,21 +236,28 @@ export function Reports() {
           })
           .sort((a, b) => b.amount - a.amount);
 
-        // Calculate income breakdown from filtered transactions
+        // Calculate income breakdown from filtered transactions (income + incoming transfers)
         const incomeTransactions = allTransactions.filter(t => t.type === 'income');
         const incomeCategoryTotals = new Map<string, number>();
         incomeTransactions.forEach(t => {
           const current = incomeCategoryTotals.get(t.categoryId) || 0;
           incomeCategoryTotals.set(t.categoryId, current + t.amount);
         });
+        // Add incoming transfers to income breakdown (use a special category or account name)
+        incomingTransfers.forEach(t => {
+          const transferCategoryId = 'incoming-transfer';
+          const current = incomeCategoryTotals.get(transferCategoryId) || 0;
+          incomeCategoryTotals.set(transferCategoryId, current + t.amount);
+        });
         const totalIncome = Array.from(incomeCategoryTotals.values()).reduce((sum, amount) => sum + amount, 0);
         const filteredIncomeBreakdown: CategoryBreakdown[] = Array.from(incomeCategoryTotals.entries())
           .map(([categoryId, amount]) => {
             const category = categoryMap.get(categoryId);
+            const isTransferCategory = categoryId === 'incoming-transfer';
             return {
               categoryId,
-              categoryName: category?.name || 'Unknown',
-              categoryColor: category?.color || '#999999',
+              categoryName: isTransferCategory ? 'Transferências Recebidas' : (category?.name || 'Unknown'),
+              categoryColor: isTransferCategory ? '#10B981' : (category?.color || '#999999'),
               amount,
               percentage: totalIncome > 0 ? (amount / totalIncome) * 100 : 0,
             };
@@ -255,11 +268,14 @@ export function Reports() {
         setIncomeBreakdown(filteredIncomeBreakdown);
 
         // Calculate summary from filtered transactions for the selected currency
+        // Income includes: income transactions + incoming transfers
         const filteredIncome = allTransactions
           .filter(t => t.type === 'income')
-          .reduce((sum, t) => sum + t.amount, 0);
+          .reduce((sum, t) => sum + t.amount, 0)
+          + incomingTransfers.reduce((sum, t) => sum + t.amount, 0);
+        // Expenses include: expenses + outgoing transfers
         const filteredExpenses = allTransactions
-          .filter(t => t.type === 'expense')
+          .filter(t => t.type === 'expense' || t.type === 'transfer')
           .reduce((sum, t) => sum + t.amount, 0);
         const filteredSummary: MonthlySummary = {
           income: filteredIncome,
@@ -280,8 +296,9 @@ export function Reports() {
 
       if (selectedCurrency && !selectedAccountId) {
         // When currency is selected but no specific account, fetch trend for each account with that currency
-        // and aggregate the results
+        // and aggregate the results, including incoming transfers
         const accountsWithCurrency = accounts.filter(a => a.currency === selectedCurrency);
+        const accountIdsInCurrency = new Set(accountsWithCurrency.map(a => a.id));
 
         if (accountsWithCurrency.length > 0) {
           // Fetch trend data for each account
@@ -301,6 +318,25 @@ export function Reports() {
                 income: existing.income + monthData.income,
                 expenses: existing.expenses + monthData.expenses,
               });
+            });
+          });
+
+          // Fetch all user transactions for the year to calculate incoming transfers per month
+          const startDate = `${year}-01-01`;
+          const endDate = `${year}-12-31`;
+          const allUserTransactions = await getTransactions(user!.uid, { startDate, endDate });
+          const incomingTransfers = allUserTransactions.filter(
+            t => t.type === 'transfer' && t.toAccountId && accountIdsInCurrency.has(t.toAccountId)
+          );
+
+          // Add incoming transfers to the appropriate months
+          incomingTransfers.forEach(transfer => {
+            const transferDate = new Date(transfer.date);
+            const monthKey = `${transferDate.getFullYear()}-${String(transferDate.getMonth() + 1).padStart(2, '0')}`;
+            const existing = monthlyData.get(monthKey) || { income: 0, expenses: 0 };
+            monthlyData.set(monthKey, {
+              income: existing.income + transfer.amount,
+              expenses: existing.expenses,
             });
           });
 
@@ -403,7 +439,20 @@ export function Reports() {
         filteredTransactions = transactions.filter(t => t.accountId && accountIdsInCurrency.has(t.accountId));
       }
 
+      // Fetch all user transactions to find incoming transfers to these accounts
+      const allUserTransactions = await getTransactions(user.uid, {
+        startDate: earliestBalanceDate,
+        endDate: currentMonthEndDate,
+      });
+
+      const accountIdsSet = new Set(accountsToCalculate.map(a => a.id));
+      const incomingTransfers = allUserTransactions.filter(
+        t => t.type === 'transfer' && t.toAccountId && accountIdsSet.has(t.toAccountId)
+      );
+
       // Group transactions by month and calculate net balance for each month
+      // Income includes: income transactions + incoming transfers
+      // Expenses include: expenses + outgoing transfers
       const monthlyNetBalances = new Map<string, number>();
 
       filteredTransactions.forEach(transaction => {
@@ -411,8 +460,25 @@ export function Reports() {
         const monthKey = `${transactionDate.getFullYear()}-${String(transactionDate.getMonth() + 1).padStart(2, '0')}`;
 
         const currentBalance = monthlyNetBalances.get(monthKey) || 0;
-        const transactionAmount = transaction.type === 'income' ? transaction.amount : -transaction.amount;
+        let transactionAmount = 0;
+        if (transaction.type === 'income') {
+          transactionAmount = transaction.amount;
+        } else if (transaction.type === 'expense') {
+          transactionAmount = -transaction.amount;
+        } else if (transaction.type === 'transfer') {
+          // Outgoing transfer: money leaves this account
+          transactionAmount = -transaction.amount;
+        }
         monthlyNetBalances.set(monthKey, currentBalance + transactionAmount);
+      });
+
+      // Add incoming transfers (money entering these accounts)
+      incomingTransfers.forEach(transfer => {
+        const transferDate = new Date(transfer.date);
+        const monthKey = `${transferDate.getFullYear()}-${String(transferDate.getMonth() + 1).padStart(2, '0')}`;
+
+        const currentBalance = monthlyNetBalances.get(monthKey) || 0;
+        monthlyNetBalances.set(monthKey, currentBalance + transfer.amount);
       });
 
       // Sum all monthly net balances
@@ -480,15 +546,42 @@ export function Reports() {
         filteredTransactions = transactions.filter(t => t.accountId && accountIdsInCurrency.has(t.accountId));
       }
 
+      // Fetch all user transactions to find incoming transfers to these accounts
+      const allUserTransactions = await getTransactions(user.uid, {
+        startDate: earliestBalanceDate,
+        endDate: previousMonthEndDate,
+      });
+
+      const accountIdsSet = new Set(accountsToCalculate.map(a => a.id));
+      const incomingTransfers = allUserTransactions.filter(
+        t => t.type === 'transfer' && t.toAccountId && accountIdsSet.has(t.toAccountId)
+      );
+
       // Calculate total net balance from all transactions up to end of previous month
+      // Income includes: income transactions + incoming transfers
+      // Expenses include: expenses + outgoing transfers
       const totalNetBalance = filteredTransactions.reduce((sum, transaction) => {
-        const transactionAmount = transaction.type === 'income' ? transaction.amount : -transaction.amount;
-        return sum + transactionAmount;
+        if (transaction.type === 'income') {
+          return sum + transaction.amount;
+        }
+        if (transaction.type === 'expense') {
+          return sum - transaction.amount;
+        }
+        if (transaction.type === 'transfer') {
+          // Outgoing transfer: money leaves this account
+          return sum - transaction.amount;
+        }
+        return sum;
       }, 0);
 
-      // Calculate: stored balance + sum of all net balances up to previous month
+      // Add incoming transfers (money entering these accounts)
+      const totalIncomingTransfers = incomingTransfers.reduce((sum, transfer) => {
+        return sum + transfer.amount;
+      }, 0);
+
+      // Calculate: stored balance + sum of all net balances + incoming transfers up to previous month
       // This gives us the balance at the START of the current month
-      const monthStartBalance = storedBalance + totalNetBalance;
+      const monthStartBalance = storedBalance + totalNetBalance + totalIncomingTransfers;
 
       setTotalAccountBalance(monthStartBalance);
     } catch (error) {

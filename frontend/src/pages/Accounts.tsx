@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { usePageModal } from '../hooks/usePageModal';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/Card';
-import { Button } from '../components/Button';
+import { Card, CardContent } from '../components/Card';
 import { AccountModal } from '../components/AccountModal';
 import {
   getAccounts,
@@ -15,8 +14,25 @@ import {
 } from '../services/accountService';
 import { formatDate } from '../utils/format';
 import type { Account } from '../types';
-import { Edit2, Trash2, Star, Wallet } from 'lucide-react';
+import { Edit2, Trash2, Star, Wallet, Banknote, DollarSign, Euro, PoundSterling, JapaneseYen, SwissFranc } from 'lucide-react';
 import { cn } from '../utils/cn';
+
+const CURRENCY_ICONS: Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
+  USD: DollarSign,
+  EUR: Euro,
+  GBP: PoundSterling,
+  JPY: JapaneseYen,
+  CHF: SwissFranc,
+};
+
+function CashCurrencyIcon({ currency, className, style }: { currency: string; className?: string; style?: React.CSSProperties }) {
+  const IconComponent = CURRENCY_ICONS[currency];
+  if (IconComponent) return <IconComponent className={className} style={style} />;
+  // Fallback: text-based symbol for currencies without a lucide icon (e.g. BRL → R$)
+  const symbols: Record<string, string> = { BRL: 'R$', ARS: '$', CLP: '$', COP: '$', MXN: '$', PEN: 'S/', CNY: '¥', KRW: '₩', INR: '₹', TRY: '₺' };
+  const symbol = symbols[currency] || currency;
+  return <span className={className} style={{ ...style, fontWeight: 700, fontSize: '0.75em', lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{symbol}</span>;
+}
 
 export function Accounts() {
   const { user } = useAuth();
@@ -41,6 +57,8 @@ export function Accounts() {
     setLoading(true);
     try {
       const data = await getAccounts(user!.uid);
+      // Cash accounts are auto-created by backend POST /accounts
+
       const sortedData = data.sort((a, b) =>
         a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
       );
@@ -80,8 +98,10 @@ export function Accounts() {
           initialBalance: accountData.initialBalance || 0,
           balanceDate: new Date().toISOString().split('T')[0],
           isDefault: accountData.isDefault || false,
+          isCash: false,
           color: accountData.color,
         });
+        // Cash account is auto-created by backend POST /accounts
 
         // Highlight logic
         setHighlightedId(newAccount.id);
@@ -147,109 +167,156 @@ export function Accounts() {
         autoStartRecording={modal.autoStartRecording}
       />
 
-      <div className="flex-1 min-h-0 overflow-y-auto sm:overflow-visible">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 pb-4 sm:pb-0">
-        {accounts.length === 0 ? (
-          <div className="col-span-full">
-            <Card className="bg-white/40 backdrop-blur-xl border-white/60">
-              <CardContent className="py-8 sm:py-12">
-                <div className="text-center">
-                  <Wallet className="mx-auto h-8 w-8 sm:h-12 sm:w-12 text-neutral-400" />
-                  <p className="mt-2 sm:mt-4 text-sm sm:text-base text-neutral-500">{t('accounts.noAccounts')}</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        ) : (
-          accounts.map((account) => (
-            <Card
-              key={account.id}
-              className={cn(
-                "transition-all duration-1000 bg-white/40 backdrop-blur-xl border-white/60",
-                account.isDefault ? 'ring-2 ring-primary-500' : '',
-                highlightedId === account.id ? "animate-highlight scale-[1.02]" : ""
-              )}
-            >
-              <CardHeader className="pb-2 sm:pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="p-1.5 sm:p-2 rounded-lg"
-                      style={{
-                        backgroundColor: account.color ? `${account.color}20` : '#EEF2FF',
-                      }}
-                    >
-                      <Wallet
-                        className="h-4 w-4 sm:h-5 sm:w-5"
-                        style={{ color: account.color || '#4F46E5' }}
-                      />
+      {accounts.length === 0 ? (
+        <Card className="bg-white/40 backdrop-blur-xl border-white/60">
+          <CardContent className="py-8 sm:py-12">
+            <div className="text-center">
+              <Wallet className="mx-auto h-8 w-8 sm:h-12 sm:w-12 text-neutral-400" />
+              <p className="mt-2 sm:mt-4 text-sm sm:text-base text-neutral-500">{t('accounts.noAccounts')}</p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-4 sm:gap-5">
+          {/* Left: Digital/Bank accounts (2/3) */}
+          <div className="lg:w-2/3 min-h-0 overflow-y-auto sm:overflow-visible">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3 pb-4 sm:pb-0">
+              {accounts.filter(a => !a.isCash).map((account) => (
+                <Card
+                  key={account.id}
+                  className={cn(
+                    "transition-all duration-1000 bg-white/40 backdrop-blur-xl border-white/60",
+                    account.isDefault ? 'ring-2 ring-primary-500' : '',
+                    highlightedId === account.id ? "animate-highlight scale-[1.02]" : ""
+                  )}
+                >
+                  <div className="p-3 sm:p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div
+                          className="p-1.5 rounded-lg flex-shrink-0"
+                          style={{
+                            backgroundColor: account.color ? `${account.color}20` : '#EEF2FF',
+                          }}
+                        >
+                          <Wallet
+                            className="h-4 w-4"
+                            style={{ color: account.color || '#4F46E5' }}
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-neutral-900 truncate">{account.name}</p>
+                          <p className="text-[11px] text-neutral-400">{account.currency}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        {account.isDefault && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-primary-100 text-primary-800">
+                            <Star className="h-2.5 w-2.5 mr-0.5 fill-current" />
+                            {t('accounts.default')}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <CardTitle className="text-sm sm:text-base text-neutral-900">{account.name}</CardTitle>
-                      <p className="text-xs sm:text-sm text-neutral-500">{account.currency}</p>
+
+                    <div className="mb-2">
+                      <p className={`text-lg sm:text-xl font-bold truncate ${(accountBalances[account.id] ?? account.balance) >= 0 ? 'text-neutral-900' : 'text-red-600'}`}>
+                        {formatCurrency(accountBalances[account.id] ?? account.balance, account.currency)}
+                      </p>
+                      <div className="flex items-center gap-3 mt-0.5">
+                        <p className="text-[10px] text-neutral-400">
+                          {t('accounts.form.initialBalance')}: {formatCurrency(account.initialBalance ?? account.balance, account.currency)}
+                        </p>
+                        <p className="text-[10px] text-neutral-400">
+                          {account.balanceDate ? formatDate(account.balanceDate) : ''}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 pt-1 border-t border-neutral-100">
+                      {!account.isDefault && (
+                        <button
+                          onClick={() => handleSetDefault(account.id)}
+                          className="flex items-center gap-1 text-[11px] text-neutral-500 hover:text-primary-600 px-1.5 py-1 rounded hover:bg-primary-50 transition-colors"
+                        >
+                          <Star className="h-3 w-3" />
+                          {t('accounts.setDefault')}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => modal.openEdit(account)}
+                        className="flex items-center gap-1 text-[11px] text-neutral-500 hover:text-neutral-700 px-1.5 py-1 rounded hover:bg-neutral-100 transition-colors"
+                      >
+                        <Edit2 className="h-3 w-3" />
+                        {t('common.edit')}
+                      </button>
+                      <button
+                        onClick={() => handleDelete(account.id)}
+                        className="flex items-center gap-1 text-[11px] text-red-400 hover:text-red-600 px-1.5 py-1 rounded hover:bg-red-50 transition-colors"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        {t('common.delete')}
+                      </button>
                     </div>
                   </div>
-                  {account.isDefault && (
-                    <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium bg-primary-100 text-primary-800">
-                      <Star className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1 fill-current" />
-                      {t('accounts.default')}
-                    </span>
+                </Card>
+              ))}
+            </div>
+          </div>
+
+          {/* Right: Cash accounts (1/3) */}
+          <div className="lg:w-1/3 flex-shrink-0">
+            <div className="flex items-center gap-2 mb-2.5">
+              <Banknote className="h-4 w-4 text-green-600" />
+              <h2 className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">{t('accounts.cashBadge')}</h2>
+            </div>
+            <div className="flex flex-col gap-2">
+              {accounts.filter(a => a.isCash).map((account) => (
+                <Card
+                  key={account.id}
+                  className={cn(
+                    "transition-all duration-1000 bg-gradient-to-r from-green-50/80 to-emerald-50/60 backdrop-blur-xl border-green-200/60",
+                    highlightedId === account.id ? "animate-highlight scale-[1.02]" : ""
                   )}
-                </div>
-              </CardHeader>
-              <CardContent className="p-3 sm:p-6">
-                <div className="mb-2 sm:mb-4">
-                  <p className="text-xs sm:text-sm text-neutral-500">{t('accounts.currentBalance')}</p>
-                  <p className={`text-base sm:text-xl lg:text-2xl font-bold truncate ${(accountBalances[account.id] ?? account.balance) >= 0 ? 'text-neutral-900' : 'text-red-600'}`}>
-                    {formatCurrency(accountBalances[account.id] ?? account.balance, account.currency)}
-                  </p>
-                </div>
-                <div className="mb-2 sm:mb-4">
-                  <p className="text-xs sm:text-sm text-neutral-500">{t('accounts.initialBalanceDate')}</p>
-                  <p className="text-xs sm:text-sm font-medium text-neutral-700">
-                    {account.balanceDate ? formatDate(account.balanceDate) : '-'}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                  {!account.isDefault && (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => handleSetDefault(account.id)}
-                      leftIcon={<Star className="h-3 w-3 flex-shrink-0" />}
-                      className="text-xs sm:text-sm h-7 sm:h-8 px-2 sm:px-3"
-                    >
-                      {t('accounts.setDefault')}
-                    </Button>
-                  )}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => modal.openEdit(account)}
-                    leftIcon={<Edit2 className="h-3 w-3 flex-shrink-0" />}
-                    className="text-xs sm:text-sm h-7 sm:h-8 px-2 sm:px-3"
-                  >
-                    {t('common.edit')}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDelete(account.id)}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50 text-xs sm:text-sm h-7 sm:h-8 px-2 sm:px-3"
-                    leftIcon={<Trash2 className="h-3 w-3 flex-shrink-0" />}
-                  >
-                    {t('common.delete')}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
+                >
+                  <div className="p-3 sm:p-3.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                          style={{ backgroundColor: `${account.color || '#16a34a'}18` }}
+                        >
+                          <CashCurrencyIcon
+                            currency={account.currency}
+                            className="h-4 w-4"
+                            style={{ color: account.color || '#16a34a' }}
+                          />
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-neutral-600">{account.currency}</p>
+                          <p className={`text-sm font-bold ${(accountBalances[account.id] ?? account.balance) >= 0 ? 'text-neutral-900' : 'text-red-600'}`}>
+                            {formatCurrency(accountBalances[account.id] ?? account.balance, account.currency)}
+                          </p>
+                          <p className="text-[10px] text-neutral-400 mt-0.5">
+                            {t('accounts.form.initialBalance')}: {formatCurrency(account.initialBalance ?? 0, account.currency)}
+                            {account.balanceDate ? ` · ${formatDate(account.balanceDate)}` : ''}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => modal.openEdit(account)}
+                        className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-white/60 rounded-lg transition-colors"
+                      >
+                        <Edit2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

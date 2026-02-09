@@ -3,11 +3,12 @@ import type { Category, Transaction, Budget } from '../types';
 
 export interface ParsedTransaction {
   amount: number;
-  type: 'income' | 'expense';
+  type: 'income' | 'expense' | 'transfer';
   description: string;
   categoryId: string;
   date: string;
   accountId?: string;
+  toAccountId?: string;
   isRecurring?: boolean;
   recurrencePattern?: 'monthly' | 'weekly' | 'yearly' | null;
   recurrenceDay?: number | null;
@@ -67,7 +68,7 @@ export class OpenAIService {
     categories: Category[],
     language: string = 'en',
     defaultDescription: string = 'Voice transaction',
-    accounts: { id: string; name: string }[] = []
+    accounts: { id: string; name: string; isCash?: boolean }[] = []
   ): Promise<ParsedTransaction> {
     const now = new Date();
     const today = now.toISOString().split('T')[0];
@@ -81,9 +82,9 @@ export class OpenAIService {
       .map(c => `"${c.name}" (ID: ${c.id}, Type: ${c.type})`)
       .join('\n');
 
-    // Build account mapping for the prompt
+    // Build account mapping for the prompt (include isCash flag to help GPT identify cash accounts)
     const accountList = accounts
-      .map(a => `"${a.name}" (ID: ${a.id})`)
+      .map(a => `"${a.name}" (ID: ${a.id}${a.isCash ? ', Cash: true' : ''})`)
       .join('\n') || 'No accounts available';
 
     // Language-specific instructions for the description
@@ -114,11 +115,12 @@ Voice command: "${transcription}"
 
 Extract and return ONLY a JSON object with these exact fields:
 - amount: number (always positive, extract the numeric value)
-- type: "income" or "expense" (determine from context - words like "spent", "paid", "bought" indicate expense; "received", "earned", "got" indicate income)
+- type: "income", "expense", or "transfer" (determine from context - words like "spent", "paid", "bought" indicate expense; "received", "earned", "got" indicate income; "transfer", "withdraw", "saque", "sacar", "mover", "enviar para", "transferir", "retirar" indicate transfer)
 - description: string (what the transaction is for, keep it concise, ${langInstruction})
-- categoryId: string (match to most appropriate category ID based on description, or empty string if uncertain)
+- categoryId: string (match to most appropriate category ID based on description, or empty string if uncertain. For transfers, pick the best matching transfer-type category: use "Withdrawal" category for withdrawals/cash keywords like "saque"/"sacar"/"withdraw"/"retirar", use "Transfer" category for generic transfers like "transferir"/"mover"/"enviar")
 - date: string in YYYY-MM-DD format (default to "${today}" if not specified)
-- accountId: string (match to account ID if user mentions an account name like "from account X", "na conta Y", "en la cuenta Z", or empty string if not specified)
+- accountId: string (match to account ID if user mentions an account name like "from account X", "na conta Y", "en la cuenta Z", or empty string if not specified. For transfers, this is the SOURCE account)
+- toAccountId: string (for transfers only: the DESTINATION account ID. If user says "saque"/"sacar"/"withdraw cash", set this to the cash account (marked Cash: true) with the same currency. Empty string if not a transfer)
 - isRecurring: boolean (true if user mentions recurring patterns like "every month", "monthly", "semanal", "cada mes", "todo mes", false otherwise)
 - recurrencePattern: "monthly", "weekly", "yearly", or null (extract from context - "every month"/"cada mes"/"mensal" = monthly, "every week"/"cada semana"/"semanal" = weekly, "every year"/"cada ano"/"anual" = yearly)
 - recurrenceDay: number or null (day of month for monthly, day of week 1-7 for weekly, day of year for yearly - extract if mentioned, otherwise null)
@@ -130,12 +132,15 @@ IMPORTANT INSTRUCTIONS:
 3. For relative dates like "yesterday", "last week", "next month", calculate based on the current date (${today}).
 4. For recurring transactions, look for keywords like: "every month", "monthly", "cada mes", "todo mes", "mensal" (monthly); "every week", "weekly", "cada semana", "semanal" (weekly); "every year", "yearly", "cada ano", "anual" (yearly).
 5. For account selection, match the account name mentioned by the user to the available accounts list.
+6. For "transfer" type: the user is moving money between accounts. "accountId" = source account (from), "toAccountId" = destination account (to). Keywords: "transferir"/"saque"/"sacar"/"withdraw"/"mover"/"enviar para"/"retirar". If user says "saque" or "sacar dinheiro" without specifying a destination, set toAccountId to the cash account (account marked with Cash: true) of the same currency as the source account.
 
 Examples:
-- "I spent 50 euros on groceries" (en) → {"amount": 50, "type": "expense", "description": "Groceries", "categoryId": "...", "date": "${today}", "accountId": "", "isRecurring": false, "recurrencePattern": null, "recurrenceDay": null, "recurrenceEndDate": null}
-- "Gastei 50 euros em supermercado na conta Sabadell" (pt) → {"amount": 50, "type": "expense", "description": "Supermercado", "categoryId": "...", "date": "${today}", "accountId": "sabadell-id", "isRecurring": false, "recurrencePattern": null, "recurrenceDay": null, "recurrenceEndDate": null}
-- "Paguei 100 euros de aluguel todo mes" (pt) → {"amount": 100, "type": "expense", "description": "Aluguel", "categoryId": "...", "date": "${today}", "accountId": "", "isRecurring": true, "recurrencePattern": "monthly", "recurrenceDay": null, "recurrenceEndDate": null}
-- "Gasté 50 euros en supermercado" (es) → {"amount": 50, "type": "expense", "description": "Supermercado", "categoryId": "...", "date": "${today}", "accountId": "", "isRecurring": false, "recurrencePattern": null, "recurrenceDay": null, "recurrenceEndDate": null}
+- "I spent 50 euros on groceries" (en) → {"amount": 50, "type": "expense", "description": "Groceries", "categoryId": "...", "date": "${today}", "accountId": "", "toAccountId": "", "isRecurring": false, "recurrencePattern": null, "recurrenceDay": null, "recurrenceEndDate": null}
+- "Gastei 50 euros em supermercado na conta Sabadell" (pt) → {"amount": 50, "type": "expense", "description": "Supermercado", "categoryId": "...", "date": "${today}", "accountId": "sabadell-id", "toAccountId": "", "isRecurring": false, "recurrencePattern": null, "recurrenceDay": null, "recurrenceEndDate": null}
+- "Paguei 100 euros de aluguel todo mes" (pt) → {"amount": 100, "type": "expense", "description": "Aluguel", "categoryId": "...", "date": "${today}", "accountId": "", "toAccountId": "", "isRecurring": true, "recurrencePattern": "monthly", "recurrenceDay": null, "recurrenceEndDate": null}
+- "Saquei 200 reais da Nubank" (pt) → {"amount": 200, "type": "transfer", "description": "Saque", "categoryId": "transfer-category-id", "date": "${today}", "accountId": "nubank-id", "toAccountId": "cash-brl-id", "isRecurring": false, "recurrencePattern": null, "recurrenceDay": null, "recurrenceEndDate": null}
+- "Transfer 100 from Sabadell to cash" (en) → {"amount": 100, "type": "transfer", "description": "Transfer", "categoryId": "transfer-category-id", "date": "${today}", "accountId": "sabadell-id", "toAccountId": "cash-eur-id", "isRecurring": false, "recurrencePattern": null, "recurrenceDay": null, "recurrenceEndDate": null}
+- "Gasté 50 euros en supermercado" (es) → {"amount": 50, "type": "expense", "description": "Supermercado", "categoryId": "...", "date": "${today}", "accountId": "", "toAccountId": "", "isRecurring": false, "recurrencePattern": null, "recurrenceDay": null, "recurrenceEndDate": null}
 
 Response must be valid JSON only, no markdown, no explanation.`;
 
@@ -192,21 +197,22 @@ Response must be valid JSON only, no markdown, no explanation.`;
         throw new Error('Invalid or missing amount');
       }
       
-      if (!parsed.type || !['income', 'expense'].includes(parsed.type)) {
+      if (!parsed.type || !['income', 'expense', 'transfer'].includes(parsed.type)) {
         throw new Error('Invalid or missing type');
       }
-      
+
       if (!parsed.description || typeof parsed.description !== 'string') {
         parsed.description = defaultDescription;
       }
 
       return {
         amount: parsed.amount,
-        type: parsed.type as 'income' | 'expense',
+        type: parsed.type as 'income' | 'expense' | 'transfer',
         description: parsed.description,
         categoryId: parsed.categoryId ?? '',
         date: parsed.date ?? today,
         accountId: parsed.accountId ?? '',
+        toAccountId: parsed.toAccountId ?? '',
         isRecurring: parsed.isRecurring ?? false,
         recurrencePattern: parsed.recurrencePattern ?? null,
         recurrenceDay: parsed.recurrenceDay ?? null,
@@ -226,7 +232,7 @@ Response must be valid JSON only, no markdown, no explanation.`;
     currentTransaction: Transaction,
     categories: Category[],
     language: string = 'en',
-    accounts: { id: string; name: string }[] = []
+    accounts: { id: string; name: string; isCash?: boolean }[] = []
   ): Promise<Partial<Transaction>> {
     const now = new Date();
     const today = now.toISOString().split('T')[0];
@@ -239,7 +245,7 @@ Response must be valid JSON only, no markdown, no explanation.`;
       .join('\n');
 
     const accountList = accounts
-      .map(a => `"${a.name}" (ID: ${a.id})`)
+      .map(a => `"${a.name}" (ID: ${a.id}${a.isCash ? ', Cash: true' : ''})`)
       .join('\n') || 'No accounts available';
 
     const languageInstructions: Record<string, string> = {
@@ -247,7 +253,7 @@ Response must be valid JSON only, no markdown, no explanation.`;
       pt: 'Return the description in Portuguese (Português)',
       es: 'Return the description in Spanish (Español)',
     };
-    
+
     const langInstruction = languageInstructions[language] || languageInstructions.en;
 
     const prompt = `You are helping update an existing transaction based on a voice command.
@@ -259,6 +265,7 @@ CURRENT TRANSACTION:
 - Category ID: ${currentTransaction.categoryId}
 - Date: ${currentTransaction.date}
 - Account ID: ${currentTransaction.accountId || 'Not set'}
+- To Account ID: ${currentTransaction.toAccountId || 'Not set'}
 - Is Recurring: ${currentTransaction.isRecurring || false}
 - Recurrence Pattern: ${currentTransaction.recurrencePattern || 'Not set'}
 
@@ -281,11 +288,12 @@ Return ONLY a JSON object with the fields that should be updated. Include only f
 
 Possible fields to update:
 - amount: number (if the user mentions a new amount)
-- type: "income" or "expense" (if the user wants to change the type)
+- type: "income", "expense", or "transfer" (if the user wants to change the type. "transfer"/"transferir"/"saque"/"sacar"/"mover" indicate transfer)
 - description: string (if the user wants to change the description, ${langInstruction})
 - categoryId: string (if the user mentions a different category, match to most appropriate category ID)
 - date: string in YYYY-MM-DD format (if the user mentions a different date - use current date ${today} as reference for relative dates like "yesterday", "next week", etc.)
-- accountId: string (if the user mentions a different account, match to account ID from available accounts)
+- accountId: string (if the user mentions a different source account, match to account ID from available accounts)
+- toAccountId: string (for transfers: the destination account ID. If changing to transfer type and user says "saque"/"cash", use the cash account)
 - isRecurring: boolean (if the user wants to set or unset recurring status)
 - recurrencePattern: "monthly", "weekly", "yearly", or null (if the user mentions recurring pattern changes)
 - recurrenceDay: number or null (if the user mentions a specific day for recurrence)
@@ -363,7 +371,7 @@ Response must be valid JSON only, no markdown, no explanation.`;
         updates.amount = parsed.amount;
       }
       
-      if (parsed.type !== undefined && ['income', 'expense'].includes(parsed.type)) {
+      if (parsed.type !== undefined && ['income', 'expense', 'transfer'].includes(parsed.type)) {
         updates.type = parsed.type;
       }
       

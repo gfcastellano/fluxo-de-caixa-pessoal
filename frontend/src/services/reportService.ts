@@ -11,14 +11,24 @@ export async function getMonthlySummary(
   const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
   const endDate = `${year}-${String(month).padStart(2, '0')}-31`;
 
+  // Fetch transactions for this account (outgoing)
   const transactions = await getTransactions(userId, { startDate, endDate, accountId });
 
+  // Fetch all user transactions to find incoming transfers to this account
+  const allTransactions = await getTransactions(userId, { startDate, endDate });
+  const incomingTransfers = allTransactions.filter(
+    (t) => t.type === 'transfer' && t.toAccountId === accountId
+  );
+
+  // Income includes: income transactions + incoming transfers
   const income = transactions
     .filter((t) => t.type === 'income')
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + t.amount, 0)
+    + incomingTransfers.reduce((sum, t) => sum + t.amount, 0);
 
+  // Expenses include: expenses + outgoing transfers (from this account)
   const expenses = transactions
-    .filter((t) => t.type === 'expense')
+    .filter((t) => t.type === 'expense' || t.type === 'transfer')
     .reduce((sum, t) => sum + t.amount, 0);
 
   return {
