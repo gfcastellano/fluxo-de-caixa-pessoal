@@ -274,17 +274,17 @@ export function Dashboard() {
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="font-medium text-ink text-sm sm:text-base truncate">
+                      <p className="font-medium text-ink text-sm sm:text-base leading-tight">
                         {transaction.description}
                       </p>
-                      <div className="flex items-center gap-1.5 sm:gap-2 text-xs mt-0.5 truncate">
-                        <span className="text-slate font-medium truncate">
+                      <div className="flex items-center gap-1.5 sm:gap-2 text-xs mt-1 flex-wrap">
+                        <span className="text-slate font-medium">
                           {transaction.category ? t(getTranslatedCategoryName(transaction.category.name)) : t('common.category')}
                         </span>
                         {transaction.account && (
                           <>
                             <span className="text-slate/40 flex-shrink-0">•</span>
-                            <span className="font-medium truncate" style={{ color: transaction.account.color }}>{transaction.account.name}</span>
+                            <span className="font-medium" style={{ color: transaction.account.color }}>{transaction.account.name}</span>
                           </>
                         )}
                       </div>

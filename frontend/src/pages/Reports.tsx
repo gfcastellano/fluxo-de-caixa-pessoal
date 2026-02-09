@@ -578,37 +578,122 @@ export function Reports() {
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-4">
-        <Card hoverable className="bg-white/40 backdrop-blur-xl border-white/60 min-h-[80px] lg:min-h-[120px]" style={{ borderLeftWidth: '4px', borderLeftColor: `rgba(34, 197, 94, ${Math.min((summary?.income || 0) / 20000 + 0.3, 1)})` }}>
-          <CardHeader className="flex flex-row items-center justify-between pb-1 lg:pb-2">
-            <CardTitle className="text-xs lg:text-sm font-medium text-slate truncate">
-              {t('common.income')}
-            </CardTitle>
-            <TrendingUp className="h-3 w-3 lg:h-4 lg:w-4 text-emerald flex-shrink-0" />
+      {/* Linha 1: Cards de Receita e Despesa com gráficos internos */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+        {/* Card de Receita com Composição */}
+        <Card className="bg-white/40 backdrop-blur-xl border-white/60 border-l-4 border-l-emerald">
+          <CardHeader className="pb-2 lg:pb-4">
+            <div className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-xs lg:text-sm font-medium text-slate">
+                  {t('common.income')}
+                </CardTitle>
+                <div className="text-lg lg:text-2xl font-bold text-emerald mt-1">
+                  {formatCurrency(summary?.income || 0, selectedCurrency || 'BRL')}
+                </div>
+              </div>
+              <TrendingUp className="h-5 w-5 lg:h-6 lg:w-6 text-emerald flex-shrink-0" />
+            </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="text-base lg:text-xl font-bold text-emerald truncate">
-              {formatCurrency(summary?.income || 0, selectedCurrency || 'BRL')}
+            <div className="border-t border-white/30 pt-4 mt-2">
+              <h4 className="text-xs lg:text-sm font-medium text-ink mb-3">{t('reports.incomeComposition')}</h4>
+              {incomeBreakdown.length === 0 ? (
+                <p className="text-slate text-center py-4 lg:py-6 text-xs lg:text-sm">{t('reports.noData')}</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={180}>
+                  <BarChart data={incomeBreakdown.slice(0, 5)} layout="vertical" margin={{ left: -20, right: 20, top: 5, bottom: 5 }} barSize={24}>
+                    <XAxis type="number" hide />
+                    <YAxis 
+                      type="category" 
+                      dataKey="categoryName" 
+                      width={90}
+                      tick={{ fontSize: 10 }}
+                      tickFormatter={(value) => {
+                        const translated = getTranslatedCategoryName(value);
+                        return translated.length > 14 ? translated.slice(0, 14) + '...' : translated;
+                      }}
+                      interval={0}
+                    />
+                    <Tooltip
+                      formatter={(value, name, props) => {
+                        const categoryName = props?.payload?.categoryName || name;
+                        const translatedName = getTranslatedCategoryName(categoryName);
+                        return [formatCurrency(Number(value), selectedCurrency || 'BRL'), translatedName];
+                      }}
+                      contentStyle={{ backgroundColor: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(8px)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.5)', fontSize: '12px' }}
+                    />
+                    <Bar dataKey="amount" radius={[0, 4, 4, 0]}>
+                      {incomeBreakdown.slice(0, 5).map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.categoryColor} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </CardContent>
         </Card>
 
-        <Card hoverable className="bg-white/40 backdrop-blur-xl border-white/60 min-h-[80px] lg:min-h-[120px]" style={{ borderLeftWidth: '4px', borderLeftColor: `rgba(255, 92, 138, ${Math.min((summary?.expenses || 0) / 15000 + 0.3, 1)})` }}>
-          <CardHeader className="flex flex-row items-center justify-between pb-1 lg:pb-2">
-            <CardTitle className="text-xs lg:text-sm font-medium text-slate truncate">
-              {t('common.expense')}
-            </CardTitle>
-            <TrendingDown className="h-3 w-3 lg:h-4 lg:w-4 text-rose flex-shrink-0" />
+        {/* Card de Despesas com Categorias */}
+        <Card className="bg-white/40 backdrop-blur-xl border-white/60 border-l-4 border-l-rose">
+          <CardHeader className="pb-2 lg:pb-4">
+            <div className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-xs lg:text-sm font-medium text-slate">
+                  {t('common.expense')}
+                </CardTitle>
+                <div className="text-lg lg:text-2xl font-bold text-rose mt-1">
+                  {formatCurrency(summary?.expenses || 0, selectedCurrency || 'BRL')}
+                </div>
+              </div>
+              <TrendingDown className="h-5 w-5 lg:h-6 lg:w-6 text-rose flex-shrink-0" />
+            </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="text-base lg:text-xl font-bold text-rose truncate">
-              {formatCurrency(summary?.expenses || 0, selectedCurrency || 'BRL')}
+            <div className="border-t border-white/30 pt-4 mt-2">
+              <h4 className="text-xs lg:text-sm font-medium text-ink mb-3">{t('reports.expensesByCategory')}</h4>
+              {expenseBreakdown.length === 0 ? (
+                <p className="text-slate text-center py-4 lg:py-6 text-xs lg:text-sm">{t('reports.noData')}</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={180}>
+                  <BarChart data={expenseBreakdown.slice(0, 5)} layout="vertical" margin={{ left: -20, right: 20, top: 5, bottom: 5 }} barSize={24}>
+                    <XAxis type="number" hide />
+                    <YAxis 
+                      type="category" 
+                      dataKey="categoryName" 
+                      width={90}
+                      tick={{ fontSize: 10 }}
+                      tickFormatter={(value) => {
+                        const translated = getTranslatedCategoryName(value);
+                        return translated.length > 14 ? translated.slice(0, 14) + '...' : translated;
+                      }}
+                      interval={0}
+                    />
+                    <Tooltip
+                      formatter={(value, name, props) => {
+                        const categoryName = props?.payload?.categoryName || name;
+                        const translatedName = getTranslatedCategoryName(categoryName);
+                        return [formatCurrency(Number(value), selectedCurrency || 'BRL'), translatedName];
+                      }}
+                      contentStyle={{ backgroundColor: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(8px)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.5)', fontSize: '12px' }}
+                    />
+                    <Bar dataKey="amount" radius={[0, 4, 4, 0]}>
+                      {expenseBreakdown.slice(0, 5).map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.categoryColor} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </CardContent>
         </Card>
+      </div>
 
-        <Card hoverable className="bg-white/40 backdrop-blur-xl border-white/60 min-h-[80px] lg:min-h-[120px]" style={{ borderLeftWidth: '4px', borderLeftColor: monthlyBalance >= 0 ? `rgba(34, 197, 94, ${Math.min(Math.abs(monthlyBalance) / 10000 + 0.3, 1)})` : `rgba(255, 92, 138, ${Math.min(Math.abs(monthlyBalance) / 10000 + 0.3, 1)})` }}>
+      {/* Linha 2: Cards de Saldo */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 lg:gap-4">
+        <Card hoverable className="bg-white/40 backdrop-blur-xl border-white/60" style={{ borderLeftWidth: '4px', borderLeftColor: monthlyBalance >= 0 ? `rgba(34, 197, 94, ${Math.min(Math.abs(monthlyBalance) / 10000 + 0.3, 1)})` : `rgba(255, 92, 138, ${Math.min(Math.abs(monthlyBalance) / 10000 + 0.3, 1)})` }}>
           <CardHeader className="flex flex-row items-center justify-between pb-1 lg:pb-2">
             <CardTitle className="text-xs lg:text-sm font-medium text-slate truncate">
               {t('reports.monthlyBalance')}
@@ -625,7 +710,7 @@ export function Reports() {
           </CardContent>
         </Card>
 
-        <Card hoverable className="bg-white/40 backdrop-blur-xl border-white/60 min-h-[80px] lg:min-h-[120px]" style={{ borderLeftWidth: '4px', borderLeftColor: `rgba(141, 153, 174, ${Math.min(Math.abs(totalAccountBalance) / 20000 + 0.3, 1)})` }}>
+        <Card hoverable className="bg-white/40 backdrop-blur-xl border-white/60" style={{ borderLeftWidth: '4px', borderLeftColor: `rgba(141, 153, 174, ${Math.min(Math.abs(totalAccountBalance) / 20000 + 0.3, 1)})` }}>
           <CardHeader className="flex flex-row items-center justify-between pb-1 lg:pb-2">
             <CardTitle className="text-xs lg:text-sm font-medium text-slate truncate">
               {t('reports.totalBalance')}
@@ -639,7 +724,7 @@ export function Reports() {
           </CardContent>
         </Card>
 
-        <Card hoverable className="bg-white/40 backdrop-blur-xl border-white/60 min-h-[80px] lg:min-h-[120px] col-span-2 lg:col-span-1" style={{ borderLeftWidth: '4px', borderLeftColor: `rgba(255, 190, 11, ${Math.min(Math.abs(calculatedBalance) / 20000 + 0.3, 1)})` }}>
+        <Card hoverable className="bg-white/40 backdrop-blur-xl border-white/60" style={{ borderLeftWidth: '4px', borderLeftColor: `rgba(255, 190, 11, ${Math.min(Math.abs(calculatedBalance) / 20000 + 0.3, 1)})` }}>
           <CardHeader className="flex flex-row items-center justify-between pb-1 lg:pb-2">
             <CardTitle className="text-xs lg:text-sm font-medium text-slate truncate">
               {t('reports.calculatedBalance')}
@@ -650,93 +735,6 @@ export function Reports() {
             <div className="text-base lg:text-xl font-bold text-amber truncate">
               {formatCurrency(calculatedBalance, selectedCurrency || 'BRL')}
             </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Charts - Empilhados no mobile, lado a lado no desktop */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
-        {/* Income Composition - Primeiro */}
-        <Card className="bg-white/40 backdrop-blur-xl border-white/60 border-l-4 border-l-emerald">
-          <CardHeader className="pb-2 lg:pb-4">
-            <CardTitle className="text-sm lg:text-base text-ink">{t('reports.incomeComposition')}</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            {incomeBreakdown.length === 0 ? (
-              <p className="text-slate text-center py-4 lg:py-8 text-sm lg:text-base">{t('reports.noData')}</p>
-            ) : (
-              <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={incomeBreakdown.slice(0, 5)} layout="vertical" margin={{ left: -20, right: 20, top: 10, bottom: 10 }} barSize={32}>
-                  <XAxis type="number" hide />
-                  <YAxis 
-                    type="category" 
-                    dataKey="categoryName" 
-                    width={100}
-                    tick={{ fontSize: 11 }}
-                    tickFormatter={(value) => {
-                      const translated = getTranslatedCategoryName(value);
-                      return translated.length > 16 ? translated.slice(0, 16) + '...' : translated;
-                    }}
-                    interval={0}
-                  />
-                  <Tooltip
-                    formatter={(value, name, props) => {
-                      const categoryName = props?.payload?.categoryName || name;
-                      const translatedName = getTranslatedCategoryName(categoryName);
-                      return [formatCurrency(Number(value), selectedCurrency || 'BRL'), translatedName];
-                    }}
-                    contentStyle={{ backgroundColor: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(8px)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.5)', fontSize: '12px' }}
-                  />
-                  <Bar dataKey="amount" radius={[0, 4, 4, 0]}>
-                    {incomeBreakdown.slice(0, 5).map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.categoryColor} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Expense Breakdown - Segundo com borda vermelha */}
-        <Card className="bg-white/40 backdrop-blur-xl border-white/60 border-l-4 border-l-rose">
-          <CardHeader className="pb-2 lg:pb-4">
-            <CardTitle className="text-sm lg:text-base text-ink">{t('reports.expensesByCategory')}</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            {expenseBreakdown.length === 0 ? (
-              <p className="text-slate text-center py-4 lg:py-8 text-sm lg:text-base">{t('reports.noData')}</p>
-            ) : (
-              <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={expenseBreakdown.slice(0, 5)} layout="vertical" margin={{ left: -20, right: 20, top: 10, bottom: 10 }} barSize={32}>
-                  <XAxis type="number" hide />
-                  <YAxis 
-                    type="category" 
-                    dataKey="categoryName" 
-                    width={100}
-                    tick={{ fontSize: 11 }}
-                    tickFormatter={(value) => {
-                      const translated = getTranslatedCategoryName(value);
-                      return translated.length > 16 ? translated.slice(0, 16) + '...' : translated;
-                    }}
-                    interval={0}
-                  />
-                  <Tooltip
-                    formatter={(value, name, props) => {
-                      const categoryName = props?.payload?.categoryName || name;
-                      const translatedName = getTranslatedCategoryName(categoryName);
-                      return [formatCurrency(Number(value), selectedCurrency || 'BRL'), translatedName];
-                    }}
-                    contentStyle={{ backgroundColor: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(8px)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.5)', fontSize: '12px' }}
-                  />
-                  <Bar dataKey="amount" radius={[0, 4, 4, 0]}>
-                    {expenseBreakdown.slice(0, 5).map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.categoryColor} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
           </CardContent>
         </Card>
       </div>
