@@ -14,7 +14,7 @@ import {
 } from '../services/accountService';
 import { formatDate } from '../utils/format';
 import type { Account } from '../types';
-import { Edit2, Trash2, Star, Wallet, Banknote, DollarSign, Euro, PoundSterling, JapaneseYen, SwissFranc } from 'lucide-react';
+import { Edit2, Trash2, Star, Wallet, Banknote, DollarSign, Euro, PoundSterling, JapaneseYen, SwissFranc, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '../utils/cn';
 
 const CURRENCY_ICONS: Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
@@ -43,6 +43,9 @@ export function Accounts() {
 
   /* New state for highlighting */
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
+
+  // Collapsible state for cash accounts on mobile
+  const [isCashExpanded, setIsCashExpanded] = useState(false);
 
   // Use the new consolidated page modal hook
   const modal = usePageModal<Account>();
@@ -177,9 +180,78 @@ export function Accounts() {
           </CardContent>
         </Card>
       ) : (
-        <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-4 sm:gap-5">
-          {/* Left: Digital/Bank accounts (2/3) */}
-          <div className="lg:w-2/3 min-h-0 overflow-y-auto sm:overflow-visible">
+        <div className="flex-1 min-h-0 flex flex-col gap-4 sm:gap-5 px-1 py-1 -mx-1 -my-1">
+          {/* Cash accounts - collapsible on mobile, always visible on lg+ */}
+          <div className="w-full">
+            <button
+              onClick={() => setIsCashExpanded(!isCashExpanded)}
+              className="lg:hidden flex items-center justify-between w-full gap-2 mb-2.5 p-2 rounded-lg hover:bg-neutral-100 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Banknote className="h-4 w-4 text-green-600" />
+                <h2 className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">{t('accounts.cashBadge')}</h2>
+              </div>
+              {isCashExpanded ? (
+                <ChevronUp className="h-4 w-4 text-neutral-400" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-neutral-400" />
+              )}
+            </button>
+            <div className="hidden lg:flex items-center gap-2 mb-2.5">
+              <Banknote className="h-4 w-4 text-green-600" />
+              <h2 className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">{t('accounts.cashBadge')}</h2>
+            </div>
+            <div className={cn(
+              "grid grid-cols-1 sm:grid-cols-3 gap-2 lg:grid",
+              isCashExpanded ? "grid" : "hidden lg:grid"
+            )}>
+              {accounts.filter(a => a.isCash).map((account) => (
+                <Card
+                  key={account.id}
+                  className={cn(
+                    "transition-all duration-1000 bg-gradient-to-r from-green-50/80 to-emerald-50/60 backdrop-blur-xl border-green-200/60",
+                    highlightedId === account.id ? "animate-highlight scale-[1.02]" : ""
+                  )}
+                >
+                  <div className="p-3 sm:p-3.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                          style={{ backgroundColor: `${account.color || '#16a34a'}18` }}
+                        >
+                          <CashCurrencyIcon
+                            currency={account.currency}
+                            className="h-4 w-4"
+                            style={{ color: account.color || '#16a34a' }}
+                          />
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-neutral-600">{account.currency}</p>
+                          <p className={`text-sm font-bold ${(accountBalances[account.id] ?? account.balance) >= 0 ? 'text-neutral-900' : 'text-red-600'}`}>
+                            {formatCurrency(accountBalances[account.id] ?? account.balance, account.currency)}
+                          </p>
+                          <p className="text-[10px] text-neutral-400 mt-0.5">
+                            {t('accounts.form.initialBalance')}: {formatCurrency(account.initialBalance ?? 0, account.currency)}
+                            {account.balanceDate ? ` · ${formatDate(account.balanceDate)}` : ''}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => modal.openEdit(account)}
+                        className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-white/60 rounded-lg transition-colors"
+                      >
+                        <Edit2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+
+          {/* Digital/Bank accounts */}
+          <div className="w-full min-h-0 overflow-y-auto sm:overflow-visible px-1 py-1 -mx-1 -my-1">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3 pb-4 sm:pb-0">
               {accounts.filter(a => !a.isCash).map((account) => (
                 <Card
@@ -264,57 +336,6 @@ export function Accounts() {
             </div>
           </div>
 
-          {/* Right: Cash accounts (1/3) */}
-          <div className="lg:w-1/3 flex-shrink-0">
-            <div className="flex items-center gap-2 mb-2.5">
-              <Banknote className="h-4 w-4 text-green-600" />
-              <h2 className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">{t('accounts.cashBadge')}</h2>
-            </div>
-            <div className="flex flex-col gap-2">
-              {accounts.filter(a => a.isCash).map((account) => (
-                <Card
-                  key={account.id}
-                  className={cn(
-                    "transition-all duration-1000 bg-gradient-to-r from-green-50/80 to-emerald-50/60 backdrop-blur-xl border-green-200/60",
-                    highlightedId === account.id ? "animate-highlight scale-[1.02]" : ""
-                  )}
-                >
-                  <div className="p-3 sm:p-3.5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2.5">
-                        <div
-                          className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-                          style={{ backgroundColor: `${account.color || '#16a34a'}18` }}
-                        >
-                          <CashCurrencyIcon
-                            currency={account.currency}
-                            className="h-4 w-4"
-                            style={{ color: account.color || '#16a34a' }}
-                          />
-                        </div>
-                        <div>
-                          <p className="text-xs font-medium text-neutral-600">{account.currency}</p>
-                          <p className={`text-sm font-bold ${(accountBalances[account.id] ?? account.balance) >= 0 ? 'text-neutral-900' : 'text-red-600'}`}>
-                            {formatCurrency(accountBalances[account.id] ?? account.balance, account.currency)}
-                          </p>
-                          <p className="text-[10px] text-neutral-400 mt-0.5">
-                            {t('accounts.form.initialBalance')}: {formatCurrency(account.initialBalance ?? 0, account.currency)}
-                            {account.balanceDate ? ` · ${formatDate(account.balanceDate)}` : ''}
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => modal.openEdit(account)}
-                        className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-white/60 rounded-lg transition-colors"
-                      >
-                        <Edit2 className="h-3 w-3" />
-                      </button>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </div>
         </div>
       )}
     </div>
