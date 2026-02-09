@@ -107,10 +107,22 @@ export function Categories() {
 
   const incomeCategories = categories
     .filter((c) => c.type === 'income')
-    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+    .sort((a, b) =>
+      t(getTranslatedCategoryName(a.name)).localeCompare(
+        t(getTranslatedCategoryName(b.name)),
+        undefined,
+        { sensitivity: 'base' }
+      )
+    );
   const expenseCategories = categories
     .filter((c) => c.type === 'expense')
-    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+    .sort((a, b) =>
+      t(getTranslatedCategoryName(a.name)).localeCompare(
+        t(getTranslatedCategoryName(b.name)),
+        undefined,
+        { sensitivity: 'base' }
+      )
+    );
 
   if (loading) {
     return (
