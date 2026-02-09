@@ -283,6 +283,11 @@ export const esTranslations = {
     nextMonth: 'Mes Siguiente',
     currencyFilter: 'Moneda',
     allCurrencies: 'Todas las Monedas',
+    zeroLine: 'Línea Cero',
+    negativeZone: 'Zona Negativa',
+    warningZone: 'Zona de Advertencia',
+    balanceApproachingZero: 'Saldo acercándose a cero',
+    balanceIsNegative: 'Saldo negativo',
   },
 
   // Default Categories

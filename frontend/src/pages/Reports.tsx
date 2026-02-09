@@ -28,6 +28,7 @@ import {
   CartesianGrid,
   LineChart,
   Line,
+  ReferenceLine,
 } from 'recharts';
 import { Download, TrendingUp, TrendingDown, Calendar, PiggyBank, Calculator, ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -75,6 +76,63 @@ export function Reports() {
   const getTranslatedCategoryName = (categoryName: string): string => {
     const translationKey = getCategoryTranslationKey(categoryName);
     return translationKey ? t(translationKey) : categoryName;
+  };
+
+  // Chart gradient configuration
+  const CHART_GRADIENT_COLORS = {
+    positive: {
+      start: '#10B981',
+      end: '#059669',
+    },
+    warning: {
+      start: '#F59E0B',
+      end: '#D97706',
+    },
+    negative: {
+      start: '#DC2626',
+      end: '#991B1B',
+    },
+    zeroLine: '#94A3B8',
+  };
+
+  const WARNING_THRESHOLD_PERCENTAGE = 0.1; // 10% of max balance
+
+  // Calculate warning threshold dynamically
+  const warningThreshold = useMemo(() => {
+    if (trendData.length === 0) return 0;
+    const maxBalance = Math.max(...trendData.map(d => d.projectedBalance), 0);
+    return maxBalance * WARNING_THRESHOLD_PERCENTAGE;
+  }, [trendData]);
+
+  // Custom dot component with conditional coloring
+  const CustomDot = (props: any) => {
+    const { cx, cy, payload } = props;
+    const value = payload.projectedBalance;
+    
+    // Default color (green for positive values above warning threshold)
+    let fillColor = '#10B981';
+    let strokeColor = '#059669';
+    
+    if (value < 0) {
+      // Red for negative values
+      fillColor = '#EF4444';
+      strokeColor = '#DC2626';
+    } else if (value < warningThreshold) {
+      // Strong orange for warning (approaching zero)
+      fillColor = '#F97316';
+      strokeColor = '#EA580C';
+    }
+    
+    return (
+      <circle
+        cx={cx}
+        cy={cy}
+        r={4}
+        fill={fillColor}
+        stroke={strokeColor}
+        strokeWidth={2}
+      />
+    );
   };
 
   useEffect(() => {
@@ -748,8 +806,23 @@ export function Reports() {
           <ResponsiveContainer width="100%" height={250}>
             <LineChart data={trendData} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--color-slate-light, #E2E8F0)" />
-              <XAxis 
-                dataKey="month" 
+              
+              {/* Zero reference line */}
+              <ReferenceLine
+                y={0}
+                stroke={CHART_GRADIENT_COLORS.zeroLine}
+                strokeDasharray="3 3"
+                strokeWidth={1}
+                label={{
+                  value: t('reports.zeroLine'),
+                  position: 'insideTopRight',
+                  fill: '#64748B',
+                  fontSize: 10
+                }}
+              />
+              
+              <XAxis
+                dataKey="month"
                 stroke="var(--color-slate, #64748B)"
                 tick={{ fontSize: 10 }}
                 tickFormatter={(value) => {
@@ -770,14 +843,41 @@ export function Reports() {
                 }
               />
               <Tooltip
-                formatter={(value) => formatCurrency(Number(value), selectedCurrency || 'BRL')}
-                contentStyle={{ backgroundColor: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(8px)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.5)', fontSize: '12px' }}
-                labelStyle={{ fontSize: '12px' }}
+                formatter={(value, name) => {
+                  const numValue = Number(value);
+                  const formattedValue = formatCurrency(numValue, selectedCurrency || 'BRL');
+                  
+                  if (name === t('reports.projectedBalance')) {
+                    const isNegative = numValue < 0;
+                    const isWarning = numValue > 0 && numValue < warningThreshold;
+                    
+                    const status = isNegative
+                      ? ` (${t('reports.balanceIsNegative')})`
+                      : isWarning
+                      ? ` (${t('reports.balanceApproachingZero')})`
+                      : '';
+                    
+                    return [formattedValue + status, name];
+                  }
+                  
+                  return [formattedValue, name];
+                }}
+                contentStyle={{
+                  backgroundColor: 'rgba(255,255,255,0.95)',
+                  backdropFilter: 'blur(8px)',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(255,255,255,0.5)',
+                  fontSize: '12px',
+                  boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                }}
+                labelStyle={{ fontSize: '12px', fontWeight: 600 }}
               />
-              <Legend 
+              <Legend
                 wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }}
                 iconSize={8}
               />
+              
+              {/* Income line */}
               <Line
                 type="monotone"
                 dataKey="income"
@@ -787,6 +887,8 @@ export function Reports() {
                 dot={{ r: 3 }}
                 activeDot={{ r: 5 }}
               />
+              
+              {/* Expenses line */}
               <Line
                 type="monotone"
                 dataKey="expenses"
@@ -796,14 +898,16 @@ export function Reports() {
                 dot={{ r: 3 }}
                 activeDot={{ r: 5 }}
               />
+              
+              {/* Projected balance line with custom dots */}
               <Line
                 type="monotone"
                 dataKey="projectedBalance"
                 stroke="#F59E0B"
                 strokeWidth={2}
                 name={t('reports.projectedBalance')}
-                dot={{ r: 3 }}
-                activeDot={{ r: 5 }}
+                dot={<CustomDot />}
+                activeDot={{ r: 6 }}
               />
             </LineChart>
           </ResponsiveContainer>
