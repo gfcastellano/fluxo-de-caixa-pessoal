@@ -283,6 +283,11 @@ export const enTranslations = {
     nextMonth: 'Next Month',
     currencyFilter: 'Currency',
     allCurrencies: 'All Currencies',
+    zeroLine: 'Zero Line',
+    negativeZone: 'Negative Zone',
+    warningZone: 'Warning Zone',
+    balanceApproachingZero: 'Balance approaching zero',
+    balanceIsNegative: 'Negative balance',
   },
 
   // Default Categories
