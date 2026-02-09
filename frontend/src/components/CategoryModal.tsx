@@ -36,7 +36,7 @@ export function CategoryModal({
 
   const [formData, setFormData] = useState({
     name: '',
-    type: 'expense' as 'income' | 'expense',
+    type: 'expense' as 'income' | 'expense' | 'transfer',
     color: CATEGORY_COLORS[0],
   });
 

@@ -319,6 +319,7 @@ export function VoiceProvider({ children, categories = [] }: VoiceProviderProps)
                             balanceDate: today,
                             currency: result.data.currency || 'BRL',
                             isDefault: false,
+                            isCash: false,
                         };
                         const newAccount = await createAccount(accountData);
                         setCreatedItem(newAccount);
