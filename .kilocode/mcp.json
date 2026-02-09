@@ -7,7 +7,6 @@
                 "firebase-tools@latest",
                 "mcp"
             ],
-            "env": {},
             "timeout": 120,
             "disabled": false,
             "alwaysAllow": [
@@ -21,14 +20,10 @@
             ]
         },
         "github": {
-            "command": "docker",
+            "command": "npx",
             "args": [
-                "run",
-                "-i",
-                "--rm",
-                "-e",
-                "GITHUB_PERSONAL_ACCESS_TOKEN",
-                "ghcr.io/github/github-mcp-server"
+                "-y",
+                "@modelcontextprotocol/server-github"
             ],
             "env": {
                 "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
@@ -47,12 +42,11 @@
             ]
         },
         "time": {
-            "command": "python",
+            "command": "npx",
             "args": [
-                "-m",
-                "mcp_server_time"
+                "-y",
+                "@modelcontextprotocol/server-time"
             ],
-            "env": {},
             "timeout": 30,
             "disabled": false,
             "alwaysAllow": [
