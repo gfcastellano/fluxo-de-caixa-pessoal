@@ -1,4 +1,4 @@
-import type { MonthlySummary, CategoryBreakdown } from '../types';
+import type { MonthlySummary, CategoryBreakdown, Transaction } from '../types';
 import { getTransactions } from './transactionService';
 import { getCategories } from './categoryService';
 
@@ -50,28 +50,57 @@ export async function getCategoryBreakdown(
   const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
   const endDate = `${year}-${String(month).padStart(2, '0')}-31`;
 
-  const [transactions, categories] = await Promise.all([
-    getTransactions(userId, { startDate, endDate, type, accountId }),
+  // For expense type, include both expenses and transfers (outgoing)
+  // For income type, include income and also fetch incoming transfers
+  const transactionTypes = type === 'expense' 
+    ? ['expense', 'transfer'] 
+    : ['income'];
+
+  const [transactions, categories, allUserTransactions] = await Promise.all([
+    getTransactions(userId, { startDate, endDate, accountId }),
     getCategories(userId),
+    // Fetch all transactions to find incoming transfers when needed
+    type === 'income' && accountId 
+      ? getTransactions(userId, { startDate, endDate })
+      : Promise.resolve([]),
   ]);
+
+  // Filter transactions by type
+  const filteredTransactions = transactions.filter(t => transactionTypes.includes(t.type));
+
+  // Find incoming transfers to this account
+  const incomingTransfers = type === 'income' && accountId
+    ? (allUserTransactions as Transaction[]).filter(
+        t => t.type === 'transfer' && t.toAccountId === accountId
+      )
+    : [];
 
   const categoryMap = new Map(categories.map((c) => [c.id, c]));
   const categoryTotals = new Map<string, number>();
 
-  transactions.forEach((t) => {
+  // Add regular transactions
+  filteredTransactions.forEach((t) => {
     const current = categoryTotals.get(t.categoryId) || 0;
     categoryTotals.set(t.categoryId, current + t.amount);
   });
+
+  // Add incoming transfers to a special category
+  if (incomingTransfers.length > 0) {
+    const transferTotal = incomingTransfers.reduce((sum, t) => sum + t.amount, 0);
+    const transferCategoryId = 'incoming-transfer';
+    categoryTotals.set(transferCategoryId, transferTotal);
+  }
 
   const total = Array.from(categoryTotals.values()).reduce((sum, amount) => sum + amount, 0);
 
   const breakdown: CategoryBreakdown[] = Array.from(categoryTotals.entries()).map(
     ([categoryId, amount]) => {
       const category = categoryMap.get(categoryId);
+      const isTransferCategory = categoryId === 'incoming-transfer';
       return {
         categoryId,
-        categoryName: category?.name || 'Unknown',
-        categoryColor: category?.color || '#999999',
+        categoryName: isTransferCategory ? 'Transferências Recebidas' : (category?.name || 'Unknown'),
+        categoryColor: isTransferCategory ? '#10B981' : (category?.color || '#999999'),
         amount,
         percentage: total > 0 ? (amount / total) * 100 : 0,
       };
