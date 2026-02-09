@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Plus, Mic, Tag, Landmark, PiggyBank } from 'lucide-react';
+import { VoiceConsentModal } from './VoiceConsentModal';
 import { useVoice } from '../context/VoiceContext';
 import { cn } from '../utils/cn';
 
@@ -13,6 +14,11 @@ export function VoiceHeroButton() {
         currentPageType,
         isEditing,
         requestOpenModal,
+        hasConsent,
+        showConsentModal,
+        requestConsent,
+        acceptConsent,
+        declineConsent,
     } = useVoice();
 
     // Determine the icon based on page type
@@ -68,6 +74,11 @@ export function VoiceHeroButton() {
     };
 
     const handleClick = () => {
+        // Check consent before requesting modal
+        if (!hasConsent) {
+            requestConsent();
+            return;
+        }
         // Request the page to open its form modal
         requestOpenModal();
     };
@@ -91,6 +102,13 @@ export function VoiceHeroButton() {
             <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] font-medium text-slate">
                 {getContextLabel()}
             </div>
+
+            {/* Voice Consent Modal */}
+            <VoiceConsentModal
+                isOpen={showConsentModal}
+                onAccept={acceptConsent}
+                onDecline={declineConsent}
+            />
         </div>
     );
 }

@@ -3,11 +3,13 @@ import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from './AuthContext';
 import { useVoiceRecorder } from '../hooks/useVoiceRecorder';
+import { hasVoiceConsent, saveVoiceConsentLocal } from '../components/VoiceConsentModal';
 import {
     sendVoiceTransaction,
     sendVoiceTransactionUpdate,
     sendVoiceCategoryUpdate,
     sendVoiceAccountUpdate,
+    getVoiceConsent,
 } from '../services/voiceService';
 import { createTransaction, updateTransaction } from '../services/transactionService';
 import { createCategory, updateCategory } from '../services/categoryService';
@@ -55,6 +57,13 @@ interface VoiceContextType {
     shouldAutoRecord: boolean;
     requestOpenModal: () => void;
     clearModalRequest: () => void;
+
+    // Voice consent
+    hasConsent: boolean;
+    showConsentModal: boolean;
+    requestConsent: () => void;
+    acceptConsent: () => void;
+    declineConsent: () => void;
 }
 
 const VoiceContext = createContext<VoiceContextType | undefined>(undefined);
@@ -86,6 +95,69 @@ export function VoiceProvider({ children, categories = [] }: VoiceProviderProps)
     const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
     const [shouldOpenModal, setShouldOpenModal] = useState(false);
     const [shouldAutoRecord, setShouldAutoRecord] = useState(false);
+
+    // Voice consent state
+    const [showConsentModal, setShowConsentModal] = useState(false);
+    const [hasConsent, setHasConsent] = useState(() => hasVoiceConsent());
+    const [isLoadingConsent, setIsLoadingConsent] = useState(true);
+
+    // Load voice consent from Firestore when user logs in
+    useEffect(() => {
+        const loadVoiceConsent = async () => {
+            if (!user) {
+                setHasConsent(false);
+                setIsLoadingConsent(false);
+                return;
+            }
+
+            setIsLoadingConsent(true);
+            try {
+                // First check localStorage for immediate response
+                const localConsent = hasVoiceConsent();
+
+                // Then fetch from server
+                const result = await getVoiceConsent();
+
+                if (result.success && result.data) {
+                    const serverConsent = result.data.voiceConsent === true;
+                    setHasConsent(serverConsent);
+
+                    // Sync localStorage with server if they differ
+                    if (serverConsent !== localConsent) {
+                        saveVoiceConsentLocal(serverConsent);
+                    }
+                } else {
+                    // If server request fails, fall back to localStorage
+                    setHasConsent(localConsent);
+                }
+            } catch (error) {
+                console.error('Error loading voice consent:', error);
+                // Fall back to localStorage on error
+                setHasConsent(hasVoiceConsent());
+            } finally {
+                setIsLoadingConsent(false);
+            }
+        };
+
+        loadVoiceConsent();
+    }, [user]);
+
+    // Request consent modal
+    const requestConsent = useCallback(() => {
+        setShowConsentModal(true);
+    }, []);
+
+    // Accept consent
+    const acceptConsent = useCallback(() => {
+        setHasConsent(true);
+        setShowConsentModal(false);
+    }, []);
+
+    // Decline consent
+    const declineConsent = useCallback(() => {
+        setHasConsent(false);
+        setShowConsentModal(false);
+    }, []);
 
     // Determine current page type from route
     const currentPageType = useMemo((): VoicePageType => {
@@ -294,6 +366,11 @@ export function VoiceProvider({ children, categories = [] }: VoiceProviderProps)
         shouldAutoRecord,
         requestOpenModal,
         clearModalRequest,
+        hasConsent,
+        showConsentModal,
+        requestConsent,
+        acceptConsent,
+        declineConsent,
     };
 
     return (

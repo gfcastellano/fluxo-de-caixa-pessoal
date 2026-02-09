@@ -248,7 +248,7 @@ export class FirebaseService {
 
   private buildFilter(filter: { field: string; op: string; value: unknown }): Record<string, unknown> {
     const firestoreValue = this.convertToFirestore({ v: filter.value }).v;
-    
+
     // Map JavaScript-style operators to Firestore REST API operators
     const opMap: Record<string, string> = {
       '==': 'EQUAL',
@@ -263,15 +263,104 @@ export class FirebaseService {
       'array-contains-any': 'ARRAY_CONTAINS_ANY',
       'not-in': 'NOT_IN',
     };
-    
+
     const firestoreOp = opMap[filter.op] || filter.op;
-    
+
     return {
       fieldFilter: {
         field: { fieldPath: filter.field },
         op: firestoreOp,
         value: firestoreValue,
       },
+    };
+  }
+
+  /**
+   * Get or create user settings document
+   * Uses userId as the document ID for easy lookup
+   */
+  async getUserSettings(userId: string): Promise<Record<string, unknown> | null> {
+    try {
+      const settings = await this.getDocument('userSettings', userId);
+      return settings;
+    } catch (error) {
+      console.error('Error getting user settings:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Save or update user settings
+   * Uses userId as the document ID for easy lookup
+   */
+  async saveUserSettings(
+    userId: string,
+    settings: Record<string, unknown>
+  ): Promise<void> {
+    const existingSettings = await this.getUserSettings(userId);
+
+    const data = {
+      ...settings,
+      userId,
+      updatedAt: new Date(),
+    };
+
+    if (existingSettings) {
+      // Update existing document
+      await this.updateDocument('userSettings', userId, data);
+    } else {
+      // Create new document with userId as the document ID
+      const url = `${this.getBaseUrl()}/userSettings?key=${this.apiKey}&documentId=${userId}`;
+      const firestoreData = this.convertToFirestore(data);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields: firestoreData }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to create user settings: ${response.statusText}`);
+      }
+    }
+  }
+
+  /**
+   * Save voice consent for a user
+   */
+  async saveVoiceConsent(
+    userId: string,
+    consent: {
+      voiceConsent: boolean;
+      voiceConsentDate: Date;
+      voiceConsentVersion: string;
+    }
+  ): Promise<void> {
+    await this.saveUserSettings(userId, {
+      voiceConsent: consent.voiceConsent,
+      voiceConsentDate: consent.voiceConsentDate,
+      voiceConsentVersion: consent.voiceConsentVersion,
+    });
+  }
+
+  /**
+   * Get voice consent for a user
+   */
+  async getVoiceConsent(userId: string): Promise<{
+    voiceConsent: boolean;
+    voiceConsentDate: string | null;
+    voiceConsentVersion: string | null;
+  } | null> {
+    const settings = await this.getUserSettings(userId);
+
+    if (!settings) {
+      return null;
+    }
+
+    return {
+      voiceConsent: settings.voiceConsent === true,
+      voiceConsentDate: (settings.voiceConsentDate as string) || null,
+      voiceConsentVersion: (settings.voiceConsentVersion as string) || null,
     };
   }
 }

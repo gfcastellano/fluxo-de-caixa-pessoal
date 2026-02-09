@@ -345,3 +345,109 @@ export async function sendVoiceCategoryUpdate(
     };
   }
 }
+
+/**
+ * Voice consent response interface
+ */
+export interface VoiceConsentResponse {
+  success: boolean;
+  data?: {
+    voiceConsent: boolean;
+    voiceConsentDate: string | null;
+    voiceConsentVersion: string | null;
+  };
+  error?: string;
+}
+
+/**
+ * Get voice consent status for the current user
+ */
+export async function getVoiceConsent(): Promise<VoiceConsentResponse> {
+  const user = auth.currentUser;
+
+  if (!user) {
+    return {
+      success: false,
+      error: 'User not authenticated',
+    };
+  }
+
+  try {
+    const token = await user.getIdToken(true);
+
+    const response = await fetch(`${API_BASE_URL}/api/voice/consent`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: result.error || `HTTP error! status: ${response.status}`,
+      };
+    }
+
+    return result as VoiceConsentResponse;
+  } catch (error) {
+    console.error('Get voice consent error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get voice consent',
+    };
+  }
+}
+
+/**
+ * Save voice consent for the current user
+ */
+export async function saveVoiceConsent(
+  accepted: boolean,
+  version = '1.0'
+): Promise<{ success: boolean; error?: string }> {
+  const user = auth.currentUser;
+
+  if (!user) {
+    return {
+      success: false,
+      error: 'User not authenticated',
+    };
+  }
+
+  try {
+    const token = await user.getIdToken(true);
+
+    const response = await fetch(`${API_BASE_URL}/api/voice/consent`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        voiceConsent: accepted,
+        voiceConsentVersion: version,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: result.error || `HTTP error! status: ${response.status}`,
+      };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Save voice consent error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to save voice consent',
+    };
+  }
+}

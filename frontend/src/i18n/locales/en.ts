@@ -7,7 +7,9 @@ export const enTranslations = {
     budgets: 'Budgets',
     reports: 'Reports',
     accounts: 'Accounts',
+    settings: 'Settings',
     logout: 'Logout',
+    user: 'User',
   },
 
   // Common
@@ -299,6 +301,250 @@ export const enTranslations = {
     budgetHint: 'Say something like: "Create budget of 500 dollars for Food monthly"',
     categoryHint: 'Say something like: "Create category Food of type expense with green color"',
     backendIntegrationNeeded: 'Backend integration needed for voice processing',
+    consent: {
+      title: 'Voice Usage Permission',
+      subtitle: 'Audio transcription with OpenAI',
+      processingTitle: 'Audio Processing',
+      processingDescription: 'Your audio will be sent to OpenAI for transcription into text. This allows us to convert your voice commands into transactions and other data.',
+      retentionTitle: 'Data Retention',
+      retentionDescription: 'OpenAI may retain audio data for up to 30 days according to their privacy policy. After this period, the data is permanently deleted.',
+      usageTitle: 'Data Usage',
+      usageDescription: 'Your audio data is used exclusively for transcription and is not used to train AI models. OpenAI does not use your data to improve their services.',
+      termsTitle: 'Terms of Service',
+      termsDescription: 'By using the voice feature, you agree to OpenAI\'s terms of service and acknowledge that your data will be processed according to their privacy policy.',
+      checkboxLabel: 'I have read and agree to the above terms regarding the use of the voice feature',
+      accept: 'Accept',
+      decline: 'Decline',
+    },
+  },
+
+  // Privacy Policy
+  privacyPolicy: {
+    title: 'Privacy Policy',
+    lastUpdated: 'Last updated',
+    date: 'January 2025',
+    introduction: 'This Privacy Policy describes how we collect, use, store, and protect your information when you use our Personal Cash Flow application. We are committed to protecting your privacy and ensuring the security of your personal and financial data.',
+    sections: {
+      information: {
+        title: 'Information Collected',
+        transactions: {
+          title: 'Transaction Data',
+          text: 'We collect information about your financial transactions, including amounts, dates, categories, accounts, and descriptions. This data is essential for the application to function and is stored securely in our infrastructure.',
+        },
+        voice: {
+          title: 'Audio Data for Transcription',
+          text: 'When you use the voice addition feature, we record audio that is sent for transcription processing. This audio is converted to text to create transactions and other data in the application.',
+        },
+        account: {
+          title: 'Account Data',
+          text: 'We collect your email address, display name, and user identifier provided by Google during login. We do not have access to your Google password.',
+        },
+      },
+      openai: {
+        title: 'OpenAI Usage and Data Retention',
+        processing: {
+          title: 'Audio Processing',
+          text: 'We use the OpenAI API (Whisper) to transcribe your audio into text. Audio is sent directly to OpenAI securely and encrypted.',
+        },
+        retention: {
+          title: '30-Day Retention',
+          text: 'According to OpenAI\'s privacy policy, audio data may be retained for up to 30 days for processing and service improvement purposes. After this period, the data is permanently deleted from OpenAI\'s servers.',
+        },
+        usage: {
+          title: 'OpenAI Data Usage',
+          text: 'OpenAI does not use your audio data to train its AI models. Data is processed exclusively to provide the requested transcription service.',
+        },
+      },
+      security: {
+        title: 'How Your Data Is Protected',
+        encryption: {
+          title: 'Encryption',
+          text: 'All data is transmitted using SSL/TLS encryption. Data stored in our database is protected by encryption at rest.',
+        },
+        access: {
+          title: 'Access Control',
+          text: 'Your data is accessible only by you through your authenticated account. We use OAuth 2.0 authentication via Google to ensure login security.',
+        },
+        firebase: {
+          title: 'Secure Infrastructure',
+          text: 'We use Firebase, Google\'s platform, for data storage. The infrastructure is certified and meets the most rigorous industry security standards.',
+        },
+      },
+      rights: {
+        title: 'Your Rights (GDPR)',
+        access: {
+          title: 'Right of Access',
+          text: 'You have the right to access all data we hold about you through the application.',
+        },
+        correction: {
+          title: 'Right of Correction',
+          text: 'You can correct or update your data at any time through the application features.',
+        },
+        deletion: {
+          title: 'Right of Deletion',
+          text: 'You can delete your account and all associated data at any time. Deletion is irreversible and all data is permanently removed.',
+        },
+        portability: {
+          title: 'Right to Data Portability',
+          text: 'You have the right to request a copy of your data in a structured, machine-readable format.',
+        },
+        consent: {
+          title: 'Right to Withdraw Consent',
+          text: 'You can withdraw your consent for voice data processing at any time in the application settings.',
+        },
+      },
+      contact: {
+        title: 'Contact for Questions',
+        text: 'If you have questions about this Privacy Policy or how we handle your data, please contact us at:',
+        response: 'We will respond to your requests within 30 days, as required by applicable law.',
+      },
+    },
+    footer: 'By using our application, you agree to this Privacy Policy.',
+    termsLink: 'Terms of Service',
+    backToApp: 'Back to App',
+  },
+
+  // Terms of Service
+  termsOfService: {
+    title: 'Terms of Service',
+    lastUpdated: 'Last updated',
+    date: 'January 2025',
+    introduction: 'Welcome to Assist - Personal Cash Flow. These Terms of Service establish the rules and conditions for using our application. Please read carefully before using our services.',
+    sections: {
+      acceptance: {
+        title: 'Acceptance of Terms',
+        text1: 'By accessing and using Assist - Personal Cash Flow, you agree to comply with and be bound by these Terms of Service. If you do not agree with any part of these terms, you may not use our application.',
+        text2: 'These terms constitute a legal agreement between you and Assist. Continued use of the application after any changes to these terms means you accept such changes.',
+        eligibility: {
+          title: 'Eligibility',
+          text: 'You must be at least 18 years old to use this application. By using Assist, you represent and warrant that you have the legal capacity to enter into a binding contract.',
+        },
+      },
+      voice: {
+        title: 'Voice Service Usage',
+        text1: 'Assist offers a voice addition feature that uses the OpenAI API to transcribe audio into text. By using this feature, you agree to the following terms:',
+        consent: {
+          title: 'Explicit Consent',
+          text: 'You must grant explicit consent before using the voice feature. This consent can be revoked at any time in the application settings.',
+        },
+        dataProcessing: {
+          title: 'Audio Data Processing',
+          text: 'You understand and agree that your audio will be sent to OpenAI for processing. Audio is converted to text and original audio data is retained by OpenAI for up to 30 days according to their privacy policy.',
+        },
+        accuracy: {
+          title: 'Transcription Accuracy',
+          text: 'While we strive to provide accurate transcriptions, we do not guarantee that all transcriptions will be perfect. You are responsible for verifying and correcting transcribed information before saving it.',
+        },
+        prohibited: {
+          title: 'Prohibited Use',
+          text: 'You agree not to use the voice feature to record or transmit illegal, defamatory, obscene content, or content that violates the rights of third parties.',
+        },
+      },
+      liability: {
+        title: 'Limitations of Liability',
+        text1: 'Assist is provided "as is" and "as available", without warranties of any kind, express or implied.',
+        financial: {
+          title: 'Financial Decisions',
+          text: 'Assist is a tool to help track your personal finances. We are not responsible for any financial decisions you make based on information provided by the application. We recommend consulting a qualified financial professional for personalized financial advice.',
+        },
+        dataLoss: {
+          title: 'Data Loss',
+          text: 'Although we implement measures to protect your data, we do not guarantee that data will always be available or free from loss. We recommend keeping alternative records of important financial information.',
+        },
+        damages: {
+          title: 'Limitation of Damages',
+          text: 'In no event shall we be liable for indirect, incidental, special, consequential, or punitive damages, including loss of profits, data, or use, arising from the use or inability to use the application.',
+        },
+      },
+      intellectual: {
+        title: 'Intellectual Property',
+        text1: 'All content, features, and functionality of Assist, including but not limited to code, design, logos, text, graphics, and interfaces, are the exclusive property of Assist and are protected by copyright, trademark, and other intellectual property laws.',
+        license: {
+          title: 'Usage License',
+          text: 'We grant you a limited, non-exclusive, non-transferable, and revocable license to use the application for personal and non-commercial purposes. This license does not include the right to modify, copy, distribute, transmit, display, reproduce, or create derivative works of the application.',
+        },
+        restrictions: {
+          title: 'Restrictions',
+          text: 'You agree not to: (a) decompile, reverse engineer, or attempt to obtain the source code of the application; (b) remove any copyright or proprietary notices; (c) transfer, sublicense, or sell the application; (d) use the application for illegal or unauthorized purposes.',
+        },
+      },
+      changes: {
+        title: 'Changes to Terms',
+        text1: 'We reserve the right to modify or replace these Terms of Service at any time, at our sole discretion. Significant changes will be notified through the application or by email.',
+        notification: {
+          title: 'Notification of Changes',
+          text: 'When we make material changes to these terms, we will update the "last updated" date at the top of this page and notify users through a notification in the application.',
+        },
+        continuedUse: {
+          title: 'Continued Use',
+          text: 'Your continued use of Assist after the publication of any changes to these terms constitutes acceptance of those changes. If you do not agree with the new terms, you must stop using the application.',
+        },
+        severability: {
+          title: 'Severability',
+          text: 'If any provision of these terms is deemed invalid or unenforceable, that provision will be limited or eliminated to the minimum extent necessary, and the remaining provisions will remain in full force and effect.',
+        },
+      },
+    },
+    contact: {
+      title: 'Contact',
+      text: 'If you have any questions about these Terms of Service, please contact us:',
+    },
+    footer: 'By using our application, you agree to these Terms of Service.',
+    privacyLink: 'Privacy Policy',
+    backToApp: 'Back to App',
+  },
+
+  // Settings
+  settings: {
+    title: 'Settings',
+    subtitle: 'Manage your preferences and privacy',
+    account: {
+      title: 'Account',
+      description: 'Manage your account and data',
+      dangerZone: 'Danger Zone',
+      logoutConfirmTitle: 'Are you sure you want to logout?',
+      logoutConfirmDescription: 'You will need to login again to access your data.',
+      deleteConfirmTitle: 'Are you sure you want to delete all your data?',
+      deleteConfirmDescription: 'This action cannot be undone. All your transactions, accounts, categories, and budgets will be permanently deleted.',
+      deleteAllData: 'Delete All Data',
+      deleteError: 'Error deleting data. Please try again.',
+    },
+    preferences: {
+      title: 'Preferences',
+      description: 'Customize your app experience',
+      language: 'Language',
+    },
+    privacy: {
+      title: 'Privacy and Data',
+      description: 'Manage your privacy settings and consents',
+    },
+    voice: {
+      title: 'Voice Consent',
+      loading: 'Loading status...',
+      granted: 'You have granted permission to use the voice feature. Your audio is processed by OpenAI for transcription.',
+      revoked: 'You have not granted permission to use the voice feature. The voice addition feature is not available.',
+      statusGranted: 'Active',
+      statusRevoked: 'Inactive',
+      revoke: 'Revoke',
+      revokeConsent: 'Revoke Voice Consent',
+      grantConsent: 'Grant Voice Consent',
+      revokeConfirmTitle: 'Are you sure you want to revoke?',
+      revokeConfirmDescription: 'You will no longer be able to use the voice addition feature.',
+    },
+    legal: {
+      title: 'Legal Documents',
+      description: 'Read our terms and privacy policies',
+      privacyPolicy: 'Privacy Policy',
+      privacyPolicyDescription: 'How we collect, use, and protect your data',
+      termsOfService: 'Terms of Service',
+      termsOfServiceDescription: 'Rules and conditions for using the app',
+    },
+    about: {
+      title: 'About the App',
+      version: 'Version',
+      developedBy: 'Developed by',
+      copyright: '© 2024 Assist. All rights reserved.',
+    },
   },
 
   // Errors
