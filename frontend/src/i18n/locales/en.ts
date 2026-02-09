@@ -57,6 +57,12 @@ export const enTranslations = {
     welcomeBack: 'Welcome back',
   },
 
+  // Logout Confirmation
+  logoutConfirm: {
+    title: 'Do you really want to logout?',
+    description: 'You will need to login again to access your data.',
+  },
+
   // Auth
   auth: {
     login: 'Login',

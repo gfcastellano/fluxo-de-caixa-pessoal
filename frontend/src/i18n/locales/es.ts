@@ -57,6 +57,12 @@ export const esTranslations = {
     welcomeBack: 'Bienvenido de nuevo',
   },
 
+  // Logout Confirmation
+  logoutConfirm: {
+    title: '¿Realmente deseas cerrar sesión?',
+    description: 'Necesitarás iniciar sesión de nuevo para acceder a tus datos.',
+  },
+
   // Auth
   auth: {
     login: 'Iniciar Sesión',

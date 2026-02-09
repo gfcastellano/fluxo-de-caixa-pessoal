@@ -4,12 +4,14 @@ import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../utils/cn';
 import { Settings, LogOut, User } from 'lucide-react';
+import { LogoutConfirmModal } from './LogoutConfirmModal';
 
 export function UserDropdown() {
   const { user, logout } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
@@ -36,7 +38,12 @@ export function UserDropdown() {
     return () => document.removeEventListener('keydown', handleEscape);
   }, []);
 
-  const handleLogout = async () => {
+  const handleLogoutClick = () => {
+    setShowLogoutModal(true);
+  };
+
+  const handleConfirmLogout = async () => {
+    setShowLogoutModal(false);
     await logout();
     navigate('/login');
   };
@@ -149,7 +156,7 @@ export function UserDropdown() {
           <div className="my-1 border-t border-slate/10" />
 
           <button
-            onClick={handleLogout}
+            onClick={handleLogoutClick}
             className={cn(
               "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm",
               "text-rose hover:bg-rose/5 transition-colors duration-150",
@@ -161,6 +168,17 @@ export function UserDropdown() {
           </button>
         </div>
       </div>
+
+      {/* Logout Confirmation Modal */}
+      <LogoutConfirmModal
+        isOpen={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={handleConfirmLogout}
+        title={t('logoutConfirm.title', 'Deseja realmente sair?')}
+        description={t('logoutConfirm.description', 'Você precisará fazer login novamente para acessar seus dados.')}
+        cancelLabel={t('common.cancel', 'Cancelar')}
+        confirmLabel={t('nav.logout', 'Sair')}
+      />
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Mic, Shield, Clock, FileText, Check } from 'lucide-react';
 import { Button } from './Button';
 import { cn } from '../utils/cn';
+import { Portal } from './Portal';
 import { saveVoiceConsent as saveVoiceConsentToServer } from '../services/voiceService';
 
 interface VoiceConsentModalProps {
@@ -103,9 +104,10 @@ export function VoiceConsentModal({ isOpen, onAccept, onDecline }: VoiceConsentM
     };
 
     return (
-        <div
-            className={cn(
-                'fixed inset-0 z-[1500] flex items-center justify-center p-2 sm:p-4 overflow-hidden',
+        <Portal>
+            <div
+                className={cn(
+                    'fixed inset-0 z-[1500] flex items-center justify-center p-2 sm:p-4 overflow-hidden',
                 'transition-opacity duration-200',
                 isOpen ? 'opacity-100' : 'opacity-0'
             )}
@@ -229,7 +231,8 @@ export function VoiceConsentModal({ isOpen, onAccept, onDecline }: VoiceConsentM
                     </Button>
                 </div>
             </div>
-        </div>
+            </div>
+        </Portal>
     );
 }
 

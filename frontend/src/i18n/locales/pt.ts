@@ -66,6 +66,12 @@ export const ptTranslations = {
     customColor: 'Cor personalizada',
   },
 
+  // Logout Confirmation
+  logoutConfirm: {
+    title: 'Deseja realmente sair?',
+    description: 'Você precisará fazer login novamente para acessar seus dados.',
+  },
+
   // Auth
   auth: {
     login: 'Entrar',

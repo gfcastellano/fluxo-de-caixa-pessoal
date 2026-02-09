@@ -9,6 +9,7 @@ import { getVoiceConsent } from '../services/voiceService';
 import { Mic, Shield, FileText, ExternalLink, CheckCircle, XCircle, LogOut, Trash2, Globe, User, AlertTriangle } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { getFirestore, collection, getDocs, doc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { LogoutConfirmModal } from '../components/LogoutConfirmModal';
 
 // Language options
 const languages = [
@@ -233,44 +234,14 @@ export function Settings() {
                 </div>
 
                 {/* Logout Button */}
-                {showLogoutConfirm ? (
-                  <div className="flex flex-col sm:flex-row gap-3 p-4 bg-slate/5 border border-slate/20 rounded-xl">
-                    <div className="flex-1">
-                      <p className="text-sm text-ink font-medium">
-                        {t('settings.account.logoutConfirmTitle', 'Deseja realmente sair?')}
-                      </p>
-                      <p className="text-xs text-slate mt-1">
-                        {t('settings.account.logoutConfirmDescription', 'Você precisará fazer login novamente para acessar seus dados.')}
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowLogoutConfirm(false)}
-                      >
-                        {t('common.cancel', 'Cancelar')}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        leftIcon={<LogOut className="h-4 w-4" />}
-                        onClick={handleLogout}
-                      >
-                        {t('nav.logout', 'Sair')}
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <Button
-                    variant="outline"
-                    leftIcon={<LogOut className="h-4 w-4" />}
-                    onClick={() => setShowLogoutConfirm(true)}
-                    className="w-full sm:w-auto"
-                  >
-                    {t('nav.logout', 'Sair')}
-                  </Button>
-                )}
+                <Button
+                  variant="danger"
+                  leftIcon={<LogOut className="h-4 w-4" />}
+                  onClick={() => setShowLogoutConfirm(true)}
+                  className="w-full sm:w-auto"
+                >
+                  {t('nav.logout', 'Sair')}
+                </Button>
               </CardContent>
             </Card>
 
@@ -572,6 +543,17 @@ export function Settings() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Logout Confirmation Modal */}
+        <LogoutConfirmModal
+          isOpen={showLogoutConfirm}
+          onClose={() => setShowLogoutConfirm(false)}
+          onConfirm={handleLogout}
+          title={t('logoutConfirm.title', 'Deseja realmente sair?')}
+          description={t('logoutConfirm.description', 'Você precisará fazer login novamente para acessar seus dados.')}
+          cancelLabel={t('common.cancel', 'Cancelar')}
+          confirmLabel={t('nav.logout', 'Sair')}
+        />
       </div>
   );
 }

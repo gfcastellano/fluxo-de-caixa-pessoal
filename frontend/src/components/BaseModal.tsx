@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { X, Check } from 'lucide-react';
 import { Button } from './Button';
 import { cn } from '../utils/cn';
+import { Portal } from './Portal';
 
 interface BaseModalProps {
     isOpen: boolean;
@@ -86,7 +87,8 @@ export function BaseModal({
     const defaultSubmitLabel = hasVoiceData || isEditing ? 'Atualizar' : 'Criar';
 
     return (
-        <div className="fixed inset-0 z-[1400] flex items-center justify-center p-2 sm:p-4 overflow-hidden">
+        <Portal>
+            <div className="fixed inset-0 z-[1400] flex items-center justify-center p-2 sm:p-4 overflow-hidden">
             {/* Backdrop */}
             <div
                 className="absolute inset-0 bg-ink/20 backdrop-blur-sm animate-fade-in"
@@ -151,6 +153,7 @@ export function BaseModal({
                     )}
                 </div>
             </div>
-        </div>
+            </div>
+        </Portal>
     );
 }
