@@ -294,9 +294,8 @@ async function generateRecurringInstancesWithCount(
     // Create the recurring instance with isRecurringInstance and createdFromRecurring flags
     // Include recurrencePattern so child transactions display the same as parent
     // installmentNumber starts at 2 because parent is 1
-    const instance = await firebase.createDocument('transactions', {
+    const instanceData: Record<string, unknown> = {
       userId: parentTransaction.userId,
-      accountId: parentTransaction.accountId,
       type: parentTransaction.type,
       amount: parentTransaction.amount,
       categoryId: parentTransaction.categoryId,
@@ -311,7 +310,23 @@ async function generateRecurringInstancesWithCount(
       totalInstallments: totalInSeries, // Total number of installments including parent
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-    });
+    };
+    
+    // Only add accountId if it exists (credit card transactions don't have accountId)
+    if (parentTransaction.accountId) {
+      instanceData.accountId = parentTransaction.accountId;
+    }
+    
+    // Add credit card fields if they exist on parent
+    const parentWithCC = parentTransaction as Record<string, unknown>;
+    if (parentWithCC.creditCardId) {
+      instanceData.creditCardId = parentWithCC.creditCardId;
+    }
+    if (parentWithCC.isCash) {
+      instanceData.isCash = parentWithCC.isCash;
+    }
+    
+    const instance = await firebase.createDocument('transactions', instanceData);
 
     instances.push(instance);
   }
@@ -389,9 +404,8 @@ async function generateRecurringInstances(
       // Create the recurring instance with isRecurringInstance flag
       // Include recurrencePattern so child transactions display the same as parent
       // installmentNumber starts at 2 because parent is 1
-      const instance = await firebase.createDocument('transactions', {
+      const instanceData: Record<string, unknown> = {
         userId: parentTransaction.userId,
-        accountId: parentTransaction.accountId,
         type: parentTransaction.type,
         amount: parentTransaction.amount,
         categoryId: parentTransaction.categoryId,
@@ -405,7 +419,23 @@ async function generateRecurringInstances(
         totalInstallments: totalInSeries, // Total including parent
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-      });
+      };
+      
+      // Only add accountId if it exists (credit card transactions don't have accountId)
+      if (parentTransaction.accountId) {
+        instanceData.accountId = parentTransaction.accountId;
+      }
+      
+      // Add credit card fields if they exist on parent
+      const parentWithCC = parentTransaction as Record<string, unknown>;
+      if (parentWithCC.creditCardId) {
+        instanceData.creditCardId = parentWithCC.creditCardId;
+      }
+      if (parentWithCC.isCash) {
+        instanceData.isCash = parentWithCC.isCash;
+      }
+      
+      const instance = await firebase.createDocument('transactions', instanceData);
 
       instances.push(instance);
     }
