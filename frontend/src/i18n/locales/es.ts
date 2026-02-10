@@ -302,6 +302,7 @@ export const esTranslations = {
   // Page Descriptions
   pageDescriptions: {
     whatYouCanDo: 'Qué puedes hacer en esta página:',
+    tooltip: 'Haz clic para saber más sobre esta página',
     dashboard: {
       title: 'Panel - Resumen Financiero',
       shortDescription: 'Visualiza tu resumen financiero del mes actual',

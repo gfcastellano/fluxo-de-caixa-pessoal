@@ -28,37 +28,72 @@ const BLUE_COLORS = {
 export function PageDescription({ pageKey, className }: PageDescriptionProps) {
   const { t } = useTranslation();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showTooltip, setShowTooltip] = useState(false);
 
   const title = t(`pageDescriptions.${pageKey}.title`);
   const fullDescription = t(`pageDescriptions.${pageKey}.fullDescription`);
   const features = t(`pageDescriptions.${pageKey}.features`, { returnObjects: true }) as string[];
+  const tooltipText = t('pageDescriptions.tooltip', 'Clique para saber mais sobre esta página');
 
   return (
     <>
       {/* Info Button - positioned next to title */}
-      <button
-        onClick={() => setIsModalOpen(true)}
-        className={cn(
-          'flex items-center justify-center',
-          'w-7 h-7 sm:w-9 sm:h-9',
-          'rounded-full',
-          'bg-white/60 backdrop-blur-sm',
-          'border border-white/80',
-          'hover:bg-white/80',
-          'active:scale-95',
-          'transition-all duration-200',
-          'focus:outline-none focus:ring-2',
-          'shadow-sm',
-          className
+      <div className="relative">
+        <button
+          onClick={() => setIsModalOpen(true)}
+          onMouseEnter={() => setShowTooltip(true)}
+          onMouseLeave={() => setShowTooltip(false)}
+          onFocus={() => setShowTooltip(true)}
+          onBlur={() => setShowTooltip(false)}
+          className={cn(
+            'flex items-center justify-center',
+            'w-7 h-7 sm:w-9 sm:h-9',
+            'rounded-full',
+            'bg-white/60 backdrop-blur-sm',
+            'border border-white/80',
+            'hover:bg-white/80',
+            'active:scale-95',
+            'transition-all duration-200',
+            'focus:outline-none focus:ring-2',
+            'shadow-sm',
+            className
+          )}
+          style={{ 
+            color: BLUE_COLORS.primary,
+            '--tw-ring-color': `${BLUE_COLORS.primary}4D` 
+          } as React.CSSProperties}
+          aria-label={t('pageDescriptions.showInfo', 'Mostrar informações da página')}
+        >
+          <Info className="h-3.5 w-3.5 sm:h-5 sm:w-5" />
+        </button>
+
+        {/* Tooltip */}
+        {showTooltip && (
+          <div 
+            className={cn(
+              'absolute z-50',
+              'top-full left-1/2 -translate-x-1/2 mt-2',
+              'px-3 py-2',
+              'rounded-lg',
+              'text-xs font-medium',
+              'whitespace-nowrap',
+              'animate-in fade-in zoom-in-95 duration-200'
+            )}
+            style={{
+              backgroundColor: BLUE_COLORS.ink,
+              color: 'white',
+              boxShadow: `0 4px 12px ${BLUE_COLORS.ink}30`,
+            }}
+          >
+            {tooltipText}
+            {/* Tooltip Arrow */}
+            <div 
+              className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 rotate-45"
+              style={{ backgroundColor: BLUE_COLORS.ink }}
+            />
+          </div>
         )}
-        style={{ 
-          color: BLUE_COLORS.primary,
-          '--tw-ring-color': `${BLUE_COLORS.primary}4D` 
-        } as React.CSSProperties}
-        aria-label={t('pageDescriptions.showInfo', 'Mostrar informações da página')}
-      >
-        <Info className="h-3.5 w-3.5 sm:h-5 sm:w-5" />
-      </button>
+      </div>
 
       {/* Modal with features list */}
       <Portal>

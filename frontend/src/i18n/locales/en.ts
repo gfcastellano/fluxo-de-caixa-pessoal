@@ -302,6 +302,7 @@ export const enTranslations = {
   // Page Descriptions
   pageDescriptions: {
     whatYouCanDo: 'What you can do on this page:',
+    tooltip: 'Click to learn more about this page',
     dashboard: {
       title: 'Dashboard - Financial Overview',
       shortDescription: 'View your monthly financial summary at a glance',
