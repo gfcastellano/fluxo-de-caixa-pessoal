@@ -243,7 +243,7 @@ app.post('/:id/generate-recurring', async (c) => {
     }
 
     // Generate recurring instances
-    const instances = await generateRecurringInstances(firebase, transaction as { id: string; date: string; isRecurring?: boolean; recurrencePattern?: string; recurrenceDay?: number | null; recurrenceEndDate?: string | null; userId: string; description: string; amount: number; type: 'income' | 'expense'; categoryId: string; accountId?: string }, transaction as { recurrencePattern?: string | null; recurrenceDay?: number | null; recurrenceEndDate?: string | null; date: string });
+    const instances = await generateRecurringInstances(firebase, transaction as { id: string; date: string; isRecurring?: boolean; recurrencePattern?: string; recurrenceDay?: number | null; recurrenceEndDate?: string | null; userId: string; description: string; amount: number; type: 'income' | 'expense'; categoryId: string; accountId?: string; creditCardId?: string; isCash?: boolean }, transaction as { recurrencePattern?: string | null; recurrenceDay?: number | null; recurrenceEndDate?: string | null; date: string });
 
     return c.json({ success: true, data: { generatedCount: instances.length } });
   } catch (error) {
@@ -259,7 +259,7 @@ app.post('/:id/generate-recurring', async (c) => {
 // Creates exactly 'count' number of instances based on recurrence pattern
 async function generateRecurringInstancesWithCount(
   firebase: FirebaseService,
-  parentTransaction: { id: string; date: string; isRecurring?: boolean; recurrencePattern?: string; recurrenceDay?: number | null; recurrenceEndDate?: string | null; userId: string; description: string; amount: number; type: 'income' | 'expense'; categoryId: string; accountId?: string; installmentNumber?: number; totalInstallments?: number },
+  parentTransaction: { id: string; date: string; isRecurring?: boolean; recurrencePattern?: string; recurrenceDay?: number | null; recurrenceEndDate?: string | null; userId: string; description: string; amount: number; type: 'income' | 'expense'; categoryId: string; accountId?: string; creditCardId?: string; isCash?: boolean; installmentNumber?: number; totalInstallments?: number },
   data: { recurrencePattern?: string | null; recurrenceDay?: number | null; recurrenceEndDate?: string | null; date: string },
   count: number
 ): Promise<unknown[]> {
@@ -339,7 +339,7 @@ async function generateRecurringInstancesWithCount(
 // Limited by MAX_INSTANCES_PER_REQUEST to prevent timeouts
 async function generateRecurringInstances(
   firebase: FirebaseService,
-  parentTransaction: { id: string; date: string; isRecurring?: boolean; recurrencePattern?: string; recurrenceDay?: number | null; recurrenceEndDate?: string | null; userId: string; description: string; amount: number; type: 'income' | 'expense'; categoryId: string; accountId?: string; installmentNumber?: number; totalInstallments?: number },
+  parentTransaction: { id: string; date: string; isRecurring?: boolean; recurrencePattern?: string; recurrenceDay?: number | null; recurrenceEndDate?: string | null; userId: string; description: string; amount: number; type: 'income' | 'expense'; categoryId: string; accountId?: string; creditCardId?: string; isCash?: boolean; installmentNumber?: number; totalInstallments?: number },
   data: { recurrencePattern?: string | null; recurrenceDay?: number | null; recurrenceEndDate?: string | null; date: string }
 ): Promise<unknown[]> {
   const startDate = new Date(parentTransaction.date);
