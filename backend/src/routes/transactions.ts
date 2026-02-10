@@ -322,9 +322,6 @@ async function generateRecurringInstancesWithCount(
     if (parentWithCC.creditCardId) {
       instanceData.creditCardId = parentWithCC.creditCardId;
     }
-    if (parentWithCC.billId) {
-      instanceData.billId = parentWithCC.billId;
-    }
     if (parentWithCC.isCash) {
       instanceData.isCash = parentWithCC.isCash;
     }
@@ -433,9 +430,6 @@ async function generateRecurringInstances(
       const parentWithCC = parentTransaction as Record<string, unknown>;
       if (parentWithCC.creditCardId) {
         instanceData.creditCardId = parentWithCC.creditCardId;
-      }
-      if (parentWithCC.billId) {
-        instanceData.billId = parentWithCC.billId;
       }
       if (parentWithCC.isCash) {
         instanceData.isCash = parentWithCC.isCash;
