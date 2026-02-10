@@ -344,7 +344,7 @@ export const ptTranslations = {
   },
 
   // Transactions - Credit Card
-  transactions: {
+  creditCardPayment: {
     form: {
       paymentMethod: 'Forma de Pagamento',
       payWithAccount: 'Conta/Débito',

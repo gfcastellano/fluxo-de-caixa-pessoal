@@ -631,7 +631,7 @@ export function TransactionModal({
         {formData.type === 'expense' && (
           <div className="col-span-1 sm:col-span-2">
             <label className="block text-sm font-medium text-ink mb-1.5">
-              {t('transactions.form.paymentMethod') || 'Forma de Pagamento'}
+              {t('creditCardPayment.form.paymentMethod') || 'Forma de Pagamento'}
             </label>
             <div className="flex flex-col gap-1 p-1 bg-slate/5 rounded-lg">
               <button
@@ -650,7 +650,7 @@ export function TransactionModal({
                 )}>
                   {paymentMethod === 'account' && <span className="w-2 h-2 rounded-full bg-blue" />}
                 </span>
-                {t('transactions.form.payWithAccount') || 'Conta/Débito'}
+                {t('creditCardPayment.form.payWithAccount') || 'Conta/Débito'}
               </button>
               {creditCards.length > 0 && (
                 <button
@@ -669,7 +669,7 @@ export function TransactionModal({
                   )}>
                     {paymentMethod === 'credit_card' && <span className="w-2 h-2 rounded-full bg-blue" />}
                   </span>
-                  {t('transactions.form.payWithCreditCard') || 'Cartão de Crédito'}
+                  {t('creditCardPayment.form.payWithCreditCard') || 'Cartão de Crédito'}
                 </button>
               )}
               <button
@@ -688,7 +688,7 @@ export function TransactionModal({
                 )}>
                   {paymentMethod === 'cash' && <span className="w-2 h-2 rounded-full bg-blue" />}
                 </span>
-                {t('transactions.form.payWithCash') || 'Dinheiro/Efetivo'}
+                {t('creditCardPayment.form.payWithCash') || 'Dinheiro/Efetivo'}
               </button>
             </div>
           </div>
@@ -700,7 +700,7 @@ export function TransactionModal({
             <div className="p-3 bg-blue/5 rounded-lg border border-blue/10">
               <div className="flex items-center justify-between mb-3">
                 <label className="text-sm font-medium text-ink">
-                  {t('transactions.form.installments') || 'Parcelamento'}
+                  {t('creditCardPayment.form.installments') || 'Parcelamento'}
                 </label>
                 <button
                   type="button"
@@ -723,7 +723,7 @@ export function TransactionModal({
                 <div className="space-y-3">
                   <div>
                     <label className="block text-xs text-slate mb-1.5">
-                      {t('transactions.form.numberOfInstallments') || 'Número de parcelas'}
+                      {t('creditCardPayment.form.numberOfInstallments') || 'Número de parcelas'}
                     </label>
                     <div className="flex items-center gap-3">
                       <input
@@ -743,13 +743,13 @@ export function TransactionModal({
                   {formData.amount && parseFloat(formData.amount) > 0 && (
                     <div className="text-xs text-slate bg-white/50 rounded-md p-2">
                       <div className="flex justify-between mb-1">
-                        <span>{t('transactions.form.totalAmount') || 'Valor total'}:</span>
+                        <span>{t('creditCardPayment.form.totalAmount') || 'Valor total'}:</span>
                         <span className="font-medium text-ink">
                           {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(parseFloat(formData.amount))}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span>{t('transactions.form.installmentAmount') || 'Valor da parcela'}:</span>
+                        <span>{t('creditCardPayment.form.installmentAmount') || 'Valor da parcela'}:</span>
                         <span className="font-medium text-blue">
                           {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(parseFloat(formData.amount) / installments)}
                         </span>
@@ -787,7 +787,7 @@ export function TransactionModal({
             {formData.type === 'expense' && paymentMethod === 'credit_card' && (
               <div>
                 <label className="block text-sm font-medium text-ink mb-1.5">
-                  {t('transactions.form.selectCreditCard') || 'Cartão de Crédito'}
+                  {t('creditCardPayment.form.selectCreditCard') || 'Cartão de Crédito'}
                 </label>
                 <select
                   value={selectedCreditCardId}
@@ -795,7 +795,7 @@ export function TransactionModal({
                   className="w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue transition-all"
                   required={paymentMethod === 'credit_card'}
                 >
-                  <option value="">{t('transactions.form.selectCreditCard') || 'Selecione um cartão'}</option>
+                  <option value="">{t('creditCardPayment.form.selectCreditCard') || 'Selecione um cartão'}</option>
                   {creditCards.map((card) => (
                     <option key={card.id} value={card.id}>{card.name}</option>
                   ))}

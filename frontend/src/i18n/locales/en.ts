@@ -333,7 +333,7 @@ export const enTranslations = {
   },
 
   // Transactions - Credit Card
-  transactions: {
+  creditCardPayment: {
     form: {
       paymentMethod: 'Payment Method',
       payWithAccount: 'Account/Debit',
