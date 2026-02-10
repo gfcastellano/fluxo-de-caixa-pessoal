@@ -5,7 +5,7 @@ import { cn } from '../utils/cn';
 import { Portal } from './Portal';
 
 interface PageDescriptionProps {
-  pageKey: 'dashboard' | 'transactions' | 'categories' | 'budgets' | 'reports' | 'accounts';
+  pageKey: 'dashboard' | 'transactions' | 'categories' | 'budgets' | 'reports' | 'accounts' | 'creditCards';
   className?: string;
 }
 

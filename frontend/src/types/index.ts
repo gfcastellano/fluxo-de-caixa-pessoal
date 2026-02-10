@@ -44,6 +44,12 @@ export interface Transaction {
   // Installment tracking fields for displaying "X of Y"
   installmentNumber?: number; // Current installment position (1-based)
   totalInstallments?: number; // Total number of installments in the series
+  // Credit card fields
+  creditCardId?: string;
+  creditCard?: CreditCard;
+  billId?: string;
+  isBillPayment?: boolean;
+  paidBillId?: string;
 }
 
 export interface Budget {
@@ -97,6 +103,41 @@ export interface ReportRequest {
   userId: string;
   format?: 'json' | 'csv' | 'pdf';
 }
+
+// Credit Card interfaces
+export interface CreditCard {
+  id: string;
+  userId: string;
+  name: string;
+  linkedAccountId: string;
+  linkedAccount?: Account;
+  creditLimit: number;
+  closingDay: number;
+  dueDay: number;
+  color?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreditCardBill {
+  id: string;
+  userId: string;
+  creditCardId: string;
+  creditCard?: CreditCard;
+  month: number;
+  year: number;
+  closingDate?: string;
+  dueDate: string;
+  totalAmount: number;
+  isClosed: boolean;
+  isPaid: boolean;
+  paidAt?: string;
+  paidFromAccountId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CreditCardInput = Omit<CreditCard, 'id' | 'createdAt' | 'updatedAt' | 'linkedAccount'>;
 
 export interface BudgetStatus {
   budget: Budget;

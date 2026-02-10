@@ -7,6 +7,7 @@ export const enTranslations = {
     budgets: 'Budgets',
     reports: 'Reports',
     accounts: 'Accounts',
+    creditCards: 'Credit Cards',
     settings: 'Settings',
     logout: 'Logout',
     user: 'User',

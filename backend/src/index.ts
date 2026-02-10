@@ -8,6 +8,8 @@ import budgets from './routes/budgets';
 import reports from './routes/reports';
 import voice from './routes/voice';
 import accounts from './routes/accounts';
+import creditCards from './routes/creditCards';
+import creditCardBills from './routes/creditCardBills';
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -54,6 +56,8 @@ app.route('/api/budgets', budgets);
 app.route('/api/reports', reports);
 app.route('/api/voice', voice);
 app.route('/api/accounts', accounts);
+app.route('/api/credit-cards', creditCards);
+app.route('/api/credit-card-bills', creditCardBills);
 
 // 404 handler
 app.notFound((c) => {

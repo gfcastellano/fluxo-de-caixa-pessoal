@@ -5,7 +5,7 @@ import { cn } from '../utils/cn';
 import { VoiceDock } from './VoiceDock';
 import { VoiceHeroButton } from './VoiceHeroButton';
 import { UserDropdown } from './UserDropdown';
-import { LayoutDashboard, ArrowLeftRight, Tags, Landmark, PiggyBank, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, ArrowLeftRight, Tags, Landmark, PiggyBank, BarChart3, CreditCard } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useScrollDirection } from '../hooks/useScrollDirection';
 
@@ -26,6 +26,7 @@ const navItems: NavItem[] = [
   { name: 'nav.transactions', href: '/transactions', icon: ArrowLeftRight, voiceEnabled: true },
   { name: 'nav.categories', href: '/categories', icon: Tags, voiceEnabled: true },
   { name: 'nav.accounts', href: '/accounts', icon: Landmark, voiceEnabled: true },
+  { name: 'nav.creditCards', href: '/credit-cards', icon: CreditCard, voiceEnabled: true },
   { name: 'nav.budgets', href: '/budgets', icon: PiggyBank, voiceEnabled: true },
   { name: 'nav.reports', href: '/reports', icon: BarChart3, voiceEnabled: false },
 ];

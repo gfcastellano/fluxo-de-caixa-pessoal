@@ -94,6 +94,46 @@ export interface BudgetStatus {
   isOverBudget: boolean;
 }
 
+// Credit Card interfaces
+export interface CreditCard {
+  id: string;
+  userId: string;
+  name: string;                   // Nome do cartão (ex: "Nubank", "Itaú")
+  linkedAccountId: string;        // Conta bancária vinculada (para pagamento)
+  creditLimit: number;            // Limite total do cartão
+  closingDay: number;             // Dia do fechamento (1-31)
+  dueDay: number;                 // Dia do vencimento (1-31)
+  color?: string;                 // Cor para identificação visual
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreditCardBill {
+  id: string;
+  userId: string;
+  creditCardId: string;           // ID do cartão
+  month: number;                  // Mês da fatura (1-12)
+  year: number;                   // Ano da fatura
+  closingDate?: string;           // Data de fechamento (quando usuário fechar)
+  dueDate: string;                // Data de vencimento calculada
+  totalAmount: number;            // Valor total da fatura
+  isClosed: boolean;              // Fatura foi fechada?
+  isPaid: boolean;                // Fatura foi paga?
+  paidAt?: string;                // Data do pagamento
+  paidFromAccountId?: string;     // Conta usada para pagar
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Extended Transaction interface with credit card support
+export interface TransactionWithCreditCard extends Transaction {
+  // Credit card fields
+  creditCardId?: string;          // ID do cartão usado (para compras no crédito)
+  billId?: string;                // ID da fatura vinculada
+  isBillPayment?: boolean;        // true = esta transação é pagamento de fatura
+  paidBillId?: string;            // ID da fatura paga (se isBillPayment=true)
+}
+
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;

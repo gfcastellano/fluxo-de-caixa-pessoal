@@ -7,6 +7,7 @@ export const esTranslations = {
     budgets: 'Presupuestos',
     reports: 'Informes',
     accounts: 'Cuentas',
+    creditCards: 'Tarjetas',
     settings: 'Configuración',
     logout: 'Cerrar Sesión',
     user: 'Usuario',

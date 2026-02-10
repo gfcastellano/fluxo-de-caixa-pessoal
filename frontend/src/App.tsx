@@ -10,6 +10,7 @@ import { Categories } from './pages/Categories';
 import { Budgets } from './pages/Budgets';
 import { Reports } from './pages/Reports';
 import { Accounts } from './pages/Accounts';
+import { CreditCards } from './pages/CreditCards';
 import { Settings } from './pages/Settings';
 import { PrivacyPolicy } from './pages/PrivacyPolicy';
 import { TermsOfService } from './pages/TermsOfService';
@@ -67,6 +68,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Accounts />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/credit-cards"
+              element={
+                <ProtectedRoute>
+                  <CreditCards />
                 </ProtectedRoute>
               }
             />

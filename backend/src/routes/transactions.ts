@@ -17,6 +17,11 @@ const transactionSchema = z.object({
   date: z.string(),
   accountId: z.string().optional(),
   toAccountId: z.string().optional(),
+  // Credit card fields
+  creditCardId: z.string().optional(),
+  billId: z.string().optional(),
+  isBillPayment: z.boolean().optional(),
+  paidBillId: z.string().optional(),
   // Recurring transaction fields
   isRecurring: z.boolean().optional(),
   recurrencePattern: z.enum(['monthly', 'weekly', 'yearly']).nullable().optional(),
@@ -57,6 +62,32 @@ app.post('/', async (c) => {
     
     // Extract recurringCount from validated data (not stored on transaction)
     const { recurringCount, ...transactionData } = validated;
+
+    // Handle credit card transactions
+    if (transactionData.creditCardId && transactionData.type === 'expense') {
+      // Find the current open bill for this credit card
+      const allBills = await firebase.getDocuments('creditCardBills', userId) as Array<{
+        creditCardId: string;
+        isClosed: boolean;
+        isPaid: boolean;
+        id: string;
+      }>;
+      
+      const currentBill = allBills.find(
+        bill => bill.creditCardId === transactionData.creditCardId && !bill.isClosed && !bill.isPaid
+      );
+
+      if (currentBill) {
+        transactionData.billId = currentBill.id;
+        
+        // Update the bill total
+        const bill = await firebase.getDocument('creditCardBills', currentBill.id) as { totalAmount: number };
+        await firebase.updateDocument('creditCardBills', currentBill.id, {
+          totalAmount: (bill?.totalAmount || 0) + transactionData.amount,
+          updatedAt: new Date().toISOString(),
+        });
+      }
+    }
 
     // Auto-resolve toAccountId for transfers without a destination
     if (transactionData.type === 'transfer' && !transactionData.toAccountId && transactionData.accountId) {

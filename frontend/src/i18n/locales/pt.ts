@@ -12,6 +12,7 @@ export const ptTranslations = {
     budgets: 'Orçamentos',
     reports: 'Relatórios',
     accounts: 'Contas',
+    creditCards: 'Cartões',
     settings: 'Configurações',
     logout: 'Sair',
     user: 'Usuário',
