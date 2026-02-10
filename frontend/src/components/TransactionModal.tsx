@@ -102,6 +102,15 @@ export function TransactionModal({
           if (transaction?.creditCardId) {
             setSelectedCreditCardId(transaction.creditCardId);
             setPaymentMethod('credit_card');
+          } else if (userCreditCards.length === 1) {
+            // Auto-select if only one credit card exists
+            setSelectedCreditCardId(userCreditCards[0].id);
+          } else if (userCreditCards.length > 0) {
+            // Auto-select default credit card if exists
+            const defaultCard = userCreditCards.find(card => card.isDefault);
+            if (defaultCard) {
+              setSelectedCreditCardId(defaultCard.id);
+            }
           }
         } catch (error) {
           console.error('Error fetching credit cards:', error);

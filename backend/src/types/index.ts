@@ -104,6 +104,7 @@ export interface CreditCard {
   closingDay: number;             // Dia do fechamento (1-31)
   dueDay: number;                 // Dia do vencimento (1-31)
   color?: string;                 // Cor para identificação visual
+  isDefault?: boolean;            // Cartão padrão
   createdAt: string;
   updatedAt: string;
 }

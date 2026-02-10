@@ -12,6 +12,7 @@ const creditCardSchema = z.object({
   closingDay: z.number().int().min(1).max(31, 'Closing day must be between 1 and 31'),
   dueDay: z.number().int().min(1).max(31, 'Due day must be between 1 and 31'),
   color: z.string().optional(),
+  isDefault: z.boolean().optional(),
 });
 
 // Schema for updating a credit card
@@ -96,6 +97,16 @@ app.post('/', async (c) => {
       );
     }
 
+    // If this card is being set as default, unset any existing default
+    if (validated.isDefault) {
+      const existingCards = await firebase.getDocuments('creditCards', userId) as Array<{ id: string; isDefault?: boolean }>;
+      for (const card of existingCards) {
+        if (card.isDefault) {
+          await firebase.updateDocument('creditCards', card.id, { isDefault: false });
+        }
+      }
+    }
+
     // Create the credit card
     const creditCard = await firebase.createDocument('creditCards', {
       ...validated,
@@ -170,6 +181,16 @@ app.put('/:id', async (c) => {
         { success: false, error: 'Unauthorized' },
         403
       );
+    }
+
+    // If this card is being set as default, unset any existing default
+    if (validated.isDefault) {
+      const existingCards = await firebase.getDocuments('creditCards', userId) as Array<{ id: string; isDefault?: boolean }>;
+      for (const card of existingCards) {
+        if (card.isDefault && card.id !== cardId) {
+          await firebase.updateDocument('creditCards', card.id, { isDefault: false });
+        }
+      }
     }
 
     // If linkedAccountId is being updated, verify the new account

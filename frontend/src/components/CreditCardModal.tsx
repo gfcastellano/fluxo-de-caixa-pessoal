@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { BaseModal } from './BaseModal';
 import { Input } from './Input';
 import { ColorPicker } from './ColorPicker';
+import { cn } from '../utils/cn';
 import type { CreditCard, Account } from '../types';
 
 interface CreditCardModalProps {
@@ -33,6 +34,7 @@ export function CreditCardModal({
     closingDay: 1,
     dueDay: 10,
     color: '#4F46E5',
+    isDefault: false,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -47,6 +49,7 @@ export function CreditCardModal({
         closingDay: creditCard.closingDay || 1,
         dueDay: creditCard.dueDay || 10,
         color: creditCard.color || '#4F46E5',
+        isDefault: creditCard.isDefault || false,
       });
     } else {
       setFormData({
@@ -56,6 +59,7 @@ export function CreditCardModal({
         closingDay: 1,
         dueDay: 10,
         color: '#4F46E5',
+        isDefault: false,
       });
     }
     setErrors({});
@@ -200,6 +204,34 @@ export function CreditCardModal({
           <p className="mt-1 text-xs text-slate">
             {t('creditCards.form.dueDayHint') || 'Dia de vencimento da fatura (1-31)'}
           </p>
+        </div>
+
+        <div className="sm:col-span-2">
+          <div className="flex items-center justify-between p-3 bg-slate/5 rounded-lg">
+            <div>
+              <label className="block text-sm font-medium text-ink">
+                {t('creditCards.form.isDefault') || 'Cartão Padrão'}
+              </label>
+              <p className="text-xs text-slate">
+                {t('creditCards.form.isDefaultHint') || 'Usar como cartão padrão para novas compras'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setFormData({ ...formData, isDefault: !formData.isDefault })}
+              className={cn(
+                "relative inline-flex h-5 w-9 items-center rounded-full transition-colors",
+                formData.isDefault ? 'bg-blue' : 'bg-slate/30'
+              )}
+            >
+              <span
+                className={cn(
+                  "inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform",
+                  formData.isDefault ? 'translate-x-5' : 'translate-x-1'
+                )}
+              />
+            </button>
+          </div>
         </div>
       </div>
     </BaseModal>

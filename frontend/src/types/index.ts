@@ -117,6 +117,7 @@ export interface CreditCard {
   closingDay: number;
   dueDay: number;
   color?: string;
+  isDefault?: boolean;  // Default credit card flag
   createdAt: string;
   updatedAt: string;
 }
