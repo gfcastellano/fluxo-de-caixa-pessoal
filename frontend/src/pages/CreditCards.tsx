@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { usePageModal } from '../hooks/usePageModal';
 import { Card, CardContent } from '../components/Card';
 import { CreditCardModal } from '../components/CreditCardModal';
+import { CreditCardBillModal } from '../components/CreditCardBillModal';
 import {
   getCreditCards,
   createCreditCard,
@@ -14,7 +15,7 @@ import {
 import { getCurrentBill, getCreditCardBillsByCard } from '../services/creditCardBillService';
 import { getAccounts } from '../services/accountService';
 import type { CreditCard, CreditCardBill, Account } from '../types';
-import { Edit2, Trash2, CreditCard as CreditCardIcon, Plus, Calendar, DollarSign, AlertCircle } from 'lucide-react';
+import { Edit2, Trash2, CreditCard as CreditCardIcon, Plus, Calendar, DollarSign, AlertCircle, FileText } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { PageDescription } from '../components/PageDescription';
 
@@ -31,8 +32,25 @@ export function CreditCards() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const [selectedBill, setSelectedBill] = useState<CreditCardBill | null>(null);
+  const [selectedCardForBill, setSelectedCardForBill] = useState<CreditCard | null>(null);
+  const [isBillModalOpen, setIsBillModalOpen] = useState(false);
 
   const modal = usePageModal<CreditCard>();
+
+  const handleViewBill = (card: CreditCardWithDetails) => {
+    if (card.currentBill) {
+      setSelectedBill(card.currentBill);
+      setSelectedCardForBill(card);
+      setIsBillModalOpen(true);
+    }
+  };
+
+  const handleCloseBillModal = () => {
+    setIsBillModalOpen(false);
+    setSelectedBill(null);
+    setSelectedCardForBill(null);
+  };
 
   useEffect(() => {
     if (user) {
@@ -179,6 +197,15 @@ export function CreditCards() {
         autoStartRecording={modal.autoStartRecording}
       />
 
+      <CreditCardBillModal
+        isOpen={isBillModalOpen}
+        onClose={handleCloseBillModal}
+        bill={selectedBill}
+        creditCard={selectedCardForBill}
+        userId={user?.uid || ''}
+        onBillUpdated={loadData}
+      />
+
       {creditCards.length === 0 ? (
         <Card className="bg-white/40 backdrop-blur-xl border-white/60">
           <CardContent className="py-8 sm:py-12">
@@ -272,7 +299,10 @@ export function CreditCards() {
 
                   {/* Current Bill */}
                   {card.currentBill && (
-                    <div className="bg-blue/5 rounded-lg p-3 mb-3">
+                    <div
+                      className="bg-blue/5 rounded-lg p-3 mb-3 cursor-pointer hover:bg-blue/10 transition-colors"
+                      onClick={() => handleViewBill(card)}
+                    >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-blue" />
@@ -288,11 +318,14 @@ export function CreditCards() {
                         <span>
                           {t('creditCards.dueDate') || 'Vencimento'}: {card.currentBill.dueDate}
                         </span>
-                        {card.currentBill.totalAmount > 0 && (
-                          <span className="text-blue">
-                            {t('creditCards.open') || 'Aberta'}
-                          </span>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {card.currentBill.totalAmount > 0 && (
+                            <span className="text-blue">
+                              {t('creditCards.open') || 'Aberta'}
+                            </span>
+                          )}
+                          <FileText className="h-3.5 w-3.5 text-blue" />
+                        </div>
                       </div>
                     </div>
                   )}
