@@ -14,6 +14,7 @@ import { getCategories } from '../services/categoryService';
 import type { Transaction, Account, Category } from '../types';
 import { TrendingUp, TrendingDown, ArrowRightLeft, Wallet, Plus, Calendar } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { PageDescription } from '../components/PageDescription';
 
 interface CurrencySummary {
   income: number;
@@ -140,14 +141,9 @@ export function Dashboard() {
   return (
     <div className="flex flex-col sm:gap-6 gap-4 sm:p-6 p-4 overflow-x-hidden">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-ink">{t('dashboard.title')}</h1>
-          <div className="flex items-center gap-2 text-slate mt-1">
-            <Calendar className="h-4 w-4" />
-            <span className="text-sm">{formatMonthYear(year, month)}</span>
-          </div>
-        </div>
+      <div className="flex items-center justify-between flex-shrink-0">
+        <h1 className="text-lg sm:text-2xl font-bold text-ink">{t('dashboard.title')}</h1>
+        <PageDescription pageKey="dashboard" />
       </div>
 
       {/* Summary Cards */}

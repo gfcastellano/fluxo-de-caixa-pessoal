@@ -19,6 +19,7 @@ import { formatCurrency } from '../utils/format';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
 import { getCurrentMonth } from '../utils/format';
 import { cn } from '../utils/cn';
+import { PageDescription } from '../components/PageDescription';
 
 export function Budgets() {
   const { user } = useAuth();
@@ -155,9 +156,10 @@ export function Budgets() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-var(--header-height)-var(--dock-height))] sm:h-auto sm:min-h-0 sm:gap-6 gap-4 sm:p-6 p-4 overflow-x-hidden">
-      {/* Header - no add button, Hero handles it */}
-      <div className="flex items-center flex-shrink-0">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-shrink-0">
         <h1 className="text-lg sm:text-2xl font-bold text-ink">{t('budgets.title')}</h1>
+        <PageDescription pageKey="budgets" />
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto sm:overflow-visible">

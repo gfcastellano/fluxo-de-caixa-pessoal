@@ -21,6 +21,7 @@ import type { Transaction, Category, Account } from '../types';
 import { formatCurrency, formatDate } from '../utils/format';
 import { Plus, Edit2, Trash2, Search, ChevronLeft, ChevronRight, Repeat, Copy, Calendar, CalendarDays, List, ChevronDown, ChevronUp, FileText } from 'lucide-react';
 import { cn } from '../utils/cn';
+import { PageDescription } from '../components/PageDescription';
 
 // RecurringGroup interface for grouping recurring transactions
 interface RecurringGroup {
@@ -481,10 +482,11 @@ export function Transactions() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-var(--header-height)-var(--dock-height))] sm:h-auto sm:min-h-0">
+    <div className="flex flex-col h-[calc(100vh-var(--header-height)-var(--dock-height))] sm:h-auto sm:min-h-0 sm:gap-6 gap-4 sm:p-6 p-4 overflow-x-hidden">
       {/* Header - no add button, Hero handles it */}
-      <div className="flex items-center flex-shrink-0 mb-2 sm:mb-4">
+      <div className="flex items-center justify-between flex-shrink-0">
         <h1 className="text-lg sm:text-2xl font-bold text-ink">{t('transactions.title')}</h1>
+        <PageDescription pageKey="transactions" />
       </div>
 
       <TransactionModal

@@ -299,6 +299,90 @@ export const enTranslations = {
     balanceIsNegative: 'Negative balance',
   },
 
+  // Page Descriptions
+  pageDescriptions: {
+    whatYouCanDo: 'What you can do on this page:',
+    dashboard: {
+      title: 'Dashboard - Financial Overview',
+      shortDescription: 'View your monthly financial summary at a glance',
+      fullDescription: 'The Dashboard is your financial command center. Here you can see a complete summary of your current month\'s finances, including income, expenses, and balance. Data is automatically calculated based on transactions recorded across all your accounts.',
+      features: [
+        'View total income and expenses for the current month',
+        'Track balance by currency/wallet',
+        'See your most recent transactions',
+        'View updated balance for all accounts',
+        'Quickly identify your financial situation'
+      ]
+    },
+    transactions: {
+      title: 'Transactions - Financial Movements',
+      shortDescription: 'Record and manage all your financial movements',
+      fullDescription: 'The Transactions page allows you to record, view, and manage all your financial movements. You can create single or recurring transactions, filter by period (month/week/all), search for specific terms, and edit or delete existing records. The system automatically calculates balances based on recorded transactions.',
+      features: [
+        'Add income, expenses, and transfers',
+        'Create recurring transactions (monthly, weekly, yearly)',
+        'Filter by period: month, week, or all transactions',
+        'Search transactions by description or category',
+        'Edit or delete individual or series of transactions',
+        'View installments for split transactions'
+      ]
+    },
+    categories: {
+      title: 'Categories - Financial Organization',
+      shortDescription: 'Create and manage categories to classify your transactions',
+      fullDescription: 'Categories allow you to organize your transactions in a personalized way. You can create categories for income, expenses, and transfers, assigning colors for easy visual identification. Well-defined categories are essential for accurate reports and budget control.',
+      features: [
+        'Create custom categories for income',
+        'Create custom categories for expenses',
+        'Define categories for transfers between accounts',
+        'Assign colors for visual identification',
+        'Edit or delete existing categories',
+        'View categories organized by type'
+      ]
+    },
+    budgets: {
+      title: 'Budgets - Expense Control',
+      shortDescription: 'Set spending limits by category and track your progress',
+      fullDescription: 'The Budgets page allows you to set spending limits by category and track your progress in real-time. The system automatically calculates how much you\'ve spent in each category for the current month and visually shows whether you\'re within budget or have exceeded the limit. Ideal for keeping your finances under control.',
+      features: [
+        'Create monthly or yearly budgets by category',
+        'Set limit amounts for each category',
+        'Track expenses in real-time',
+        'View progress with visual indicators',
+        'Get alerts when approaching limits',
+        'View spending vs. budget history'
+      ]
+    },
+    reports: {
+      title: 'Reports - Financial Analysis',
+      shortDescription: 'Analyze your financial data with detailed charts and statistics',
+      fullDescription: 'The Reports page offers visual analyses and complete statistics of your finances. You can view income vs. expense charts, expense composition by category, monthly trends, and balance projections. Data can be filtered by account, currency, and specific period for more precise analysis.',
+      features: [
+        'View comparative income vs. expenses chart',
+        'Analyze expense composition by category (pie chart)',
+        'View monthly trends over time',
+        'Track initial, current, and projected balance',
+        'Filter by specific account or all accounts',
+        'Filter by currency for multi-currency analysis',
+        'Identify warning zones and negative balance'
+      ]
+    },
+    accounts: {
+      title: 'Accounts - Wallet Management',
+      shortDescription: 'Manage your bank accounts, wallets, and balances in different currencies',
+      fullDescription: 'The Accounts page allows you to manage all your financial wallets, whether bank accounts, cash wallets, or investments. Each account can have its own currency and initial balance. The system automatically calculates the current balance based on recorded transactions. Cash accounts are automatically created for each currency used.',
+      features: [
+        'Create bank accounts and custom wallets',
+        'Set currency for each account (BRL, USD, EUR, etc.)',
+        'Establish initial balance and reference date',
+        'Set default account for new transactions',
+        'View automatically calculated balance',
+        'Identify cash accounts (automatic)',
+        'Edit or delete custom accounts'
+      ]
+    }
+  },
+
   // Default Categories
   defaultCategories: {
     salary: 'Salary',

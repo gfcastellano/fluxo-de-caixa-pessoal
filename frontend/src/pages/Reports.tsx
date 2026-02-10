@@ -31,6 +31,7 @@ import {
   ReferenceLine,
 } from 'recharts';
 import { Download, TrendingUp, TrendingDown, Calendar, PiggyBank, Calculator, ChevronLeft, ChevronRight } from 'lucide-react';
+import { PageDescription } from '../components/PageDescription';
 
 export function Reports() {
   const { user } = useAuth();
@@ -643,90 +644,91 @@ export function Reports() {
 
   return (
     <div className="flex flex-col sm:gap-6 gap-4 sm:p-6 p-4 overflow-x-hidden">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 lg:gap-4">
-        <h1 className="text-lg lg:text-2xl font-bold text-ink">{t('reports.title')}</h1>
-        <div className="flex flex-wrap gap-2 lg:gap-3">
-          {/* Currency Filter Toggle Buttons */}
-          {availableCurrencies.length > 0 && (
-            <div className="flex items-center gap-0.5 lg:gap-1 bg-white/50 backdrop-blur-sm p-0.5 lg:p-1 rounded-lg lg:rounded-xl border border-white/40">
-              {availableCurrencies.map((currency) => (
-                <Button
-                  key={currency}
-                  variant={selectedCurrency === currency ? 'primary' : 'ghost'}
-                  size="sm"
-                  onClick={() => handleCurrencyChange(currency)}
-                  className="text-[10px] lg:text-xs px-2 lg:px-3 py-1 h-7 lg:h-8"
-                >
-                  {currency}
-                </Button>
-              ))}
-            </div>
-          )}
-          <select
-            value={selectedAccountId}
-            onChange={(e) => setSelectedAccountId(e.target.value)}
-            className="rounded-lg lg:rounded-xl border border-white/40 bg-white/50 backdrop-blur-sm px-2 lg:px-3 py-1 lg:py-2 text-xs lg:text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue h-7 lg:h-auto"
-          >
-            <option value="" className="text-ink">{t('reports.allAccounts')}</option>
-            {filteredAccounts.map((account) => (
-              <option key={account.id} value={account.id} className="text-ink">
-                {account.name} ({account.currency})
-              </option>
-            ))}
-          </select>
-          <select
-            value={year}
-            onChange={(e) => setYear(parseInt(e.target.value))}
-            className="rounded-lg lg:rounded-xl border border-white/40 bg-white/50 backdrop-blur-sm px-2 lg:px-3 py-1 lg:py-2 text-xs lg:text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue h-7 lg:h-auto"
-          >
-            {[2023, 2024, 2025, 2026].map((y) => (
-              <option key={y} value={y} className="text-ink">
-                {y}
-              </option>
-            ))}
-          </select>
+      <div className="flex items-center justify-between gap-3 lg:gap-4">
+        <h1 className="text-lg sm:text-2xl font-bold text-ink">{t('reports.title')}</h1>
+        <PageDescription pageKey="reports" />
+      </div>
+      <div className="flex flex-wrap gap-2 lg:gap-3">
+        {/* Currency Filter Toggle Buttons */}
+        {availableCurrencies.length > 0 && (
           <div className="flex items-center gap-0.5 lg:gap-1 bg-white/50 backdrop-blur-sm p-0.5 lg:p-1 rounded-lg lg:rounded-xl border border-white/40">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={handlePreviousMonth}
-              aria-label={t('reports.previousMonth')}
-              className="h-6 w-6 lg:h-8 lg:w-8"
-            >
-              <ChevronLeft className="h-3 w-3 lg:h-4 lg:w-4" />
-            </Button>
-            <select
-              value={month}
-              onChange={(e) => setMonth(parseInt(e.target.value))}
-              className="bg-transparent border-none text-xs lg:text-sm text-ink focus:outline-none cursor-pointer py-0.5 lg:py-1"
-            >
-              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                <option key={m} value={m} className="text-ink">
-                  {new Date(2000, m - 1).toLocaleString('default', {
-                    month: 'short',
-                  })}
-                </option>
-              ))}
-            </select>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={handleNextMonth}
-              aria-label={t('reports.nextMonth')}
-              className="h-6 w-6 lg:h-8 lg:w-8"
-            >
-              <ChevronRight className="h-3 w-3 lg:h-4 lg:w-4" />
-            </Button>
+            {availableCurrencies.map((currency) => (
+              <Button
+                key={currency}
+                variant={selectedCurrency === currency ? 'primary' : 'ghost'}
+                size="sm"
+                onClick={() => handleCurrencyChange(currency)}
+                className="text-[10px] lg:text-xs px-2 lg:px-3 py-1 h-7 lg:h-8"
+              >
+                {currency}
+              </Button>
+            ))}
           </div>
-          <Button 
-            variant="secondary" 
-            onClick={handleExport} 
-            leftIcon={<Download className="h-3 w-3 lg:h-4 lg:w-4 flex-shrink-0" />}
-            className="text-xs lg:text-sm px-2 lg:px-4 py-1 lg:py-2 h-7 lg:h-auto whitespace-nowrap"
+        )}
+        <select
+          value={selectedAccountId}
+          onChange={(e) => setSelectedAccountId(e.target.value)}
+          className="rounded-lg lg:rounded-xl border border-white/40 bg-white/50 backdrop-blur-sm px-2 lg:px-3 py-1 lg:py-2 text-xs lg:text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue h-7 lg:h-auto"
+        >
+          <option value="" className="text-ink">{t('reports.allAccounts')}</option>
+          {filteredAccounts.map((account) => (
+            <option key={account.id} value={account.id} className="text-ink">
+              {account.name} ({account.currency})
+            </option>
+          ))}
+        </select>
+        <select
+          value={year}
+          onChange={(e) => setYear(parseInt(e.target.value))}
+          className="rounded-lg lg:rounded-xl border border-white/40 bg-white/50 backdrop-blur-sm px-2 lg:px-3 py-1 lg:py-2 text-xs lg:text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue h-7 lg:h-auto"
+        >
+          {[2023, 2024, 2025, 2026].map((y) => (
+            <option key={y} value={y} className="text-ink">
+              {y}
+            </option>
+          ))}
+        </select>
+        <div className="flex items-center gap-0.5 lg:gap-1 bg-white/50 backdrop-blur-sm p-0.5 lg:p-1 rounded-lg lg:rounded-xl border border-white/40">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={handlePreviousMonth}
+            aria-label={t('reports.previousMonth')}
+            className="h-6 w-6 lg:h-8 lg:w-8"
           >
-            {t('common.save')}
+            <ChevronLeft className="h-3 w-3 lg:h-4 lg:w-4" />
+          </Button>
+          <select
+            value={month}
+            onChange={(e) => setMonth(parseInt(e.target.value))}
+            className="bg-transparent border-none text-xs lg:text-sm text-ink focus:outline-none cursor-pointer py-0.5 lg:py-1"
+          >
+            {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+              <option key={m} value={m} className="text-ink">
+                {new Date(2000, m - 1).toLocaleString('default', {
+                  month: 'short',
+                })}
+              </option>
+            ))}
+          </select>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={handleNextMonth}
+            aria-label={t('reports.nextMonth')}
+            className="h-6 w-6 lg:h-8 lg:w-8"
+          >
+            <ChevronRight className="h-3 w-3 lg:h-4 lg:w-4" />
           </Button>
         </div>
+        <Button 
+          variant="secondary" 
+          onClick={handleExport} 
+          leftIcon={<Download className="h-3 w-3 lg:h-4 lg:w-4 flex-shrink-0" />}
+          className="text-xs lg:text-sm px-2 lg:px-4 py-1 lg:py-2 h-7 lg:h-auto whitespace-nowrap"
+        >
+          {t('common.save')}
+        </Button>
       </div>
 
       {/* Linha 1: Cards de Receita e Despesa com gráficos internos */}

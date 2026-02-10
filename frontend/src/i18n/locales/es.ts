@@ -299,6 +299,90 @@ export const esTranslations = {
     balanceIsNegative: 'Saldo negativo',
   },
 
+  // Page Descriptions
+  pageDescriptions: {
+    whatYouCanDo: 'Qué puedes hacer en esta página:',
+    dashboard: {
+      title: 'Panel - Resumen Financiero',
+      shortDescription: 'Visualiza tu resumen financiero del mes actual',
+      fullDescription: 'El Panel es tu centro de comando financiero. Aquí puedes ver un resumen completo de tus finanzas del mes actual, incluyendo ingresos, gastos y saldo. Los datos se calculan automáticamente basándose en las transacciones registradas en todas tus cuentas.',
+      features: [
+        'Ver total de ingresos y gastos del mes actual',
+        'Seguir el saldo por moneda/cartera',
+        'Visualizar las transacciones más recientes',
+        'Ver saldo actualizado de todas las cuentas',
+        'Identificar rápidamente tu situación financiera'
+      ]
+    },
+    transactions: {
+      title: 'Transacciones - Gestión de Movimientos',
+      shortDescription: 'Registra y gestiona todos tus movimientos financieros',
+      fullDescription: 'La página de Transacciones permite registrar, visualizar y gestionar todos tus movimientos financieros. Puedes crear transacciones únicas o recurrentes, filtrar por período (mes/semana/todas), buscar por términos específicos y editar o eliminar registros existentes. El sistema calcula automáticamente el saldo basándose en las transacciones registradas.',
+      features: [
+        'Añadir ingresos, gastos y transferencias',
+        'Crear transacciones recurrentes (mensuales, semanales, anuales)',
+        'Filtrar por período: mes, semana o todas las transacciones',
+        'Buscar transacciones por descripción o categoría',
+        'Editar o eliminar transacciones individuales o en serie',
+        'Visualizar cuotas de transacciones divididas'
+      ]
+    },
+    categories: {
+      title: 'Categorías - Organización Financiera',
+      shortDescription: 'Crea y gestiona categorías para clasificar tus transacciones',
+      fullDescription: 'Las Categorías permiten organizar tus transacciones de forma personalizada. Puedes crear categorías para ingresos, gastos y transferencias, asignando colores para facilitar la identificación visual. Las categorías bien definidas son esenciales para informes precisos y control de presupuestos.',
+      features: [
+        'Crear categorías personalizadas para ingresos',
+        'Crear categorías personalizadas para gastos',
+        'Definir categorías para transferencias entre cuentas',
+        'Asignar colores para identificación visual',
+        'Editar o eliminar categorías existentes',
+        'Visualizar categorías organizadas por tipo'
+      ]
+    },
+    budgets: {
+      title: 'Presupuestos - Control de Gastos',
+      shortDescription: 'Define límites de gastos por categoría y sigue tu progreso',
+      fullDescription: 'La página de Presupuestos permite definir límites de gastos por categoría y seguir tu progreso en tiempo real. El sistema calcula automáticamente cuánto has gastado en cada categoría en el mes actual y muestra visualmente si estás dentro del presupuesto o si has excedido el límite. Ideal para mantener tus finanzas bajo control.',
+      features: [
+        'Crear presupuestos mensuales o anuales por categoría',
+        'Definir valor límite para cada categoría',
+        'Seguir gastos en tiempo real',
+        'Visualizar progreso con indicadores visuales',
+        'Recibir alertas cuando estés cerca de exceder',
+        'Ver historial de gastos vs. presupuesto'
+      ]
+    },
+    reports: {
+      title: 'Informes - Análisis Financiero',
+      shortDescription: 'Analiza tus datos financieros con gráficos y estadísticas detalladas',
+      fullDescription: 'La página de Informes ofrece análisis visuales y estadísticas completas de tus finanzas. Puedes ver gráficos de ingresos vs gastos, composición de gastos por categoría, tendencias mensuales y proyección de saldo. Los datos pueden filtrarse por cuenta, moneda y período específico para análisis más precisos.',
+      features: [
+        'Ver gráfico comparativo de ingresos vs gastos',
+        'Analizar composición de gastos por categoría (gráfico circular)',
+        'Visualizar tendencia mensual a lo largo del tiempo',
+        'Seguir saldo inicial, actual y proyectado',
+        'Filtrar por cuenta específica o todas las cuentas',
+        'Filtrar por moneda para análisis multi-moneda',
+        'Identificar zonas de alerta y saldo negativo'
+      ]
+    },
+    accounts: {
+      title: 'Cuentas - Gestión de Carteras',
+      shortDescription: 'Gestiona tus cuentas bancarias, carteras y saldos en diferentes monedas',
+      fullDescription: 'La página de Cuentas permite gestionar todas tus carteras financieras, ya sean cuentas bancarias, carteras de efectivo o inversiones. Cada cuenta puede tener su propia moneda y saldo inicial. El sistema calcula automáticamente el saldo actual basándose en las transacciones registradas. Las cuentas en efectivo se crean automáticamente para cada moneda utilizada.',
+      features: [
+        'Crear cuentas bancarias y carteras personalizadas',
+        'Definir moneda para cada cuenta (BRL, USD, EUR, etc.)',
+        'Establecer saldo inicial y fecha de referencia',
+        'Definir cuenta predeterminada para nuevas transacciones',
+        'Ver saldo calculado automáticamente',
+        'Identificar cuentas en efectivo (automáticas)',
+        'Editar o eliminar cuentas personalizadas'
+      ]
+    }
+  },
+
   // Default Categories
   defaultCategories: {
     salary: 'Salario',

@@ -16,6 +16,7 @@ import { formatDate } from '../utils/format';
 import type { Account } from '../types';
 import { Edit2, Trash2, Star, Wallet, Banknote, DollarSign, Euro, PoundSterling, JapaneseYen, SwissFranc, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '../utils/cn';
+import { PageDescription } from '../components/PageDescription';
 
 const CURRENCY_ICONS: Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
   USD: DollarSign,
@@ -156,9 +157,10 @@ export function Accounts() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-var(--header-height)-var(--dock-height))] sm:h-auto sm:min-h-0 sm:gap-6 gap-4 sm:p-6 p-4 overflow-x-hidden">
-      {/* Header - no add button, Hero handles it */}
-      <div className="flex items-center flex-shrink-0">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-shrink-0">
         <h1 className="text-lg sm:text-2xl font-bold text-ink">{t('accounts.title')}</h1>
+        <PageDescription pageKey="accounts" />
       </div>
 
       <AccountModal

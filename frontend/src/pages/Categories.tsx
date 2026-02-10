@@ -14,6 +14,7 @@ import { getTranslatedCategoryName } from '../utils/categoryTranslations';
 import type { Category } from '../types';
 import { Edit2, Trash2, TrendingUp, TrendingDown, ArrowRightLeft, Tag } from 'lucide-react';
 import { cn } from '../utils/cn';
+import { PageDescription } from '../components/PageDescription';
 
 export function Categories() {
   const { user } = useAuth();
@@ -143,10 +144,10 @@ export function Categories() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-var(--header-height)-var(--dock-height))] sm:h-auto sm:min-h-0 sm:gap-6 gap-4 sm:p-6 p-4 overflow-x-hidden">
-      {/* Header - no add button, Hero handles it */}
-      <div className="flex flex-col gap-1 sm:gap-2 flex-shrink-0">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-shrink-0">
         <h1 className="text-lg sm:text-2xl font-bold text-ink">{t('categories.title')}</h1>
-        <p className="text-xs sm:text-sm text-neutral-500">{t('categories.subtitle')}</p>
+        <PageDescription pageKey="categories" />
       </div>
 
       <CategoryModal
