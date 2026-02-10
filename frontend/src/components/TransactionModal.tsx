@@ -6,9 +6,10 @@ import { Input } from './Input';
 import { useVoiceForm } from '../hooks/useVoiceForm';
 import { sendVoiceTransaction, sendVoiceTransactionUpdate } from '../services/voiceService';
 import { getAccounts } from '../services/accountService';
+import { getCreditCards } from '../services/creditCardService';
 import { getRecurringInstances } from '../services/transactionService';
 import { getTranslatedCategoryName } from '../utils/categoryTranslations';
-import type { Transaction, Category, Account } from '../types';
+import type { Transaction, Category, Account, CreditCard } from '../types';
 import { cn } from '../utils/cn';
 
 interface TransactionModalProps {
@@ -52,6 +53,11 @@ export function TransactionModal({
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
   const [selectedToAccountId, setSelectedToAccountId] = useState<string>('');
+  
+  // Credit card states
+  const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
+  const [selectedCreditCardId, setSelectedCreditCardId] = useState<string>('');
+  const [paymentMethod, setPaymentMethod] = useState<'account' | 'credit_card'>('account');
 
   // Estados para edição em massa de transações recorrentes
   const [editMode, setEditMode] = useState<'single' | 'forward' | 'all'>('forward');
@@ -83,7 +89,23 @@ export function TransactionModal({
           console.error('Error fetching accounts:', error);
         }
       };
+      
+      const fetchCreditCards = async () => {
+        try {
+          const userCreditCards = await getCreditCards(userId);
+          setCreditCards(userCreditCards);
+          
+          if (transaction?.creditCardId) {
+            setSelectedCreditCardId(transaction.creditCardId);
+            setPaymentMethod('credit_card');
+          }
+        } catch (error) {
+          console.error('Error fetching credit cards:', error);
+        }
+      };
+      
       fetchAccounts();
+      fetchCreditCards();
     }
   }, [isOpen, userId, transaction]);
 
@@ -117,6 +139,8 @@ export function TransactionModal({
       setRecurringCount('');
       setRecurringMode('date');
       setSelectedToAccountId('');
+      setSelectedCreditCardId('');
+      setPaymentMethod('account');
     }
     voice.resetVoice();
   }, [transaction, isOpen]);
@@ -199,9 +223,18 @@ export function TransactionModal({
       ...formData,
       type: validType,
       amount: parseFloat(formData.amount.toString().replace(',', '.')),
-      accountId: selectedAccountId || undefined,
-      ...(validType === 'transfer' ? { toAccountId: selectedToAccountId || undefined } : {}),
     };
+    
+    // Add credit card or account info based on payment method
+    if (paymentMethod === 'credit_card' && selectedCreditCardId) {
+      transactionData.creditCardId = selectedCreditCardId;
+      // Don't set accountId for credit card transactions
+    } else {
+      transactionData.accountId = selectedAccountId || undefined;
+      if (validType === 'transfer') {
+        transactionData.toAccountId = selectedToAccountId || undefined;
+      }
+    }
 
     if (isRecurring && !isEditing) {
       transactionData.isRecurring = true;
@@ -563,23 +596,81 @@ export function TransactionModal({
             </div>
           </div>
         </div>
-        <div className="col-span-1 sm:col-span-2">
-          <div className={`grid ${formData.type === 'transfer' ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-2'} gap-3`}>
-            <div>
-              <label className="block text-sm font-medium text-ink mb-1.5">
-                {formData.type === 'transfer' ? t('transactions.form.sourceAccount') || t('transactions.form.account') : t('transactions.form.account')}
-              </label>
-              <select
-                value={selectedAccountId}
-                onChange={(e) => setSelectedAccountId(e.target.value)}
-                className="w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue transition-all"
+        {/* Payment Method Selection - Only for expenses */}
+        {formData.type === 'expense' && creditCards.length > 0 && (
+          <div className="col-span-1 sm:col-span-2">
+            <label className="block text-sm font-medium text-ink mb-1.5">
+              {t('transactions.form.paymentMethod') || 'Forma de Pagamento'}
+            </label>
+            <div className="flex gap-2 p-1 bg-slate/5 rounded-lg">
+              <button
+                type="button"
+                onClick={() => setPaymentMethod('account')}
+                className={cn(
+                  "flex-1 px-3 py-2 text-sm font-medium rounded-md transition-all duration-200",
+                  paymentMethod === 'account'
+                    ? 'bg-white text-blue shadow-sm'
+                    : 'text-slate hover:text-ink'
+                )}
               >
-                <option value="">{t('transactions.form.selectAccount')}</option>
-                {accounts.map((account) => (
-                  <option key={account.id} value={account.id}>{account.name} {account.isDefault ? `(${t('common.default')})` : ''}</option>
-                ))}
-              </select>
+                {t('transactions.form.payWithAccount') || 'Conta/Débito'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setPaymentMethod('credit_card')}
+                className={cn(
+                  "flex-1 px-3 py-2 text-sm font-medium rounded-md transition-all duration-200",
+                  paymentMethod === 'credit_card'
+                    ? 'bg-white text-blue shadow-sm'
+                    : 'text-slate hover:text-ink'
+                )}
+              >
+                {t('transactions.form.payWithCreditCard') || 'Cartão de Crédito'}
+              </button>
             </div>
+          </div>
+        )}
+
+        <div className="col-span-1 sm:col-span-2">
+          <div className={`grid ${formData.type === 'transfer' ? 'grid-cols-1 sm:grid-cols-3' : paymentMethod === 'credit_card' ? 'grid-cols-1' : 'grid-cols-2'} gap-3`}>
+            {/* Show account selection for transfers or when payment method is account */}
+            {(formData.type === 'transfer' || paymentMethod === 'account') && (
+              <div>
+                <label className="block text-sm font-medium text-ink mb-1.5">
+                  {formData.type === 'transfer' ? t('transactions.form.sourceAccount') || t('transactions.form.account') : t('transactions.form.account')}
+                </label>
+                <select
+                  value={selectedAccountId}
+                  onChange={(e) => setSelectedAccountId(e.target.value)}
+                  className="w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue transition-all"
+                >
+                  <option value="">{t('transactions.form.selectAccount')}</option>
+                  {accounts.map((account) => (
+                    <option key={account.id} value={account.id}>{account.name} {account.isDefault ? `(${t('common.default')})` : ''}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            
+            {/* Show credit card selection when payment method is credit card */}
+            {formData.type === 'expense' && paymentMethod === 'credit_card' && (
+              <div>
+                <label className="block text-sm font-medium text-ink mb-1.5">
+                  {t('transactions.form.selectCreditCard') || 'Cartão de Crédito'}
+                </label>
+                <select
+                  value={selectedCreditCardId}
+                  onChange={(e) => setSelectedCreditCardId(e.target.value)}
+                  className="w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue transition-all"
+                  required={paymentMethod === 'credit_card'}
+                >
+                  <option value="">{t('transactions.form.selectCreditCard') || 'Selecione um cartão'}</option>
+                  {creditCards.map((card) => (
+                    <option key={card.id} value={card.id}>{card.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             {formData.type === 'transfer' && (
               <div>
                 <label className="block text-sm font-medium text-ink mb-1.5">{t('transactions.form.destinationAccount')}</label>
