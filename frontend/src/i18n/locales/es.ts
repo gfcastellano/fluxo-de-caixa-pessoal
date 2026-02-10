@@ -268,6 +268,80 @@ export const esTranslations = {
     },
   },
 
+  // Credit Cards
+  creditCards: {
+    title: 'Tarjetas de Crédito',
+    addNew: 'Añadir Tarjeta',
+    editCard: 'Editar Tarjeta',
+    deleteConfirm: '¿Estás seguro de que quieres eliminar esta tarjeta?',
+    deleteError: 'Error al eliminar tarjeta. Verifica si hay facturas pendientes.',
+    noCards: 'No se encontraron tarjetas',
+    addFirst: 'Añade tu primera tarjeta de crédito',
+    linkedAccount: 'Cuenta',
+    availableLimit: 'Límite Disponible',
+    used: 'Usado',
+    totalLimit: 'Límite Total',
+    currentBill: 'Factura Actual',
+    dueDate: 'Fecha de Vencimiento',
+    closingDay: 'Día de Cierre',
+    dueDay: 'Día de Vencimiento',
+    open: 'Abierta',
+    highUsageWarning: '¡Límite casi agotado!',
+    form: {
+      name: 'Nombre de la Tarjeta',
+      namePlaceholder: 'Ej: Nubank, Itaú, etc.',
+      linkedAccount: 'Cuenta Vinculada',
+      selectAccount: 'Selecciona una cuenta',
+      creditLimit: 'Límite de Crédito',
+      color: 'Color de la Tarjeta',
+      closingDay: 'Día de Cierre',
+      closingDayHint: 'Día en que cierra la factura (1-31)',
+      dueDay: 'Día de Vencimiento',
+      dueDayHint: 'Día de vencimiento de la factura (1-31)',
+    },
+    errors: {
+      nameRequired: 'El nombre de la tarjeta es obligatorio',
+      accountRequired: 'La cuenta vinculada es obligatoria',
+      limitPositive: 'El límite debe ser mayor que cero',
+      closingDayInvalid: 'El día de cierre debe estar entre 1 y 31',
+      dueDayInvalid: 'El día de vencimiento debe estar entre 1 y 31',
+    },
+  },
+
+  // Credit Card Bills
+  creditCardBills: {
+    title: 'Factura de Tarjeta',
+    monthYear: 'Factura {{month}}/{{year}}',
+    totalAmount: 'Monto Total',
+    dueDate: 'Fecha de Vencimiento',
+    closingDate: 'Fecha de Cierre',
+    transactions: 'Transacciones',
+    noTransactions: 'No hay transacciones en esta factura',
+    open: 'Abierta',
+    closed: 'Cerrada - Esperando Pago',
+    paid: 'Pagada',
+    paidOn: 'Pagada el {{date}}',
+    closeBill: 'Cerrar Factura',
+    payBill: 'Pagar Factura',
+    payWithAccount: 'Pagar con cuenta',
+    selectAccount: 'Selecciona una cuenta',
+    confirmClose: '¿Estás seguro de que quieres cerrar esta factura?',
+    confirmPay: '¿Confirmar pago de la factura?',
+    loadError: 'Error al cargar datos de la factura',
+    closeError: 'Error al cerrar factura',
+    payError: 'Error al pagar factura',
+  },
+
+  // Transactions - Credit Card
+  transactions: {
+    form: {
+      paymentMethod: 'Forma de Pago',
+      payWithAccount: 'Cuenta/Débito',
+      payWithCreditCard: 'Tarjeta de Crédito',
+      selectCreditCard: 'Tarjeta de Crédito',
+    },
+  },
+
   // Reports
   reports: {
     title: 'Informes',

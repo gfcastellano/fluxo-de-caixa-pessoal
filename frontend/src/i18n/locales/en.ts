@@ -268,6 +268,80 @@ export const enTranslations = {
     },
   },
 
+  // Credit Cards
+  creditCards: {
+    title: 'Credit Cards',
+    addNew: 'Add Credit Card',
+    editCard: 'Edit Credit Card',
+    deleteConfirm: 'Are you sure you want to delete this credit card?',
+    deleteError: 'Error deleting credit card. Check for pending bills.',
+    noCards: 'No credit cards found',
+    addFirst: 'Add your first credit card',
+    linkedAccount: 'Linked Account',
+    availableLimit: 'Available Limit',
+    used: 'Used',
+    totalLimit: 'Total Limit',
+    currentBill: 'Current Bill',
+    dueDate: 'Due Date',
+    closingDay: 'Closing Day',
+    dueDay: 'Due Day',
+    open: 'Open',
+    highUsageWarning: 'Limit almost exhausted!',
+    form: {
+      name: 'Card Name',
+      namePlaceholder: 'Ex: Nubank, Itaú, etc.',
+      linkedAccount: 'Linked Account',
+      selectAccount: 'Select an account',
+      creditLimit: 'Credit Limit',
+      color: 'Card Color',
+      closingDay: 'Closing Day',
+      closingDayHint: 'Day when bill closes (1-31)',
+      dueDay: 'Due Day',
+      dueDayHint: 'Bill due day (1-31)',
+    },
+    errors: {
+      nameRequired: 'Card name is required',
+      accountRequired: 'Linked account is required',
+      limitPositive: 'Limit must be greater than zero',
+      closingDayInvalid: 'Closing day must be between 1 and 31',
+      dueDayInvalid: 'Due day must be between 1 and 31',
+    },
+  },
+
+  // Credit Card Bills
+  creditCardBills: {
+    title: 'Credit Card Bill',
+    monthYear: 'Bill {{month}}/{{year}}',
+    totalAmount: 'Total Amount',
+    dueDate: 'Due Date',
+    closingDate: 'Closing Date',
+    transactions: 'Transactions',
+    noTransactions: 'No transactions in this bill',
+    open: 'Open',
+    closed: 'Closed - Awaiting Payment',
+    paid: 'Paid',
+    paidOn: 'Paid on {{date}}',
+    closeBill: 'Close Bill',
+    payBill: 'Pay Bill',
+    payWithAccount: 'Pay with account',
+    selectAccount: 'Select an account',
+    confirmClose: 'Are you sure you want to close this bill?',
+    confirmPay: 'Confirm bill payment?',
+    loadError: 'Error loading bill data',
+    closeError: 'Error closing bill',
+    payError: 'Error paying bill',
+  },
+
+  // Transactions - Credit Card
+  transactions: {
+    form: {
+      paymentMethod: 'Payment Method',
+      payWithAccount: 'Account/Debit',
+      payWithCreditCard: 'Credit Card',
+      selectCreditCard: 'Credit Card',
+    },
+  },
+
   // Reports
   reports: {
     title: 'Reports',

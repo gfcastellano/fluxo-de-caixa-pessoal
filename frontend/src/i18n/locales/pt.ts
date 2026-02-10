@@ -279,6 +279,80 @@ export const ptTranslations = {
     },
   },
 
+  // Credit Cards
+  creditCards: {
+    title: 'Cartões de Crédito',
+    addNew: 'Adicionar Cartão',
+    editCard: 'Editar Cartão',
+    deleteConfirm: 'Tem certeza que deseja excluir este cartão?',
+    deleteError: 'Erro ao excluir cartão. Verifique se há faturas pendentes.',
+    noCards: 'Nenhum cartão encontrado',
+    addFirst: 'Adicione seu primeiro cartão de crédito',
+    linkedAccount: 'Conta',
+    availableLimit: 'Limite Disponível',
+    used: 'Usado',
+    totalLimit: 'Limite',
+    currentBill: 'Fatura Atual',
+    dueDate: 'Vencimento',
+    closingDay: 'Fechamento',
+    dueDay: 'Vencimento',
+    open: 'Aberta',
+    highUsageWarning: 'Limite quase esgotado!',
+    form: {
+      name: 'Nome do Cartão',
+      namePlaceholder: 'Ex: Nubank, Itaú, etc.',
+      linkedAccount: 'Conta Vinculada',
+      selectAccount: 'Selecione uma conta',
+      creditLimit: 'Limite do Cartão',
+      color: 'Cor do Cartão',
+      closingDay: 'Dia do Fechamento',
+      closingDayHint: 'Dia em que a fatura fecha (1-31)',
+      dueDay: 'Dia do Vencimento',
+      dueDayHint: 'Dia de vencimento da fatura (1-31)',
+    },
+    errors: {
+      nameRequired: 'Nome do cartão é obrigatório',
+      accountRequired: 'Conta vinculada é obrigatória',
+      limitPositive: 'Limite deve ser maior que zero',
+      closingDayInvalid: 'Dia de fechamento deve ser entre 1 e 31',
+      dueDayInvalid: 'Dia de vencimento deve ser entre 1 e 31',
+    },
+  },
+
+  // Credit Card Bills
+  creditCardBills: {
+    title: 'Fatura do Cartão',
+    monthYear: 'Fatura {{month}}/{{year}}',
+    totalAmount: 'Valor Total',
+    dueDate: 'Vencimento',
+    closingDate: 'Data de Fechamento',
+    transactions: 'Transações',
+    noTransactions: 'Nenhuma transação nesta fatura',
+    open: 'Aberta',
+    closed: 'Fechada - Aguardando Pagamento',
+    paid: 'Paga',
+    paidOn: 'Paga em {{date}}',
+    closeBill: 'Fechar Fatura',
+    payBill: 'Pagar Fatura',
+    payWithAccount: 'Pagar com conta',
+    selectAccount: 'Selecione uma conta',
+    confirmClose: 'Tem certeza que deseja fechar esta fatura?',
+    confirmPay: 'Confirmar pagamento da fatura?',
+    loadError: 'Erro ao carregar dados da fatura',
+    closeError: 'Erro ao fechar fatura',
+    payError: 'Erro ao pagar fatura',
+  },
+
+  // Transactions - Credit Card
+  transactions: {
+    form: {
+      paymentMethod: 'Forma de Pagamento',
+      payWithAccount: 'Conta/Débito',
+      payWithCreditCard: 'Cartão de Crédito',
+      selectCreditCard: 'Cartão de Crédito',
+    },
+  },
+
   // Reports
   reports: {
     title: 'Relatórios',
