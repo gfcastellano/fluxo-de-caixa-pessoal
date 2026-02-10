@@ -340,6 +340,10 @@ export const enTranslations = {
       payWithCreditCard: 'Credit Card',
       payWithCash: 'Cash',
       selectCreditCard: 'Credit Card',
+      installments: 'Installments',
+      numberOfInstallments: 'Number of installments',
+      totalAmount: 'Total amount',
+      installmentAmount: 'Installment amount',
     },
   },
 

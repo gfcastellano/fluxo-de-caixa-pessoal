@@ -58,6 +58,10 @@ export function TransactionModal({
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
   const [selectedCreditCardId, setSelectedCreditCardId] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<'account' | 'credit_card' | 'cash'>('account');
+  
+  // Installment states for credit card
+  const [installments, setInstallments] = useState<number>(1);
+  const [isInstallmentMode, setIsInstallmentMode] = useState(false);
 
   // Estados para edição em massa de transações recorrentes
   const [editMode, setEditMode] = useState<'single' | 'forward' | 'all'>('forward');
@@ -219,10 +223,17 @@ export function TransactionModal({
       validType = 'expense';
     }
 
+    const totalAmount = parseFloat(formData.amount.toString().replace(',', '.'));
+    
+    // Calculate installment amount if in installment mode
+    const installmentAmount = isInstallmentMode && installments > 1
+      ? totalAmount / installments
+      : totalAmount;
+
     const transactionData: Partial<Transaction> = {
       ...formData,
       type: validType,
-      amount: parseFloat(formData.amount.toString().replace(',', '.')),
+      amount: installmentAmount,
     };
     
     // Add credit card, account, or cash info based on payment method
@@ -239,7 +250,15 @@ export function TransactionModal({
       }
     }
 
-    if (isRecurring && !isEditing) {
+    // Handle credit card installments
+    if (isInstallmentMode && installments > 1 && paymentMethod === 'credit_card' && !isEditing) {
+      transactionData.isRecurring = true;
+      transactionData.recurrencePattern = 'monthly';
+      transactionData.recurringCount = installments;
+      // Store total amount and installment info
+      transactionData.totalInstallments = installments;
+      transactionData.installmentNumber = 1;
+    } else if (isRecurring && !isEditing) {
       transactionData.isRecurring = true;
       transactionData.recurrencePattern = recurrencePattern;
       if (recurrenceDay !== '') {
@@ -662,6 +681,74 @@ export function TransactionModal({
                 </span>
                 {t('transactions.form.payWithCash') || 'Dinheiro/Efetivo'}
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Installments section - Only for credit card expenses */}
+        {formData.type === 'expense' && paymentMethod === 'credit_card' && (
+          <div className="col-span-1 sm:col-span-2">
+            <div className="p-3 bg-blue/5 rounded-lg border border-blue/10">
+              <div className="flex items-center justify-between mb-3">
+                <label className="text-sm font-medium text-ink">
+                  {t('transactions.form.installments') || 'Parcelamento'}
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setIsInstallmentMode(!isInstallmentMode)}
+                  className={cn(
+                    "relative inline-flex h-5 w-9 items-center rounded-full transition-colors",
+                    isInstallmentMode ? 'bg-blue' : 'bg-slate/30'
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform",
+                      isInstallmentMode ? 'translate-x-5' : 'translate-x-1'
+                    )}
+                  />
+                </button>
+              </div>
+              
+              {isInstallmentMode && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs text-slate mb-1.5">
+                      {t('transactions.form.numberOfInstallments') || 'Número de parcelas'}
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="range"
+                        min="2"
+                        max="24"
+                        value={installments}
+                        onChange={(e) => setInstallments(parseInt(e.target.value))}
+                        className="flex-1 h-2 bg-slate/20 rounded-lg appearance-none cursor-pointer accent-blue"
+                      />
+                      <span className="text-sm font-medium text-ink min-w-[3rem] text-center">
+                        {installments}x
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {formData.amount && parseFloat(formData.amount) > 0 && (
+                    <div className="text-xs text-slate bg-white/50 rounded-md p-2">
+                      <div className="flex justify-between mb-1">
+                        <span>{t('transactions.form.totalAmount') || 'Valor total'}:</span>
+                        <span className="font-medium text-ink">
+                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(parseFloat(formData.amount))}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>{t('transactions.form.installmentAmount') || 'Valor da parcela'}:</span>
+                        <span className="font-medium text-blue">
+                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(parseFloat(formData.amount) / installments)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}

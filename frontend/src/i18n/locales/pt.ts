@@ -351,6 +351,10 @@ export const ptTranslations = {
       payWithCreditCard: 'Cartão de Crédito',
       payWithCash: 'Dinheiro/Efetivo',
       selectCreditCard: 'Cartão de Crédito',
+      installments: 'Parcelamento',
+      numberOfInstallments: 'Número de parcelas',
+      totalAmount: 'Valor total',
+      installmentAmount: 'Valor da parcela',
     },
   },
 

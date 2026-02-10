@@ -340,6 +340,10 @@ export const esTranslations = {
       payWithCreditCard: 'Tarjeta de Crédito',
       payWithCash: 'Efectivo',
       selectCreditCard: 'Tarjeta de Crédito',
+      installments: 'Cuotas',
+      numberOfInstallments: 'Número de cuotas',
+      totalAmount: 'Monto total',
+      installmentAmount: 'Monto de la cuota',
     },
   },
 
