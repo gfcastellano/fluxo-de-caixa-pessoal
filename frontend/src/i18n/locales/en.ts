@@ -338,6 +338,7 @@ export const enTranslations = {
       paymentMethod: 'Payment Method',
       payWithAccount: 'Account/Debit',
       payWithCreditCard: 'Credit Card',
+      payWithCash: 'Cash',
       selectCreditCard: 'Credit Card',
     },
   },

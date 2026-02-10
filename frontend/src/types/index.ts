@@ -50,6 +50,8 @@ export interface Transaction {
   billId?: string;
   isBillPayment?: boolean;
   paidBillId?: string;
+  // Cash payment flag
+  isCash?: boolean;
 }
 
 export interface Budget {

@@ -338,6 +338,7 @@ export const esTranslations = {
       paymentMethod: 'Forma de Pago',
       payWithAccount: 'Cuenta/Débito',
       payWithCreditCard: 'Tarjeta de Crédito',
+      payWithCash: 'Efectivo',
       selectCreditCard: 'Tarjeta de Crédito',
     },
   },

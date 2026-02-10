@@ -22,6 +22,8 @@ const transactionSchema = z.object({
   billId: z.string().optional(),
   isBillPayment: z.boolean().optional(),
   paidBillId: z.string().optional(),
+  // Cash payment flag
+  isCash: z.boolean().optional(),
   // Recurring transaction fields
   isRecurring: z.boolean().optional(),
   recurrencePattern: z.enum(['monthly', 'weekly', 'yearly']).nullable().optional(),

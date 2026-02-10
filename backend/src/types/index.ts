@@ -132,6 +132,8 @@ export interface TransactionWithCreditCard extends Transaction {
   billId?: string;                // ID da fatura vinculada
   isBillPayment?: boolean;        // true = esta transação é pagamento de fatura
   paidBillId?: string;            // ID da fatura paga (se isBillPayment=true)
+  // Cash payment flag
+  isCash?: boolean;               // true = pagamento em dinheiro/efetivo
 }
 
 export interface ApiResponse<T> {

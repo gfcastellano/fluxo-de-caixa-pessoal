@@ -57,7 +57,7 @@ export function TransactionModal({
   // Credit card states
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
   const [selectedCreditCardId, setSelectedCreditCardId] = useState<string>('');
-  const [paymentMethod, setPaymentMethod] = useState<'account' | 'credit_card'>('account');
+  const [paymentMethod, setPaymentMethod] = useState<'account' | 'credit_card' | 'cash'>('account');
 
   // Estados para edição em massa de transações recorrentes
   const [editMode, setEditMode] = useState<'single' | 'forward' | 'all'>('forward');
@@ -225,10 +225,13 @@ export function TransactionModal({
       amount: parseFloat(formData.amount.toString().replace(',', '.')),
     };
     
-    // Add credit card or account info based on payment method
+    // Add credit card, account, or cash info based on payment method
     if (paymentMethod === 'credit_card' && selectedCreditCardId) {
       transactionData.creditCardId = selectedCreditCardId;
       // Don't set accountId for credit card transactions
+    } else if (paymentMethod === 'cash') {
+      // Cash transactions don't have accountId or creditCardId
+      transactionData.isCash = true;
     } else {
       transactionData.accountId = selectedAccountId || undefined;
       if (validType === 'transfer') {
@@ -597,42 +600,74 @@ export function TransactionModal({
           </div>
         </div>
         {/* Payment Method Selection - Only for expenses */}
-        {formData.type === 'expense' && creditCards.length > 0 && (
+        {formData.type === 'expense' && (
           <div className="col-span-1 sm:col-span-2">
             <label className="block text-sm font-medium text-ink mb-1.5">
               {t('transactions.form.paymentMethod') || 'Forma de Pagamento'}
             </label>
-            <div className="flex gap-2 p-1 bg-slate/5 rounded-lg">
+            <div className="flex flex-col gap-1 p-1 bg-slate/5 rounded-lg">
               <button
                 type="button"
                 onClick={() => setPaymentMethod('account')}
                 className={cn(
-                  "flex-1 px-3 py-2 text-sm font-medium rounded-md transition-all duration-200",
+                  "w-full px-3 py-2.5 text-sm font-medium rounded-md transition-all duration-200 text-left flex items-center gap-3",
                   paymentMethod === 'account'
                     ? 'bg-white text-blue shadow-sm'
-                    : 'text-slate hover:text-ink'
+                    : 'text-slate hover:text-ink hover:bg-white/50'
                 )}
               >
+                <span className={cn(
+                  "w-4 h-4 rounded-full border-2 flex items-center justify-center",
+                  paymentMethod === 'account' ? 'border-blue' : 'border-slate/40'
+                )}>
+                  {paymentMethod === 'account' && <span className="w-2 h-2 rounded-full bg-blue" />}
+                </span>
                 {t('transactions.form.payWithAccount') || 'Conta/Débito'}
               </button>
+              {creditCards.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('credit_card')}
+                  className={cn(
+                    "w-full px-3 py-2.5 text-sm font-medium rounded-md transition-all duration-200 text-left flex items-center gap-3",
+                    paymentMethod === 'credit_card'
+                      ? 'bg-white text-blue shadow-sm'
+                      : 'text-slate hover:text-ink hover:bg-white/50'
+                  )}
+                >
+                  <span className={cn(
+                    "w-4 h-4 rounded-full border-2 flex items-center justify-center",
+                    paymentMethod === 'credit_card' ? 'border-blue' : 'border-slate/40'
+                  )}>
+                    {paymentMethod === 'credit_card' && <span className="w-2 h-2 rounded-full bg-blue" />}
+                  </span>
+                  {t('transactions.form.payWithCreditCard') || 'Cartão de Crédito'}
+                </button>
+              )}
               <button
                 type="button"
-                onClick={() => setPaymentMethod('credit_card')}
+                onClick={() => setPaymentMethod('cash')}
                 className={cn(
-                  "flex-1 px-3 py-2 text-sm font-medium rounded-md transition-all duration-200",
-                  paymentMethod === 'credit_card'
+                  "w-full px-3 py-2.5 text-sm font-medium rounded-md transition-all duration-200 text-left flex items-center gap-3",
+                  paymentMethod === 'cash'
                     ? 'bg-white text-blue shadow-sm'
-                    : 'text-slate hover:text-ink'
+                    : 'text-slate hover:text-ink hover:bg-white/50'
                 )}
               >
-                {t('transactions.form.payWithCreditCard') || 'Cartão de Crédito'}
+                <span className={cn(
+                  "w-4 h-4 rounded-full border-2 flex items-center justify-center",
+                  paymentMethod === 'cash' ? 'border-blue' : 'border-slate/40'
+                )}>
+                  {paymentMethod === 'cash' && <span className="w-2 h-2 rounded-full bg-blue" />}
+                </span>
+                {t('transactions.form.payWithCash') || 'Dinheiro/Efetivo'}
               </button>
             </div>
           </div>
         )}
 
         <div className="col-span-1 sm:col-span-2">
-          <div className={`grid ${formData.type === 'transfer' ? 'grid-cols-1 sm:grid-cols-3' : paymentMethod === 'credit_card' ? 'grid-cols-1' : 'grid-cols-2'} gap-3`}>
+          <div className={`grid ${formData.type === 'transfer' ? 'grid-cols-1 sm:grid-cols-3' : paymentMethod === 'credit_card' || paymentMethod === 'cash' ? 'grid-cols-1' : 'grid-cols-2'} gap-3`}>
             {/* Show account selection for transfers or when payment method is account */}
             {(formData.type === 'transfer' || paymentMethod === 'account') && (
               <div>
