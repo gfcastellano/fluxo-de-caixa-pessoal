@@ -98,6 +98,28 @@ npm run deploy
 - `GET /api/reports/monthly-summary?year=2024&month=1` - Monthly summary
 - `GET /api/reports/category-breakdown?year=2024&month=1&type=expense` - Category breakdown
 
+### Accounts
+- `GET /api/accounts` - List all accounts
+- `POST /api/accounts` - Create an account
+- `GET /api/accounts/:id` - Get a specific account
+- `PUT /api/accounts/:id` - Update an account (full update)
+- `PATCH /api/accounts/:id` - Update an account (partial update)
+- `DELETE /api/accounts/:id` - Delete an account
+- `PATCH /api/accounts/:id/set-default` - Set account as default
+
+### Voice (OpenAI Integration)
+- `POST /api/voice/transactions` - Create a transaction from voice input
+- `POST /api/voice/transactions/update` - Update an existing transaction from voice
+- `POST /api/voice/transactions/update-pending` - Update a pending transaction from voice
+- `POST /api/voice/categories` - Create a category from voice input
+- `POST /api/voice/budgets` - Create or update a budget from voice input
+- `POST /api/voice/accounts` - Create an account from voice input
+- `GET /api/voice/consent` - Get voice consent status
+- `POST /api/voice/consent` - Save voice consent
+
+### Recurring Transactions
+- `POST /api/transactions/:id/generate-recurring` - Generate recurring instances for an existing transaction
+
 ## Authentication
 
 All API endpoints (except health check) require a Firebase JWT token in the Authorization header:
@@ -108,10 +130,11 @@ Authorization: Bearer <firebase_id_token>
 
 ## Environment Variables
 
-| Variable | Description |
-|----------|-------------|
-| `FIREBASE_PROJECT_ID` | Firebase project ID |
-| `FIREBASE_API_KEY` | Firebase Web API Key |
+| Variable | Type | Description |
+|----------|------|-------------|
+| `FIREBASE_PROJECT_ID` | Plain text | Firebase project ID |
+| `FIREBASE_API_KEY` | Secret | Firebase Web API Key |
+| `OPENAI_API_KEY` | Secret | OpenAI API key for voice transcription and parsing |
 
 ## License
 

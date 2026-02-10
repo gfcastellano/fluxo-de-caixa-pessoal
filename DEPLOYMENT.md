@@ -95,10 +95,16 @@ npm install
 npm run deploy
 ```
 
-After deployment, note your Worker URL:
+After deployment, note your Worker URL. It will be displayed in the terminal output:
 ```
 https://fluxo-de-caixa-backend.<your-account>.workers.dev
 ```
+
+**Finding Your Cloudflare Account Name:**
+- After running `wrangler deploy`, the URL will be shown in the terminal
+- The format is: `https://<worker-name>.<account-name>.workers.dev`
+- Your account name is the subdomain between your worker name and `workers.dev`
+- Example: If URL is `https://fluxo-de-caixa-backend.gabrielcastellano25.workers.dev`, then `gabrielcastellano25` is your account name
 
 **Reference:** See [backend/DEPLOYMENT.md](backend/DEPLOYMENT.md) for detailed backend configuration.
 
@@ -130,8 +136,17 @@ Edit [`frontend/.env.production`](frontend/.env.production) and update the API U
 
 ```bash
 # Replace YOUR_ACCOUNT with your actual Cloudflare account name
+# Example: VITE_API_URL=https://fluxo-de-caixa-backend.gabrielcastellano25.workers.dev
 VITE_API_URL=https://fluxo-de-caixa-backend.YOUR_ACCOUNT.workers.dev
 ```
+
+**How to find your account name:**
+1. Look at the URL displayed after deploying the backend (Step 1)
+2. The account name is the subdomain between your worker name and `workers.dev`
+3. Example URL: `https://fluxo-de-caixa-backend.gabrielcastellano25.workers.dev`
+4. Account name: `gabrielcastellano25`
+
+**Note:** Do not include `https://` twice or any trailing slashes.
 
 ---
 

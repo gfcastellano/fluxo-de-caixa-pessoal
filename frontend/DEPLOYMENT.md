@@ -16,18 +16,40 @@ The file [`.env.production`](.env.production) contains production environment va
 
 ```bash
 # Firebase Configuration
-VITE_FIREBASE_API_KEY=AIzaSyDEY0U9xweOtx6CDw_AKxjl7oegEQebLcQ
-VITE_FIREBASE_AUTH_DOMAIN=fluxo-de-caixa-pessoal-d6d3f.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=fluxo-de-caixa-pessoal-d6d3f
-VITE_FIREBASE_STORAGE_BUCKET=fluxo-de-caixa-pessoal-d6d3f.appspot.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=1006982255424
-VITE_FIREBASE_APP_ID=1:1006982255424:web:abc123def456
+VITE_FIREBASE_API_KEY=your_firebase_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your_project_id
+VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+VITE_FIREBASE_APP_ID=your_app_id
 
 # Backend API URL (Cloudflare Worker)
+# Replace YOUR_ACCOUNT with your actual Cloudflare account name
+# Example: VITE_API_URL=https://fluxo-de-caixa-backend.gabrielcastellano25.workers.dev
 VITE_API_URL=https://fluxo-de-caixa-backend.YOUR_ACCOUNT.workers.dev
 ```
 
-**Important**: Replace `YOUR_ACCOUNT` in `VITE_API_URL` with your actual Cloudflare account name.
+**How to find your Cloudflare account name:**
+
+1. **After deploying the backend**, the terminal will show your Worker URL:
+   ```
+   https://fluxo-de-caixa-backend.<account-name>.workers.dev
+   ```
+
+2. **Extract the account name** from the URL:
+   - Full URL: `https://fluxo-de-caixa-backend.gabrielcastellano25.workers.dev`
+   - Account name: `gabrielcastellano25`
+
+3. **Update the `.env.production` file**:
+   ```bash
+   VITE_API_URL=https://fluxo-de-caixa-backend.gabrielcastellano25.workers.dev
+   ```
+
+**Important Notes:**
+- Do not include a trailing slash at the end of the URL
+- Do not include `https://` twice
+- The account name is case-sensitive
+- If you have a custom domain, use that instead
 
 ## Building the Frontend
 

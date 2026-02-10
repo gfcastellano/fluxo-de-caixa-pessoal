@@ -140,6 +140,45 @@ npm run dev
 
 Open http://localhost:5173 in your browser and you should see the login page with a "Sign in with Google" button!
 
+## Step 9: Set Up Firestore Indexes (Optional but Recommended)
+
+For optimal query performance, you may need to create composite indexes in Firestore:
+
+1. Go to Firestore Database → Indexes tab
+2. Click "Add index"
+3. Create the following indexes:
+
+### Collection: transactions
+| Field 1 | Field 2 | Query Scope |
+|---------|---------|-------------|
+| userId (Ascending) | date (Descending) | Collection |
+| userId (Ascending) | categoryId (Ascending) | Collection |
+| userId (Ascending) | accountId (Ascending) | Collection |
+| parentTransactionId (Ascending) | date (Ascending) | Collection |
+
+### Collection: budgets
+| Field 1 | Field 2 | Query Scope |
+|---------|---------|-------------|
+| userId (Ascending) | categoryId (Ascending) | Collection |
+
+### Collection: accounts
+| Field 1 | Field 2 | Query Scope |
+|---------|---------|-------------|
+| userId (Ascending) | isDefault (Descending) | Collection |
+
+Alternatively, you can deploy the indexes using the Firebase CLI:
+
+```bash
+# Install Firebase CLI if not already installed
+npm install -g firebase-tools
+
+# Login to Firebase
+firebase login
+
+# Deploy indexes
+firebase deploy --only firestore:indexes
+```
+
 ## Troubleshooting
 
 ### "Firebase: Error (auth/invalid-api-key)"
@@ -166,8 +205,57 @@ Open http://localhost:5173 in your browser and you should see the login page wit
 1. Click "Sign in with Google" on the login page
 2. Select your Google account
 3. You'll be redirected to the Dashboard
-4. Add some categories (e.g., "Food", "Transport", "Salary")
-5. Add your first transactions
+4. Default categories will be created automatically (Food, Transport, Salary, etc.)
+5. Create your first account (e.g., "Nubank", "Cash", "Savings")
+6. Set an account as default for quick transaction creation
+7. Add your first transactions
+
+## Additional Configuration
+
+### Custom Claims (Optional)
+
+If you need to set admin roles or other custom claims:
+
+```javascript
+// Using Firebase Admin SDK
+const admin = require('firebase-admin');
+
+admin.auth().setCustomUserClaims(uid, {
+  admin: true
+});
+```
+
+### Backup and Export
+
+To export your Firestore data:
+
+```bash
+# Using Firebase CLI
+firebase firestore:export ./backups/$(date +%Y%m%d)
+```
+
+### Monitoring
+
+Set up Firebase Monitoring:
+1. Go to Firebase Console → Performance
+2. Click "Get started"
+3. The SDK is already included in the app
+4. View performance metrics in the console
+
+### Security Best Practices
+
+1. **Never commit `.env` files** - They contain sensitive API keys
+2. **Rotate API keys periodically** - Generate new keys every 6 months
+3. **Monitor authentication** - Check Firebase Auth logs for suspicious activity
+4. **Review security rules** - Audit rules quarterly
+5. **Enable App Check** - Protect your backend resources (optional)
+
+## Getting Help
+
+- [Firebase Documentation](https://firebase.google.com/docs)
+- [Firestore Security Rules Reference](https://firebase.google.com/docs/firestore/security/get-started)
+- [Firebase Authentication](https://firebase.google.com/docs/auth)
+- [Firebase Support](https://firebase.google.com/support)
 6. Set up budgets to track your spending
 7. View reports to see your financial overview
 
