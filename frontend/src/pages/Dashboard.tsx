@@ -14,7 +14,9 @@ import { getCategories } from '../services/categoryService';
 import { getCreditCards } from '../services/creditCardService';
 import { getCreditCardBills } from '../services/creditCardBillService';
 import type { Transaction, Account, Category, CreditCard, CreditCardBill } from '../types';
-import { TrendingUp, TrendingDown, ArrowRightLeft, Wallet, Plus, Calendar, CreditCard as CreditCardIcon } from 'lucide-react';
+import { enrichTransactions } from '../utils/transactionEnrichment';
+import { CashCurrencyIcon } from '../components/CashCurrencyIcon';
+import { TrendingUp, TrendingDown, ArrowRightLeft, Wallet, Plus, Calendar, CreditCard as CreditCardIcon, Landmark } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PageDescription } from '../components/PageDescription';
 import { cn } from '../utils/cn';
@@ -61,7 +63,8 @@ export function Dashboard() {
     try {
       const { year, month } = getCurrentMonth();
       const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-      const endDate = `${year}-${String(month).padStart(2, '0')}-31`;
+      const lastDay = new Date(year, month, 0).getDate();
+      const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
 
       const [transactions, accountsData, categoriesData, creditCardsData, billsData] = await Promise.all([
         getTransactions(user!.uid, { startDate, endDate }),
@@ -76,10 +79,23 @@ export function Dashboard() {
         accountCurrencyMap[account.id] = account.currency;
       });
 
+      // Map credit card IDs to currencies
+      const cardCurrencyMap: Record<string, string> = {};
+      creditCardsData.forEach(card => {
+        const linkedAccount = accountsData.find(a => a.id === card.linkedAccountId);
+        if (linkedAccount) {
+          cardCurrencyMap[card.id] = linkedAccount.currency;
+        }
+      });
+
       const summaries: Record<string, CurrencySummary> = {};
 
       transactions.forEach((transaction) => {
-        const currency = accountCurrencyMap[transaction.accountId || ''] || 'BRL';
+        const currency = transaction.accountId
+          ? accountCurrencyMap[transaction.accountId]
+          : transaction.creditCardId
+            ? cardCurrencyMap[transaction.creditCardId]
+            : 'BRL';
 
         if (!summaries[currency]) {
           summaries[currency] = { income: 0, expenses: 0, balance: 0 };
@@ -101,22 +117,12 @@ export function Dashboard() {
       setCurrencySummaries(summaries);
 
       // Enrich transactions with account and category data for display
-      const accountsMap = accountsData.reduce((acc, account) => {
-        acc[account.id] = account;
-        return acc;
-      }, {} as Record<string, Account>);
-
-      const categoriesMap = categoriesData.reduce((acc, category) => {
-        acc[category.id] = category;
-        return acc;
-      }, {} as Record<string, Category>);
-
-      const enrichedTransactions = transactions.map(t => ({
-        ...t,
-        account: t.accountId ? accountsMap[t.accountId] : undefined,
-        toAccount: t.toAccountId ? accountsMap[t.toAccountId] : undefined,
-        category: t.categoryId ? categoriesMap[t.categoryId] : undefined,
-      }));
+      const enrichedTransactions = enrichTransactions(
+        transactions,
+        accountsData,
+        categoriesData,
+        creditCardsData
+      );
 
       setRecentTransactions(enrichedTransactions.slice(0, 5));
       setAccounts(accountsData);
@@ -253,7 +259,7 @@ export function Dashboard() {
           {recentTransactions.length === 0 ? (
             <div className="text-center py-12">
               <div className="mx-auto w-12 h-12 bg-white/50 rounded-full flex items-center justify-center mb-4 text-slate">
-                <Wallet className="h-6 w-6" />
+                <Landmark className="h-6 w-6" />
               </div>
               <p className="text-slate mb-4 font-medium">{t('dashboard.noTransactions')}</p>
               <Link to="/transactions">
@@ -292,17 +298,40 @@ export function Dashboard() {
                         <span className="text-slate font-medium">
                           {transaction.category ? t(getTranslatedCategoryName(transaction.category.name)) : t('common.category')}
                         </span>
-                        {transaction.account && (
-                          <>
-                            <span className="text-slate/40 flex-shrink-0">•</span>
-                            <span className="font-medium" style={{ color: transaction.account.color }}>{transaction.account.name}</span>
-                            {transaction.type === 'transfer' && transaction.toAccount && (
-                              <>
-                                <span className="text-slate/40 flex-shrink-0">→</span>
-                                <span className="font-medium" style={{ color: transaction.toAccount.color }}>{transaction.toAccount.name}</span>
-                              </>
+
+                        <span className="text-slate/40 flex-shrink-0">•</span>
+
+                        {transaction.creditCard ? (
+                          <div className="flex items-center gap-1">
+                            <CreditCardIcon size={12} className="text-slate flex-shrink-0" />
+                            <span className="font-medium" style={{ color: transaction.creditCard.color }}>
+                              {transaction.creditCard.name}
+                            </span>
+                            {transaction.creditCard.linkedAccount && (
+                              <span className="text-slate/50 text-[10px]">
+                                via {transaction.creditCard.linkedAccount.name}
+                              </span>
                             )}
-                          </>
+                          </div>
+                        ) : (
+                          transaction.account && (
+                            <div className="flex items-center gap-1">
+                              {transaction.toAccountId ? (
+                                <ArrowRightLeft size={12} className="text-slate flex-shrink-0" />
+                              ) : transaction.account.isCash ? (
+                                <CashCurrencyIcon currency={transaction.account.currency} className="w-3 h-3 text-slate flex-shrink-0" style={{ color: transaction.account.color }} />
+                              ) : (
+                                <Landmark size={12} className="text-slate flex-shrink-0" />
+                              )}
+                              <span className="font-medium" style={{ color: transaction.account.color }}>{transaction.account.name}</span>
+                              {transaction.type === 'transfer' && transaction.toAccount && (
+                                <>
+                                  <span className="text-slate/40 flex-shrink-0">→</span>
+                                  <span className="font-medium" style={{ color: transaction.toAccount.color }}>{transaction.toAccount.name}</span>
+                                </>
+                              )}
+                            </div>
+                          )
                         )}
                       </div>
                     </div>

@@ -11,7 +11,7 @@ import {
   orderBy,
   serverTimestamp,
 } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { db, auth } from '../firebase/config';
 import type { CreditCardBill, Transaction } from '../types';
 
 const COLLECTION_NAME = 'creditCardBills';
@@ -20,9 +20,7 @@ export async function getCreditCardBills(userId: string): Promise<CreditCardBill
   try {
     const q = query(
       collection(db, COLLECTION_NAME),
-      where('userId', '==', userId),
-      orderBy('year', 'desc'),
-      orderBy('month', 'desc')
+      where('userId', '==', userId)
     );
 
     const snapshot = await getDocs(q);
@@ -36,10 +34,17 @@ export async function getCreditCardBills(userId: string): Promise<CreditCardBill
       };
     }) as CreditCardBill[];
 
+    // Sort in memory to avoid composite index requirement
+    bills.sort((a, b) => {
+      if (a.year !== b.year) return b.year - a.year;
+      return b.month - a.month;
+    });
+
     return bills;
   } catch (error) {
     console.error('Error fetching credit card bills:', error);
-    throw error;
+    // Return empty array instead of throwing to prevent blocking other data loading
+    return [];
   }
 }
 
@@ -136,18 +141,29 @@ export async function closeBill(billId: string): Promise<void> {
 
 export async function payBill(
   billId: string,
-  accountId: string
+  accountId: string,
+  categoryId: string
 ): Promise<void> {
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
   try {
-    const docRef = doc(db, COLLECTION_NAME, billId);
-    const now = new Date().toISOString();
-    
-    await updateDoc(docRef, {
-      isPaid: true,
-      paidAt: now,
-      paidFromAccountId: accountId,
-      updatedAt: serverTimestamp(),
+    const token = await auth.currentUser?.getIdToken();
+    if (!token) throw new Error('No auth token');
+
+    const response = await fetch(`${API_URL}/api/credit-card-bills/${billId}/pay`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ accountId, categoryId }),
     });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to pay bill');
+    }
+
   } catch (error) {
     console.error('Error paying bill:', error);
     throw error;
@@ -158,13 +174,13 @@ export async function updateBillTotal(billId: string, amount: number): Promise<v
   try {
     const docRef = doc(db, COLLECTION_NAME, billId);
     const billSnap = await getDoc(docRef);
-    
+
     if (!billSnap.exists()) {
       throw new Error('Bill not found');
     }
 
     const currentTotal = billSnap.data().totalAmount || 0;
-    
+
     await updateDoc(docRef, {
       totalAmount: currentTotal + amount,
       updatedAt: serverTimestamp(),

@@ -45,7 +45,7 @@ app.get('/card/:creditCardId', async (c) => {
       year: number;
       month: number;
     }>;
-    
+
     const bills = allBills
       .filter(bill => bill.creditCardId === creditCardId)
       .sort((a, b) => {
@@ -84,7 +84,7 @@ app.get('/current/:creditCardId', async (c) => {
       isClosed: boolean;
       isPaid: boolean;
     }>;
-    
+
     const currentBill = allBills.find(
       bill => bill.creditCardId === creditCardId && !bill.isClosed && !bill.isPaid
     );
@@ -127,7 +127,7 @@ app.get('/:id/transactions', async (c) => {
       billId?: string;
       date: string;
     }>;
-    
+
     const transactions = allTransactions
       .filter(t => t.billId === billId)
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -156,7 +156,7 @@ app.post('/:id/close', async (c) => {
       isPaid: boolean;
       creditCardId: string;
     } | null;
-    
+
     if (!bill || bill.userId !== userId) {
       return c.json(
         { success: false, error: 'Bill not found or unauthorized' },
@@ -182,7 +182,7 @@ app.post('/:id/close', async (c) => {
     const creditCard = await firebase.getDocument('creditCards', bill.creditCardId) as {
       dueDay: number;
     } | null;
-    
+
     if (!creditCard) {
       return c.json(
         { success: false, error: 'Credit card not found' },
@@ -221,13 +221,13 @@ app.post('/:id/close', async (c) => {
       updatedAt: new Date().toISOString(),
     });
 
-    return c.json({ 
-      success: true, 
-      data: { 
+    return c.json({
+      success: true,
+      data: {
         message: 'Bill closed successfully',
         closingDate,
         nextDueDate
-      } 
+      }
     });
   } catch (error) {
     console.error('Error closing bill:', error);
@@ -241,6 +241,7 @@ app.post('/:id/close', async (c) => {
 // Schema for paying a bill
 const payBillSchema = z.object({
   accountId: z.string().min(1, 'Account ID is required'),
+  categoryId: z.string().min(1, 'Category ID is required'),
 });
 
 // POST /credit-card-bills/:id/pay - Pay a bill
@@ -263,7 +264,7 @@ app.post('/:id/pay', async (c) => {
       totalAmount: number;
       dueDate: string;
     } | null;
-    
+
     if (!bill || bill.userId !== userId) {
       return c.json(
         { success: false, error: 'Bill not found or unauthorized' },
@@ -294,6 +295,15 @@ app.post('/:id/pay', async (c) => {
       );
     }
 
+    // Verify the category belongs to the user
+    const category = await firebase.getDocument('categories', validated.categoryId);
+    if (!category || category.userId !== userId) {
+      return c.json(
+        { success: false, error: 'Category not found or unauthorized' },
+        404
+      );
+    }
+
     // Get credit card info
     const creditCard = await firebase.getDocument('creditCards', bill.creditCardId) as {
       name: string;
@@ -315,7 +325,7 @@ app.post('/:id/pay', async (c) => {
       accountId: validated.accountId,
       type: 'expense',
       amount: bill.totalAmount,
-      categoryId: 'bill-payment', // This should be a special category
+      categoryId: validated.categoryId,
       description: `Pagamento fatura ${creditCard?.name || 'Cartão'} - ${bill.dueDate}`,
       date: paidAt.split('T')[0],
       isBillPayment: true,
@@ -324,13 +334,13 @@ app.post('/:id/pay', async (c) => {
       updatedAt: paidAt,
     });
 
-    return c.json({ 
-      success: true, 
-      data: { 
+    return c.json({
+      success: true,
+      data: {
         message: 'Bill paid successfully',
         paidAt,
         amount: bill.totalAmount
-      } 
+      }
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

@@ -55,8 +55,10 @@ interface VoiceContextType {
     // Modal control - Hero button triggers this, pages listen
     shouldOpenModal: boolean;
     shouldAutoRecord: boolean;
+    isModalActive: boolean; // Track if specialized modal is open
     requestOpenModal: () => void;
     clearModalRequest: () => void;
+    setIsModalActive: (active: boolean) => void;
 
     // Voice consent
     hasConsent: boolean;
@@ -95,6 +97,7 @@ export function VoiceProvider({ children, categories = [] }: VoiceProviderProps)
     const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
     const [shouldOpenModal, setShouldOpenModal] = useState(false);
     const [shouldAutoRecord, setShouldAutoRecord] = useState(false);
+    const [isModalActive, setIsModalActive] = useState(false);
 
     // Voice consent state
     const [showConsentModal, setShowConsentModal] = useState(false);
@@ -365,8 +368,10 @@ export function VoiceProvider({ children, categories = [] }: VoiceProviderProps)
         isVoiceEnabled,
         shouldOpenModal,
         shouldAutoRecord,
+        isModalActive,
         requestOpenModal,
         clearModalRequest,
+        setIsModalActive,
         hasConsent,
         showConsentModal,
         requestConsent,

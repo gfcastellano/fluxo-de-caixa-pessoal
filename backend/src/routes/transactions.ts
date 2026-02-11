@@ -67,28 +67,22 @@ app.post('/', async (c) => {
 
     // Handle credit card transactions
     if (transactionData.creditCardId && transactionData.type === 'expense') {
-      // Find the current open bill for this credit card
-      const allBills = await firebase.getDocuments('creditCardBills', userId) as Array<{
-        creditCardId: string;
-        isClosed: boolean;
-        isPaid: boolean;
-        id: string;
-      }>;
-
-      const currentBill = allBills.find(
-        bill => bill.creditCardId === transactionData.creditCardId && !bill.isClosed && !bill.isPaid
+      // Find or create the appropriate bill for this transaction date
+      const billId = await ensureBillForDate(
+        firebase,
+        userId,
+        transactionData.creditCardId,
+        transactionData.date
       );
 
-      if (currentBill) {
-        transactionData.billId = currentBill.id;
+      transactionData.billId = billId;
 
-        // Update the bill total
-        const bill = await firebase.getDocument('creditCardBills', currentBill.id) as { totalAmount: number };
-        await firebase.updateDocument('creditCardBills', currentBill.id, {
-          totalAmount: (bill?.totalAmount || 0) + transactionData.amount,
-          updatedAt: new Date().toISOString(),
-        });
-      }
+      // Update the bill total
+      const bill = await firebase.getDocument('creditCardBills', billId) as { totalAmount: number };
+      await firebase.updateDocument('creditCardBills', billId, {
+        totalAmount: (bill?.totalAmount || 0) + transactionData.amount,
+        updatedAt: new Date().toISOString(),
+      });
     }
 
     // Auto-resolve toAccountId for transfers without a destination
@@ -292,8 +286,26 @@ async function ensureBillForDate(
   date: string
 ): Promise<string> {
   const transactionDate = new Date(date);
-  const month = transactionDate.getMonth() + 1;
-  const year = transactionDate.getFullYear();
+  let month = transactionDate.getMonth() + 1;
+  let year = transactionDate.getFullYear();
+  const day = transactionDate.getDate();
+
+  // First, get the credit card to know the dueDay and closingDay
+  const creditCard = await firebase.getDocument('creditCards', creditCardId) as {
+    dueDay: number;
+    closingDay?: number;
+  };
+
+  // If we have a closing day and the transaction is on or after it, move to next month
+  if (creditCard && creditCard.closingDay && day >= creditCard.closingDay) {
+    month++;
+    if (month > 12) {
+      month = 1;
+      year++;
+    }
+  }
+
+  const dueDay = creditCard?.dueDay || 10;
 
   // Find if a bill already exists for this month/year
   const allBills = await firebase.getDocuments('creditCardBills', userId) as Array<{
@@ -313,20 +325,16 @@ async function ensureBillForDate(
     return existingBill.id;
   }
 
-  // If not found, create a new one
-  // First, get the credit card to know the dueDay
-  const creditCard = await firebase.getDocument('creditCards', creditCardId) as { dueDay: number };
-  const dueDay = creditCard?.dueDay || 10;
-
-  // Calculate due date for the specific month/year
+  // Use the calculated year/month for due date calculation
+  // Carefully handle end of year rollover for due date
   const dueDate = new Date(year, month - 1, dueDay);
   const dueDateStr = dueDate.toISOString().split('T')[0];
 
   const newBill = await firebase.createDocument('creditCardBills', {
     creditCardId,
     userId,
-    month,
-    year,
+    month, // calculated month (1-12)
+    year,  // calculated year
     dueDate: dueDateStr,
     totalAmount: 0,
     isClosed: false,

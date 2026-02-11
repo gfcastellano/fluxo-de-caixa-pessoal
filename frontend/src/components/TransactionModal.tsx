@@ -4,6 +4,7 @@ import { Mic, Square, Loader2, Check, AlertCircle, X, Repeat } from 'lucide-reac
 import { BaseModal } from './BaseModal';
 import { Input } from './Input';
 import { useVoiceForm } from '../hooks/useVoiceForm';
+import { useVoice } from '../context/VoiceContext';
 import { sendVoiceTransaction, sendVoiceTransactionUpdate } from '../services/voiceService';
 import { getAccounts } from '../services/accountService';
 import { getCreditCards } from '../services/creditCardService';
@@ -69,6 +70,17 @@ export function TransactionModal({
   const [seriesTransactions, setSeriesTransactions] = useState<Transaction[]>([]);
 
   const voice = useVoiceForm({ autoStartRecording });
+  const { setIsModalActive } = useVoice();
+
+  // Sync isModalActive with VoiceContext
+  useEffect(() => {
+    setIsModalActive(isOpen);
+    return () => {
+      // Small delay to ensure we don't clear it before the next page/modal takes over
+      // but primarily focused on resetting when this component unmounts
+      if (isOpen) setIsModalActive(false);
+    };
+  }, [isOpen, setIsModalActive]);
 
   useEffect(() => {
     if (isOpen && userId) {
@@ -407,80 +419,106 @@ export function TransactionModal({
     }
   };
 
-  const handleVoiceInput = useCallback(async () => {
-    if (voice.voiceState === 'recording') {
-      const audioBlob = await voice.stopRecording();
-      if (audioBlob) {
+  // Handle voice commands from the centralized VoiceHeroButton
+  useEffect(() => {
+    const processVoiceCommand = async () => {
+      if (voice.voiceState === 'preview' && voice.audioBlob) {
         voice.setProcessing(true);
+        const audioBlob = voice.audioBlob;
+
         try {
-          const result = await sendVoiceTransaction(audioBlob, i18n.language);
-          if (result.success && result.data) {
-            const parsedTransaction = result.data;
+          if (voice.hasVoiceData || isEditing) {
+            // Update mode - uses the current form data as context or the existing transaction
+            const currentContext: Transaction = transaction || {
+              id: '',
+              userId: userId,
+              description: formData.description,
+              amount: parseFloat(formData.amount.toString().replace(',', '.')) || 0,
+              type: formData.type,
+              categoryId: formData.categoryId,
+              date: formData.date,
+              accountId: selectedAccountId || '',
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            };
 
-            // Normalize type
-            let normalizedType = parsedTransaction.type || formData.type;
-            if (parsedTransaction.type) {
-              const t = String(parsedTransaction.type).toLowerCase();
-              if (t.includes('receita') || t.includes('income')) normalizedType = 'income';
-              else if (t.includes('transfer') || t.includes('transferencia') || t.includes('saque')) normalizedType = 'transfer';
-              else if (t.includes('despesa') || t.includes('expense')) normalizedType = 'expense';
-            }
+            const result = await sendVoiceTransactionUpdate(
+              audioBlob,
+              i18n.language,
+              currentContext,
+              categories,
+              true
+            );
 
-            // For transfers: auto-fill missing toAccountId and categoryId
-            let finalCategoryId = parsedTransaction.categoryId;
-            let finalToAccountId = parsedTransaction.toAccountId || '';
+            if (result.success && result.data) {
+              const updates = result.data;
 
-            if (normalizedType === 'transfer') {
-              // If GPT didn't return a toAccountId, auto-select cash account for the source currency
-              if (!finalToAccountId && parsedTransaction.accountId) {
-                const sourceAccount = accounts.find(a => a.id === parsedTransaction.accountId);
-                if (sourceAccount) {
-                  const cashAccount = accounts.find(a => a.isCash === true && a.currency === sourceAccount.currency);
-                  if (cashAccount) finalToAccountId = cashAccount.id;
-                }
+              // Apply updates to form
+              setFormData(prev => ({
+                ...prev,
+                description: updates.description || prev.description,
+                amount: updates.amount?.toString() || prev.amount,
+                type: updates.type || prev.type,
+                categoryId: updates.categoryId || prev.categoryId,
+                date: updates.date || prev.date,
+              }));
+
+              if (updates.accountId) {
+                setSelectedAccountId(updates.accountId);
+                setPaymentMethod('account');
+                setSelectedCreditCardId('');
               }
-              // If GPT didn't return a categoryId, auto-select the best transfer category
-              if (!finalCategoryId) {
-                const desc = (parsedTransaction.description || '').toLowerCase();
-                const isWithdrawal = desc.includes('saque') || desc.includes('withdraw') || desc.includes('retir');
-                const withdrawalCategory = categories.find(c => c.type === 'transfer' && c.name === 'Withdrawal');
-                const genericTransferCategory = categories.find(c => c.type === 'transfer' && c.name === 'Transfer');
-                if (isWithdrawal && withdrawalCategory) {
-                  finalCategoryId = withdrawalCategory.id;
-                } else {
-                  finalCategoryId = (genericTransferCategory || categories.find(c => c.type === 'transfer'))?.id || '';
-                }
+              if (updates.toAccountId) setSelectedToAccountId(updates.toAccountId);
+              if (updates.creditCardId) {
+                setSelectedCreditCardId(updates.creditCardId);
+                setPaymentMethod('credit_card');
+                setSelectedAccountId('');
               }
-            }
+              if (updates.installments !== undefined) {
+                setInstallments(updates.installments);
+                setIsInstallmentMode(updates.installments > 1);
+              }
 
-            setFormData(prev => ({
-              ...prev,
-              description: parsedTransaction.description || prev.description,
-              amount: parsedTransaction.amount?.toString() || prev.amount,
-              type: normalizedType as 'income' | 'expense' | 'transfer',
-              categoryId: finalCategoryId || prev.categoryId,
-              date: parsedTransaction.date || prev.date,
-            }));
-            if (parsedTransaction.accountId) {
-              setSelectedAccountId(parsedTransaction.accountId);
+              voice.showFeedback('success', result.message || t('voice.updateSuccess'));
+              if (onVoiceUpdate) onVoiceUpdate(updates);
             } else {
-              // Fall back to the default account when voice doesn't specify one
-              const defaultAccount = accounts.find(a => a.isDefault);
-              if (defaultAccount) setSelectedAccountId(defaultAccount.id);
+              voice.showFeedback('error', result.error || t('voice.error'));
             }
-            if (finalToAccountId) setSelectedToAccountId(finalToAccountId);
-
-            if (parsedTransaction.isRecurring) {
-              setIsRecurring(true);
-              if (parsedTransaction.recurrencePattern) setRecurrencePattern(parsedTransaction.recurrencePattern);
-              if (parsedTransaction.recurrenceDay !== undefined && parsedTransaction.recurrenceDay !== null) setRecurrenceDay(parsedTransaction.recurrenceDay);
-              if (parsedTransaction.recurrenceEndDate) setRecurrenceEndDate(parsedTransaction.recurrenceEndDate);
-            }
-
-            voice.setVoiceDataReceived();
-            voice.showFeedback('success', result.message || t('voice.updateSuccess'));
           } else {
-            voice.showFeedback('error', result.error || t('voice.error'));
+            // Creation mode
+            const result = await sendVoiceTransaction(audioBlob, i18n.language);
+
+            if (result.success && result.data) {
+              const parsedTransaction = result.data;
+
+              // Map parsed data to form
+              setFormData({
+                description: parsedTransaction.description || '',
+                amount: parsedTransaction.amount?.toString() || '',
+                type: parsedTransaction.type || 'expense',
+                categoryId: parsedTransaction.categoryId || '',
+                date: parsedTransaction.date || new Date().toISOString().split('T')[0],
+              });
+
+              if (parsedTransaction.accountId) {
+                setSelectedAccountId(parsedTransaction.accountId);
+                setPaymentMethod('account');
+              }
+              if (parsedTransaction.creditCardId) {
+                setSelectedCreditCardId(parsedTransaction.creditCardId);
+                setPaymentMethod('credit_card');
+                setSelectedAccountId('');
+              }
+              if (parsedTransaction.installments) {
+                setInstallments(parsedTransaction.installments);
+                setIsInstallmentMode(parsedTransaction.installments > 1);
+              }
+
+              voice.setVoiceDataReceived();
+              voice.showFeedback('success', result.message || t('voice.transactionCreated'));
+            } else {
+              voice.showFeedback('error', result.error || t('voice.error'));
+            }
           }
         } catch (error) {
           console.error('Voice processing error:', error);
@@ -489,58 +527,10 @@ export function TransactionModal({
           voice.setProcessing(false);
         }
       }
-    } else if (voice.voiceState === 'idle' || voice.voiceState === 'error') {
-      voice.clearFeedback();
-      await voice.startRecording();
-    }
-  }, [voice, i18n.language, t, accounts, categories]);
+    };
 
-  const handleVoiceUpdate = useCallback(async () => {
-    if (voice.voiceState === 'recording') {
-      const audioBlob = await voice.stopRecording();
-      if (audioBlob) {
-        voice.setProcessing(true);
-
-        // Build current transaction context from formData (for new) or existing transaction (for edit)
-        const currentContext: Transaction = transaction || {
-          id: '',
-          userId: userId,
-          description: formData.description,
-          amount: parseFloat(formData.amount.toString().replace(',', '.')) || 0,
-          type: formData.type,
-          categoryId: formData.categoryId,
-          date: formData.date,
-          accountId: selectedAccountId,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-
-        const result = await sendVoiceTransactionUpdate(audioBlob, i18n.language, currentContext, categories);
-        voice.setProcessing(false);
-
-        if (result.success && result.data) {
-          voice.showFeedback('success', result.message || t('voice.updateSuccess'));
-          voice.setVoiceDataReceived(); // Mark as having voice data
-
-          const updates: Partial<Transaction> = {};
-          if (result.data.description) { updates.description = result.data.description; setFormData(prev => ({ ...prev, description: result.data!.description! })); }
-          if (result.data.amount) { updates.amount = result.data.amount; setFormData(prev => ({ ...prev, amount: result.data!.amount!.toString() })); }
-          if (result.data.type) { updates.type = result.data.type; setFormData(prev => ({ ...prev, type: result.data!.type! })); }
-          if (result.data.categoryId) { updates.categoryId = result.data.categoryId; setFormData(prev => ({ ...prev, categoryId: result.data!.categoryId! })); }
-          if (result.data.date) { updates.date = result.data.date; setFormData(prev => ({ ...prev, date: result.data!.date! })); }
-          if (result.data.accountId) { updates.accountId = result.data.accountId; setSelectedAccountId(result.data.accountId); }
-          if (result.data.toAccountId) { updates.toAccountId = result.data.toAccountId; setSelectedToAccountId(result.data.toAccountId); }
-
-          if (onVoiceUpdate && Object.keys(updates).length > 0) onVoiceUpdate(updates);
-        } else {
-          voice.showFeedback('error', result.error || t('voice.error'));
-        }
-      }
-    } else if (voice.voiceState === 'idle' || voice.voiceState === 'error') {
-      voice.clearFeedback();
-      await voice.startRecording();
-    }
-  }, [voice, i18n.language, transaction, categories, t, onVoiceUpdate, formData, userId, selectedAccountId]);
+    processVoiceCommand();
+  }, [voice.voiceState, voice.audioBlob, voice.hasVoiceData, isEditing, i18n.language, transaction, categories, t, onVoiceUpdate, formData, userId, selectedAccountId]);
 
   // Auto-select destination cash account only for withdrawal transfers
   useEffect(() => {
@@ -580,6 +570,7 @@ export function TransactionModal({
       cancelLabel={t('common.cancel')}
       isRecording={voice.voiceState === 'recording'}
       onCancelRecording={voice.cancelRecording}
+      isSubmitDisabled={voice.voiceState === 'processing'}
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <Input
@@ -1027,75 +1018,6 @@ export function TransactionModal({
         </div>
       )}
 
-      {/* Voice Input Section */}
-      <div className="border-t border-slate/10 pt-3 mt-3 sm:pt-4 sm:mt-4">
-        <label className="block text-sm font-medium text-ink mb-2 sm:mb-3">
-          {(voice.hasVoiceData || isEditing) ? t('voice.updateByVoice') : t('voice.addByVoice')}
-        </label>
-        <div className="flex flex-col gap-2 sm:gap-3">
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                // First audio: use creation endpoint
-                // Subsequent audios (hasVoiceData=true) or editing: use update endpoint
-                if (voice.hasVoiceData || isEditing) {
-                  handleVoiceUpdate();
-                } else {
-                  handleVoiceInput();
-                }
-              }}
-              disabled={voice.voiceState === 'processing' || voice.isProcessingVoice}
-              className={cn(
-                "flex-1 flex items-center justify-center gap-2 h-11 sm:h-14 rounded-full font-medium transition-all duration-300",
-                voice.voiceState === 'recording'
-                  ? 'bg-emerald text-white ring-4 ring-emerald/20 animate-pulse'
-                  : (voice.voiceState === 'processing' || voice.isProcessingVoice)
-                    ? 'bg-slate/10 text-slate cursor-wait'
-                    : 'bg-gradient-to-r from-blue to-blue-hover text-white shadow-lg shadow-blue/20 hover:shadow-blue/30 hover:scale-[1.02]'
-              )}
-            >
-              {voice.voiceState === 'recording' ? (
-                <>
-                  <Square className="h-4 w-4 sm:h-5 sm:w-5" />
-                  <span className="text-sm sm:text-base">{t('voice.stopRecording')}</span>
-                </>
-              ) : voice.voiceState === 'processing' || voice.isProcessingVoice ? (
-                <>
-                  <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
-                  <span className="text-sm sm:text-base">{t('voice.processing')}</span>
-                </>
-              ) : (
-                <>
-                  <Mic className="h-4 w-4 sm:h-5 sm:w-5" />
-                  <span className="text-sm sm:text-base">{(voice.hasVoiceData || isEditing) ? t('voice.updateByVoice') : t('voice.addByVoice')}</span>
-                </>
-              )}
-            </button>
-
-            {voice.voiceState === 'recording' && (
-              <button
-                type="button"
-                onClick={voice.cancelRecording}
-                className="h-11 w-11 sm:h-14 sm:w-14 flex items-center justify-center rounded-full bg-rose/10 text-rose hover:bg-rose/20 transition-all duration-200 border-2 border-rose/20 shadow-lg shadow-rose/10"
-                title={t('common.cancel')}
-              >
-                <X className="h-4 w-4 sm:h-5 sm:w-5" />
-              </button>
-            )}
-          </div>
-
-          {voice.voiceFeedback && (
-            <div className={cn(
-              "flex items-center gap-2 text-sm px-3 py-2 rounded-xl border animate-fade-in",
-              voice.voiceFeedback.type === 'success' ? 'bg-emerald/10 text-emerald border-emerald/20' : 'bg-rose/10 text-rose border-rose/20'
-            )}>
-              {voice.voiceFeedback.type === 'success' ? <Check className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
-              <span>{voice.voiceFeedback.message}</span>
-            </div>
-          )}
-        </div>
-      </div>
     </BaseModal>
   );
 }

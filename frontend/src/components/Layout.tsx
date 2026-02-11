@@ -33,7 +33,7 @@ const navItems: NavItem[] = [
 
 export function Layout({ children }: LayoutProps) {
   const { user } = useAuth();
-  const { isVoiceEnabled } = useVoice();
+  const { isVoiceEnabled, isModalActive } = useVoice();
   const location = useLocation();
   const { t } = useTranslation();
   const scrollDirection = useScrollDirection();
@@ -149,7 +149,7 @@ export function Layout({ children }: LayoutProps) {
       {/* ============================================
           DESKTOP TOP NAVIGATION (lg+)
           ============================================ */}
-      <header className="hidden lg:block sticky top-0 z-sticky bg-white/70 backdrop-blur-xl border-b border-white/40 shadow-glass">
+      <header className="hidden lg:block sticky top-0 z-[2000] bg-white/70 backdrop-blur-xl border-b border-white/40 shadow-glass">
         <div className="max-w-7xl mx-auto px-6 xl:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Brand */}
@@ -186,7 +186,7 @@ export function Layout({ children }: LayoutProps) {
           TABLET FLOATING HERO BUTTON (sm to lg)
           ============================================ */}
       {isVoiceEnabled && (
-        <div className="hidden sm:block lg:hidden fixed top-6 right-6 z-[100]">
+        <div className="hidden sm:block lg:hidden fixed top-6 right-6 z-[2000]">
           <VoiceHeroButton />
         </div>
       )}
@@ -208,6 +208,18 @@ export function Layout({ children }: LayoutProps) {
           MOBILE BOTTOM DOCK (sm-)
           ============================================ */}
       <VoiceDock />
+
+      {/* ============================================
+          MOBILE FLOATING VOICE BUTTON (When Modal Active)
+          Ensures consistency with dock's location but sits above modal
+          ============================================ */}
+      {isVoiceEnabled && isModalActive && (
+        <div className="sm:hidden fixed bottom-1 left-1 right-1 z-[2000] pointer-events-none flex justify-center pb-safe">
+          <div className="mb-8 pointer-events-auto">
+            <VoiceHeroButton />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

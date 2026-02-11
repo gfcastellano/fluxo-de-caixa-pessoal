@@ -16,11 +16,14 @@ import {
 } from '../services/transactionService';
 import { getCategories } from '../services/categoryService';
 import { getAccounts } from '../services/accountService';
+import { getCreditCards } from '../services/creditCardService';
 import { getTranslatedCategoryName } from '../utils/categoryTranslations';
-import type { Transaction, Category, Account } from '../types';
+import type { Transaction, Category, Account, CreditCard } from '../types';
 import { formatCurrency, formatDate } from '../utils/format';
-import { Plus, Edit2, Trash2, Search, ChevronLeft, ChevronRight, Repeat, Copy, Calendar, CalendarDays, List, ChevronDown, ChevronUp, FileText } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, ChevronLeft, ChevronRight, Repeat, Copy, Calendar, CalendarDays, List, ChevronDown, ChevronUp, FileText, Landmark, CreditCard as CreditCardIcon } from 'lucide-react';
 import { cn } from '../utils/cn';
+import { enrichTransactions } from '../utils/transactionEnrichment';
+import { CashCurrencyIcon } from '../components/CashCurrencyIcon';
 import { PageDescription } from '../components/PageDescription';
 
 // RecurringGroup interface for grouping recurring transactions
@@ -37,6 +40,8 @@ interface RecurringGroup {
   category?: Category;
   accountId?: string;
   account?: Account;
+  creditCardId?: string;
+  creditCard?: CreditCard;
 }
 
 // Filter mode type
@@ -123,6 +128,7 @@ export function Transactions() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
 
   // Loading states - separated for better UX
   const [isInitialLoading, setIsInitialLoading] = useState(true);
@@ -177,16 +183,18 @@ export function Transactions() {
     return { startDate: undefined, endDate: undefined };
   }, [filterMode, currentDate]);
 
-  // Load categories and accounts only once
+  // Load categories, accounts, and credit cards only once
   const loadStaticData = useCallback(async () => {
     if (!user) return;
     try {
-      const [categoriesData, accountsData] = await Promise.all([
+      const [categoriesData, accountsData, creditCardsData] = await Promise.all([
         getCategories(user.uid),
         getAccounts(user.uid),
+        getCreditCards(user.uid),
       ]);
       setCategories(categoriesData);
       setAccounts(accountsData);
+      setCreditCards(creditCardsData);
     } catch (error) {
       console.error('Error loading static data:', error);
     }
@@ -208,13 +216,13 @@ export function Transactions() {
 
       const transactionsData = await getTransactions(user.uid, dateRange);
 
-      // Enrich transactions with category, account, and toAccount info
-      const enrichedTransactions = transactionsData.map((transaction) => ({
-        ...transaction,
-        category: categories.find((c) => c.id === transaction.categoryId),
-        account: accounts.find((a) => a.id === transaction.accountId),
-        toAccount: transaction.toAccountId ? accounts.find((a) => a.id === transaction.toAccountId) : undefined,
-      }));
+      // Enrich transactions with category, account, credit card, and toAccount info
+      const enrichedTransactions = enrichTransactions(
+        transactionsData,
+        accounts,
+        categories,
+        creditCards
+      );
 
       // Sort transactions by date (most recent first)
       const sortedTransactions = enrichedTransactions.sort((a, b) =>
@@ -228,7 +236,7 @@ export function Transactions() {
       setIsInitialLoading(false);
       setIsTableLoading(false);
     }
-  }, [user, dateRange, categories, accounts]);
+  }, [user, dateRange, categories, accounts, creditCards]);
 
   // Initial load - categories, accounts, and transactions
   useEffect(() => {
@@ -316,6 +324,7 @@ export function Transactions() {
                 ...transactionData,
                 category: transactionData.categoryId ? categories.find(c => c.id === transactionData.categoryId) : t.category,
                 account: transactionData.accountId ? accounts.find(a => a.id === transactionData.accountId) : t.account,
+                creditCard: transactionData.creditCardId ? creditCards.find(c => c.id === transactionData.creditCardId) : t.creditCard,
               };
             }
             return t;
@@ -333,6 +342,7 @@ export function Transactions() {
             ...newTransaction,
             category: categories.find((c) => c.id === newTransaction.categoryId),
             account: accounts.find((a) => a.id === newTransaction.accountId),
+            creditCard: newTransaction.creditCardId ? creditCards.find((c) => c.id === newTransaction.creditCardId) : undefined,
           };
           setTransactions(prev => [enrichedTransaction, ...prev]);
 
@@ -391,6 +401,7 @@ export function Transactions() {
             ...updates,
             category: updates.categoryId ? categories.find(c => c.id === updates.categoryId) : t.category,
             account: updates.accountId ? accounts.find(a => a.id === updates.accountId) : t.account,
+            creditCard: updates.creditCardId ? creditCards.find(c => c.id === updates.creditCardId) : t.creditCard,
           };
         }
         return t;
@@ -431,6 +442,8 @@ export function Transactions() {
             category: t.category,
             accountId: t.accountId,
             account: t.account,
+            creditCardId: t.creditCardId,
+            creditCard: t.creditCard,
           });
         }
 
@@ -685,7 +698,24 @@ export function Transactions() {
                             <span className="px-1.5 py-0.5 rounded-full bg-slate/5 text-slate">
                               {group.category ? t(getTranslatedCategoryName(group.category.name)) : t('common.category')}
                             </span>
-                            <span style={{ color: group.account?.color }}>{group.account?.name}</span>
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              {group.creditCard ? (
+                                <>
+                                  <CreditCardIcon size={10} className="text-slate flex-shrink-0" />
+                                  <span className="truncate" style={{ color: group.creditCard.color }}>{group.creditCard.name}</span>
+                                  {group.creditCard.linkedAccount && (
+                                    <span className="text-[9px] text-slate/50 truncate border-l border-slate/20 pl-1.5">
+                                      {group.creditCard.linkedAccount.name}
+                                    </span>
+                                  )}
+                                </>
+                              ) : (
+                                <>
+                                  <Landmark size={10} className="text-slate flex-shrink-0" />
+                                  <span className="truncate" style={{ color: group.account?.color }}>{group.account?.name || '-'}</span>
+                                </>
+                              )}
+                            </div>
                           </div>
                           <div className="flex gap-0.5">
                             <button
@@ -742,7 +772,24 @@ export function Transactions() {
                                 <span className="px-1.5 py-0.5 rounded-full bg-slate/5 text-slate">
                                   {transaction.category ? t(getTranslatedCategoryName(transaction.category.name)) : t('common.category')}
                                 </span>
-                                <span style={{ color: transaction.account?.color }}>{transaction.account?.name}</span>
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  {transaction.creditCard ? (
+                                    <>
+                                      <CreditCardIcon size={10} className="text-slate flex-shrink-0" />
+                                      <span className="truncate" style={{ color: transaction.creditCard.color }}>{transaction.creditCard.name}</span>
+                                      {transaction.creditCard.linkedAccount && (
+                                        <span className="text-[9px] text-slate/50 truncate border-l border-slate/20 pl-1.5">
+                                          {transaction.creditCard.linkedAccount.name}
+                                        </span>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Landmark size={10} className="text-slate flex-shrink-0" />
+                                      <span className="truncate" style={{ color: transaction.account?.color }}>{transaction.account?.name || '-'}</span>
+                                    </>
+                                  )}
+                                </div>
                               </div>
                               <div className="flex gap-0.5">
                                 <button
@@ -798,7 +845,28 @@ export function Transactions() {
                             <span className="px-1.5 py-0.5 rounded-full bg-slate/5 text-slate">
                               {transaction.category ? t(getTranslatedCategoryName(transaction.category.name)) : t('common.category')}
                             </span>
-                            <span style={{ color: transaction.account?.color }}>{transaction.account?.name}</span>
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              {transaction.creditCard ? (
+                                <>
+                                  <CreditCardIcon size={10} className="text-slate flex-shrink-0" />
+                                  <span className="truncate" style={{ color: transaction.creditCard.color }}>{transaction.creditCard.name}</span>
+                                  {transaction.creditCard.linkedAccount && (
+                                    <span className="text-[9px] text-slate/50 truncate border-l border-slate/20 pl-1.5">
+                                      {transaction.creditCard.linkedAccount.name}
+                                    </span>
+                                  )}
+                                </>
+                              ) : (
+                                <>
+                                  {transaction.account?.isCash ? (
+                                    <CashCurrencyIcon currency={transaction.account.currency} className="w-2.5 h-2.5 text-slate flex-shrink-0" style={{ color: transaction.account.color }} />
+                                  ) : (
+                                    <Landmark size={10} className="text-slate flex-shrink-0" />
+                                  )}
+                                  <span className="truncate" style={{ color: transaction.account?.color }}>{transaction.account?.name || '-'}</span>
+                                </>
+                              )}
+                            </div>
                           </div>
                           <div className="flex gap-0.5">
                             <button onClick={() => handleOpenEditModal(transaction)} className="p-1.5 text-slate hover:bg-slate/10 rounded-full touch-target">
@@ -875,8 +943,29 @@ export function Transactions() {
                                 {group.category ? t(getTranslatedCategoryName(group.category.name)) : t('common.category')}
                               </span>
                             </td>
-                            <td className="py-3 px-4 text-sm text-slate hidden lg:table-cell" style={{ color: group.account?.color }}>
-                              {group.account?.name || '-'}
+                            <td className="py-3 px-4 text-sm text-slate hidden lg:table-cell">
+                              {group.creditCard ? (
+                                <div className="flex flex-col">
+                                  <div className="flex items-center gap-1.5">
+                                    <CreditCardIcon size={14} className="text-slate flex-shrink-0" />
+                                    <span style={{ color: group.creditCard.color }}>{group.creditCard.name}</span>
+                                  </div>
+                                  {group.creditCard.linkedAccount && (
+                                    <div className="flex items-center gap-1 text-[10px] text-slate/50 ml-5">
+                                      <span>via {group.creditCard.linkedAccount.name}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1.5">
+                                  {group.account?.isCash ? (
+                                    <CashCurrencyIcon currency={group.account.currency} className="w-3.5 h-3.5 text-slate flex-shrink-0" style={{ color: group.account.color }} />
+                                  ) : (
+                                    <Landmark size={14} className="text-slate flex-shrink-0" />
+                                  )}
+                                  <span style={{ color: group.account?.color }}>{group.account?.name || '-'}</span>
+                                </div>
+                              )}
                             </td>
                             <td className={`py-3 px-4 text-right font-bold text-base ${group.type === 'income' ? 'text-emerald' : group.type === 'transfer' ? 'text-blue' : 'text-rose'}`}>
                               {group.type === 'income' ? '+' : '-'}{formatCurrency(group.totalAmountInPeriod, group.account?.currency)}
@@ -931,8 +1020,8 @@ export function Transactions() {
                                     {transaction.category ? t(getTranslatedCategoryName(transaction.category.name)) : '-'}
                                   </span>
                                 </td>
-                                <td className="py-2 px-4 text-sm text-slate opacity-70 hidden lg:table-cell" style={{ color: transaction.account?.color }}>
-                                  {transaction.account?.name}
+                                <td className="py-2 px-4 text-sm text-slate opacity-70 hidden lg:table-cell" style={{ color: transaction.account?.color || transaction.creditCard?.color }}>
+                                  {transaction.account?.name || transaction.creditCard?.name}
                                 </td>
                                 <td className={`py-2 px-4 text-right text-sm ${transaction.type === 'income' ? 'text-emerald' : transaction.type === 'transfer' ? 'text-blue' : 'text-rose'}`}>
                                   {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount, transaction.account?.currency)}
@@ -995,7 +1084,30 @@ export function Transactions() {
                             {transaction.category ? t(getTranslatedCategoryName(transaction.category.name)) : t('common.category')}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-sm text-slate hidden lg:table-cell" style={{ color: transaction.account?.color }}>{transaction.account?.name || '-'}</td>
+                        <td className="py-3 px-4 text-sm text-slate hidden lg:table-cell">
+                          {transaction.creditCard ? (
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-1.5">
+                                <CreditCardIcon size={14} className="text-slate flex-shrink-0" />
+                                <span style={{ color: transaction.creditCard.color }}>{transaction.creditCard.name}</span>
+                              </div>
+                              {transaction.creditCard.linkedAccount && (
+                                <div className="flex items-center gap-1 text-[10px] text-slate/50 ml-5">
+                                  <span>via {transaction.creditCard.linkedAccount.name}</span>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5">
+                              {transaction.account?.isCash ? (
+                                <CashCurrencyIcon currency={transaction.account.currency} className="w-3.5 h-3.5 text-slate flex-shrink-0" style={{ color: transaction.account.color }} />
+                              ) : (
+                                <Landmark size={14} className="text-slate flex-shrink-0" />
+                              )}
+                              <span style={{ color: transaction.account?.color }}>{transaction.account?.name || '-'}</span>
+                            </div>
+                          )}
+                        </td>
                         <td className={`py-3 px-4 text-right font-medium text-base ${transaction.type === 'income' ? 'text-emerald' : transaction.type === 'transfer' ? 'text-blue' : 'text-rose'}`}>
                           {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount, transaction.account?.currency)}
                         </td>

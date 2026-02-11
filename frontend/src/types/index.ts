@@ -52,6 +52,7 @@ export interface Transaction {
   paidBillId?: string;
   // Cash payment flag
   isCash?: boolean;
+  installments?: number; // Total number of installments (initial request)
 }
 
 export interface Budget {

@@ -1,13 +1,12 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Mic, Square, Loader2, Check, AlertCircle, X } from 'lucide-react';
 import { BaseModal } from './BaseModal';
 import { Input } from './Input';
+import { useVoice } from '../context/VoiceContext';
 import { useVoiceForm } from '../hooks/useVoiceForm';
 import { sendVoiceBudgetUpdate } from '../services/voiceService';
 import { getTranslatedCategoryName } from '../utils/categoryTranslations';
 import type { Budget, Category } from '../types';
-import { cn } from '../utils/cn';
 
 interface BudgetModalProps {
   isOpen: boolean;
@@ -39,6 +38,7 @@ export function BudgetModal({
   });
 
   const voice = useVoiceForm({ autoStartRecording });
+  const { setIsModalActive } = useVoice();
 
   const expenseCategories = categories
     .filter((c) => c.type === 'expense')
@@ -69,6 +69,14 @@ export function BudgetModal({
     voice.resetVoice();
   }, [budget, isOpen]);
 
+  // Sync isModalActive with VoiceContext
+  useEffect(() => {
+    setIsModalActive(isOpen);
+    return () => {
+      if (isOpen) setIsModalActive(false);
+    };
+  }, [isOpen, setIsModalActive]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave({
@@ -78,12 +86,12 @@ export function BudgetModal({
     });
   };
 
-  const handleVoiceInput = useCallback(async () => {
-    if (voice.voiceState === 'recording') {
-      const audioBlob = await voice.stopRecording();
-
-      if (audioBlob) {
+  // Handle voice commands from the centralized VoiceHeroButton
+  useEffect(() => {
+    const processVoiceCommand = async () => {
+      if (voice.voiceState === 'preview' && voice.audioBlob) {
         voice.setProcessing(true);
+        const audioBlob = voice.audioBlob;
 
         try {
           // Use update mode if editing OR if we already have voice data (second voice input)
@@ -106,22 +114,21 @@ export function BudgetModal({
               amount: result.data?.amount?.toString() || prev.amount,
             }));
             voice.setVoiceDataReceived();
-            voice.showFeedback('success', result.message || t('voice.updateSuccess') || 'Budget information extracted from voice');
+            voice.showFeedback('success', result.message || t('voice.updateSuccess'));
           } else {
-            voice.showFeedback('error', result.error || t('voice.error') || 'Could not understand. Please try again.');
+            voice.showFeedback('error', result.error || t('voice.error'));
           }
         } catch (error) {
           console.error('Voice processing error:', error);
-          voice.showFeedback('error', t('voice.error') || 'Could not understand. Please try again.');
+          voice.showFeedback('error', t('voice.error'));
         } finally {
           voice.setProcessing(false);
         }
       }
-    } else if (voice.voiceState === 'idle' || voice.voiceState === 'error') {
-      voice.clearFeedback();
-      await voice.startRecording();
-    }
-  }, [voice, i18n.language, formData, isEditing, t, expenseCategories, budget?.id]);
+    };
+
+    processVoiceCommand();
+  }, [voice.voiceState, voice.audioBlob, voice.hasVoiceData, isEditing, i18n.language, formData, t, expenseCategories, budget?.id]);
 
   return (
     <BaseModal
@@ -187,71 +194,6 @@ export function BudgetModal({
           onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
           required
         />
-      </div>
-
-      {/* Voice Input Section */}
-      <div className="border-t border-slate/10 pt-3 mt-3 sm:pt-4 sm:mt-4">
-        <label className="block text-sm font-medium text-ink mb-2 sm:mb-3">
-          {(voice.hasVoiceData || isEditing) ? t('voice.updateByVoice') : t('voice.addByVoice')}
-        </label>
-        <div className="flex flex-col gap-2 sm:gap-3">
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={handleVoiceInput}
-              disabled={voice.voiceState === 'processing' || voice.isProcessingVoice}
-              className={cn(
-                "flex-1 flex items-center justify-center gap-2 h-11 sm:h-14 rounded-full font-medium transition-all duration-300",
-                voice.voiceState === 'recording'
-                  ? 'bg-emerald text-white ring-4 ring-emerald/20 animate-pulse'
-                  : voice.voiceState === 'processing' || voice.isProcessingVoice
-                    ? 'bg-slate/10 text-slate cursor-wait'
-                    : 'bg-gradient-to-r from-blue to-blue-hover text-white shadow-lg shadow-blue/20 hover:shadow-blue/30 hover:scale-[1.02]'
-              )}
-            >
-              {voice.voiceState === 'recording' ? (
-                <>
-                  <Square className="h-4 w-4 sm:h-5 sm:w-5" />
-                  <span className="text-sm sm:text-base">{t('voice.stopRecording')}</span>
-                </>
-              ) : voice.voiceState === 'processing' || voice.isProcessingVoice ? (
-                <>
-                  <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
-                  <span className="text-sm sm:text-base">{t('voice.processing')}</span>
-                </>
-              ) : (
-                <>
-                  <Mic className="h-4 w-4 sm:h-5 sm:w-5" />
-                  <span className="text-sm sm:text-base">{(voice.hasVoiceData || isEditing) ? t('voice.updateByVoice') : t('voice.addByVoice')}</span>
-                </>
-              )}
-            </button>
-
-            {voice.voiceState === 'recording' && (
-              <button
-                type="button"
-                onClick={voice.cancelRecording}
-                className="h-11 w-11 sm:h-14 sm:w-14 flex items-center justify-center rounded-full bg-rose/10 text-rose hover:bg-rose/20 transition-all duration-200 border-2 border-rose/20 shadow-lg shadow-rose/10"
-                title={t('common.cancel')}
-              >
-                <X className="h-4 w-4 sm:h-5 sm:w-5" />
-              </button>
-            )}
-          </div>
-
-          {voice.voiceFeedback && (
-            <div className={cn(
-              "flex items-center gap-2 text-sm px-3 py-2 rounded-xl border animate-fade-in",
-              voice.voiceFeedback.type === 'success' ? 'bg-emerald/10 text-emerald border-emerald/20' : 'bg-rose/10 text-rose border-rose/20'
-            )}>
-              {voice.voiceFeedback.type === 'success' ? <Check className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
-              <span>{voice.voiceFeedback.message}</span>
-            </div>
-          )}
-        </div>
-        <p className="text-xs text-ink/70 mt-3 italic">
-          {t('voice.budgetHint') || 'Diga algo como: "Criar orçamento de 500 reais para Alimentação mensal"'}
-        </p>
       </div>
     </BaseModal>
   );

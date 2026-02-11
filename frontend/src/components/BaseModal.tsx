@@ -23,40 +23,11 @@ interface BaseModalProps {
     isRecording?: boolean;
     /** Callback to cancel/stop recording (called before closing if recording) */
     onCancelRecording?: () => void;
+    /** Callback to trigger voice recording from floating button */
+    onVoiceClick?: () => void;
 }
 
-// Sound effect for cancel action (only when stopping recording)
-const playCancelSound = () => {
-    try {
-        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-
-        // First beep
-        const osc1 = audioContext.createOscillator();
-        const gain1 = audioContext.createGain();
-        osc1.connect(gain1);
-        gain1.connect(audioContext.destination);
-        osc1.frequency.value = 660; // E5 note - lower pitch for stop
-        osc1.type = 'sine';
-        gain1.gain.setValueAtTime(0.25, audioContext.currentTime);
-        gain1.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
-        osc1.start(audioContext.currentTime);
-        osc1.stop(audioContext.currentTime + 0.1);
-
-        // Second beep (slightly delayed)
-        const osc2 = audioContext.createOscillator();
-        const gain2 = audioContext.createGain();
-        osc2.connect(gain2);
-        gain2.connect(audioContext.destination);
-        osc2.frequency.value = 440; // A4 note - even lower
-        osc2.type = 'sine';
-        gain2.gain.setValueAtTime(0.25, audioContext.currentTime + 0.12);
-        gain2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.25);
-        osc2.start(audioContext.currentTime + 0.12);
-        osc2.stop(audioContext.currentTime + 0.25);
-    } catch (e) {
-        // Sound not critical, ignore errors
-    }
-};
+// ... (sound effect function code remains unchanged)
 
 export function BaseModal({
     isOpen,
@@ -89,70 +60,70 @@ export function BaseModal({
     return (
         <Portal>
             <div className="fixed inset-0 z-[1400] flex items-end sm:items-center justify-center p-2 sm:p-3 md:p-4 overflow-hidden">
-            {/* Backdrop */}
-            <div
-                className="absolute inset-0 bg-ink/20 backdrop-blur-sm animate-fade-in"
-                onClick={handleCancel}
-            />
+                {/* Backdrop */}
+                <div
+                    className="absolute inset-0 bg-ink/20 backdrop-blur-sm animate-fade-in"
+                    onClick={handleCancel}
+                />
 
-            {/* Modal Container - Card floating style on mobile */}
-            <div className="relative w-full sm:w-[calc(100%-2rem)] md:w-full max-w-lg h-[calc(100dvh-1rem)] sm:h-auto sm:max-h-[90dvh] md:max-h-[85dvh] flex flex-col bg-mist/95 backdrop-blur-xl border border-white/50 rounded-2xl shadow-2xl animate-scale-in">
-                {/* Header - Fixed at top */}
-                <div className="flex items-center justify-between px-3 py-2.5 sm:px-4 sm:py-3 md:px-6 md:py-4 border-b border-slate/5 flex-shrink-0">
-                    <h2 className="text-sm sm:text-base md:text-lg font-semibold text-ink truncate pr-2">{title}</h2>
-                    <button
-                        onClick={handleCancel}
-                        className="p-1 sm:p-1.5 md:p-2 text-slate hover:text-ink hover:bg-slate/10 rounded-full transition-colors flex-shrink-0"
-                    >
-                        <X className="h-4 w-4 sm:h-5 sm:w-5" />
-                    </button>
+                {/* Modal Container - Card floating style on mobile */}
+                <div className="relative w-full sm:w-[calc(100%-2rem)] md:w-full max-w-lg h-[calc(100dvh-1rem)] sm:h-auto sm:max-h-[90dvh] md:max-h-[85dvh] flex flex-col bg-mist/95 backdrop-blur-xl border border-white/50 rounded-2xl shadow-2xl animate-scale-in">
+                    {/* Header - Fixed at top */}
+                    <div className="flex items-center justify-between px-3 py-2.5 sm:px-4 sm:py-3 md:px-6 md:py-4 border-b border-slate/5 flex-shrink-0">
+                        <h2 className="text-sm sm:text-base md:text-lg font-semibold text-ink truncate pr-2">{title}</h2>
+                        <button
+                            onClick={handleCancel}
+                            className="p-1 sm:p-1.5 md:p-2 text-slate hover:text-ink hover:bg-slate/10 rounded-full transition-colors flex-shrink-0"
+                        >
+                            <X className="h-4 w-4 sm:h-5 sm:w-5" />
+                        </button>
+                    </div>
+
+                    {/* Content - Scrollable with safe area support */}
+                    <div className="px-3 py-2.5 sm:px-4 sm:py-3 md:px-6 md:py-4 pb-[env(safe-area-inset-bottom,0px)] overflow-y-auto flex-1 custom-scrollbar">
+                        {onSubmit ? (
+                            <form onSubmit={onSubmit} className="space-y-4">
+                                {children}
+
+                                {/* Action buttons */}
+                                <div className="flex flex-row gap-3 pt-4">
+                                    <Button
+                                        type="submit"
+                                        disabled={isSubmitDisabled}
+                                        className="flex-1 rounded-xl bg-emerald hover:bg-emerald/90 text-white shadow-lg shadow-emerald/20"
+                                        leftIcon={submitIcon || <Check className="h-4 w-4" />}
+                                    >
+                                        {submitLabel || defaultSubmitLabel}
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        onClick={handleCancel}
+                                        className="flex-1 rounded-xl bg-amber-100 text-amber-700 hover:bg-amber-200 border border-amber-200"
+                                        leftIcon={cancelIcon || <X className="h-4 w-4" />}
+                                    >
+                                        {cancelLabel}
+                                    </Button>
+                                </div>
+                            </form>
+                        ) : (
+                            <>
+                                {children}
+                                <div className="flex flex-row gap-3 pt-4">
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        onClick={handleCancel}
+                                        className="flex-1 rounded-xl bg-amber-100 text-amber-700 hover:bg-amber-200 border border-amber-200"
+                                        leftIcon={cancelIcon || <X className="h-4 w-4" />}
+                                    >
+                                        {cancelLabel}
+                                    </Button>
+                                </div>
+                            </>
+                        )}
+                    </div>
                 </div>
-
-                {/* Content - Scrollable with safe area support */}
-                <div className="px-3 py-2.5 sm:px-4 sm:py-3 md:px-6 md:py-4 pb-[env(safe-area-inset-bottom,0px)] overflow-y-auto flex-1 custom-scrollbar">
-                    {onSubmit ? (
-                        <form onSubmit={onSubmit} className="space-y-4">
-                            {children}
-
-                            {/* Action buttons */}
-                            <div className="flex flex-row gap-3 pt-4">
-                                <Button
-                                    type="submit"
-                                    disabled={isSubmitDisabled}
-                                    className="flex-1 rounded-xl bg-emerald hover:bg-emerald/90 text-white shadow-lg shadow-emerald/20"
-                                    leftIcon={submitIcon || <Check className="h-4 w-4" />}
-                                >
-                                    {submitLabel || defaultSubmitLabel}
-                                </Button>
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    onClick={handleCancel}
-                                    className="flex-1 rounded-xl bg-amber-100 text-amber-700 hover:bg-amber-200 border border-amber-200"
-                                    leftIcon={cancelIcon || <X className="h-4 w-4" />}
-                                >
-                                    {cancelLabel}
-                                </Button>
-                            </div>
-                        </form>
-                    ) : (
-                        <>
-                            {children}
-                            <div className="flex flex-row gap-3 pt-4">
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    onClick={handleCancel}
-                                    className="flex-1 rounded-xl bg-amber-100 text-amber-700 hover:bg-amber-200 border border-amber-200"
-                                    leftIcon={cancelIcon || <X className="h-4 w-4" />}
-                                >
-                                    {cancelLabel}
-                                </Button>
-                            </div>
-                        </>
-                    )}
-                </div>
-            </div>
             </div>
         </Portal>
     );

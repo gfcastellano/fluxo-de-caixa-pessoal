@@ -109,7 +109,8 @@ export async function sendVoiceTransactionUpdate(
   audioBlob: Blob,
   language: string,
   currentTransaction: Transaction,
-  categories: Category[]
+  categories: Category[],
+  previewOnly: boolean = false
 ): Promise<VoiceTransactionUpdateResponse> {
   const user = auth.currentUser;
 
@@ -129,16 +130,18 @@ export async function sendVoiceTransactionUpdate(
     formData.append('currentTransaction', JSON.stringify(currentTransaction));
     formData.append('categories', JSON.stringify(categories));
 
-    // Determine endpoint based on whether transaction has an ID
-    // If ID exists and is not empty: transaction is already saved, use update endpoint (persists to DB)
-    // If ID is empty or missing: transaction is pending, use update-pending endpoint (no persistence)
+    // Determine endpoint based on whether transaction has an ID and previewOnly flag
+    // If ID exists and is not empty AND previewOnly is false: uses /transactions/update (persists to Firestore)
+    // If ID is empty/missing OR previewOnly is true: uses /transactions/update-pending (no persistence)
     const isPersisted = currentTransaction.id && currentTransaction.id.trim() !== '';
-    const endpoint = isPersisted
+    const useUpdateEndpoint = isPersisted && !previewOnly;
+
+    const endpoint = useUpdateEndpoint
       ? `${API_BASE_URL}/api/voice/transactions/update`
       : `${API_BASE_URL}/api/voice/transactions/update-pending`;
 
-    // Add transactionId only for persisted transactions
-    if (isPersisted) {
+    // Add transactionId only for persisted transactions when NOT in preview mode
+    if (useUpdateEndpoint) {
       formData.append('transactionId', currentTransaction.id);
     }
 

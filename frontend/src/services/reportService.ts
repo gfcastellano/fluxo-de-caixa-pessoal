@@ -20,15 +20,15 @@ export async function getMonthlySummary(
     (t) => t.type === 'transfer' && t.toAccountId === accountId
   );
 
-  // Income includes: income transactions + incoming transfers
+  // Income includes: income transactions + incoming transfers (only if accountId is provided)
   const income = transactions
     .filter((t) => t.type === 'income')
     .reduce((sum, t) => sum + t.amount, 0)
-    + incomingTransfers.reduce((sum, t) => sum + t.amount, 0);
+    + (accountId ? incomingTransfers.reduce((sum, t) => sum + t.amount, 0) : 0);
 
-  // Expenses include: expenses + outgoing transfers (from this account)
+  // Expenses include: expenses + outgoing transfers (only if accountId is provided)
   const expenses = transactions
-    .filter((t) => t.type === 'expense' || t.type === 'transfer')
+    .filter((t) => t.type === 'expense' || (accountId && t.type === 'transfer'))
     .reduce((sum, t) => sum + t.amount, 0);
 
   return {
@@ -52,15 +52,15 @@ export async function getCategoryBreakdown(
 
   // For expense type, include both expenses and transfers (outgoing)
   // For income type, include income and also fetch incoming transfers
-  const transactionTypes = type === 'expense' 
-    ? ['expense', 'transfer'] 
+  const transactionTypes = type === 'expense'
+    ? ['expense', 'transfer']
     : ['income'];
 
   const [transactions, categories, allUserTransactions] = await Promise.all([
     getTransactions(userId, { startDate, endDate, accountId }),
     getCategories(userId),
     // Fetch all transactions to find incoming transfers when needed
-    type === 'income' && accountId 
+    type === 'income' && accountId
       ? getTransactions(userId, { startDate, endDate })
       : Promise.resolve([]),
   ]);
@@ -71,8 +71,8 @@ export async function getCategoryBreakdown(
   // Find incoming transfers to this account
   const incomingTransfers = type === 'income' && accountId
     ? (allUserTransactions as Transaction[]).filter(
-        t => t.type === 'transfer' && t.toAccountId === accountId
-      )
+      t => t.type === 'transfer' && t.toAccountId === accountId
+    )
     : [];
 
   const categoryMap = new Map(categories.map((c) => [c.id, c]));

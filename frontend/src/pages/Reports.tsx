@@ -9,9 +9,10 @@ import {
   getTrendData,
 } from '../services/reportService';
 import { getAccounts } from '../services/accountService';
+import { getCreditCards } from '../services/creditCardService';
 import { getTransactions } from '../services/transactionService';
 import { getCategories } from '../services/categoryService';
-import type { MonthlySummary, CategoryBreakdown, Account } from '../types';
+import type { MonthlySummary, CategoryBreakdown, Account, CreditCard } from '../types';
 import { formatCurrency, formatMonthYear, getCurrentMonth } from '../utils/format';
 import { getCategoryTranslationKey } from '../utils/categoryTranslations';
 import {
@@ -50,6 +51,7 @@ export function Reports() {
   const [year, setYear] = useState(getCurrentMonth().year);
   const [month, setMonth] = useState(getCurrentMonth().month);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
   const [selectedCurrency, setSelectedCurrency] = useState<string>('');
   const [calculatedBalance, setCalculatedBalance] = useState<number>(0);
@@ -109,11 +111,11 @@ export function Reports() {
   const CustomDot = (props: any) => {
     const { cx, cy, payload } = props;
     const value = payload.projectedBalance;
-    
+
     // Default color (green for positive values above warning threshold)
     let fillColor = '#10B981';
     let strokeColor = '#059669';
-    
+
     if (value < 0) {
       // Red for negative values
       fillColor = '#EF4444';
@@ -123,7 +125,7 @@ export function Reports() {
       fillColor = '#F97316';
       strokeColor = '#EA580C';
     }
-    
+
     return (
       <circle
         cx={cx}
@@ -168,10 +170,14 @@ export function Reports() {
 
   const loadAccounts = async () => {
     try {
-      const accountsData = await getAccounts(user!.uid);
+      const [accountsData, creditCardsData] = await Promise.all([
+        getAccounts(user!.uid),
+        getCreditCards(user!.uid)
+      ]);
       setAccounts(accountsData);
+      setCreditCards(creditCardsData);
     } catch (error) {
-      console.error('Error loading accounts:', error);
+      console.error('Error loading accounts and credit cards:', error);
     }
   };
 
@@ -194,16 +200,32 @@ export function Reports() {
         // When currency is selected but no specific account, we need to fetch transactions
         // for all accounts with that currency and calculate category breakdowns client-side
         const accountIdsInCurrency = new Set(filteredAccountIds);
+
+        // Find credit card IDs that belong to the selected currency
+        const creditCardIdsInCurrency = new Set(
+          creditCards
+            .filter(card => {
+              const linkedAccount = accounts.find(a => a.id === card.linkedAccountId);
+              return linkedAccount?.currency === selectedCurrency;
+            })
+            .map(card => card.id)
+        );
+
         const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
         const endDate = `${year}-${String(month).padStart(2, '0')}-31`;
 
-        // Fetch transactions and categories for all accounts with the selected currency
+        // Fetch transactions and categories for all accounts and credit cards with the selected currency
         const [allTransactions, categories] = await Promise.all([
-          Promise.all(
-            Array.from(accountIdsInCurrency).map(accountId =>
+          Promise.all([
+            ...Array.from(accountIdsInCurrency).map(accountId =>
               getTransactions(user!.uid, { startDate, endDate, accountId })
+            ),
+            ...Array.from(creditCardIdsInCurrency).map(creditCardId =>
+              getTransactions(user!.uid, { startDate, endDate }).then(txs =>
+                txs.filter(t => t.creditCardId === creditCardId)
+              )
             )
-          ).then(results => results.flat()),
+          ]).then(results => results.flat()),
           getCategories(user!.uid),
         ]);
 
@@ -297,15 +319,40 @@ export function Reports() {
 
       if (selectedCurrency && !selectedAccountId) {
         // When currency is selected but no specific account, fetch trend for each account with that currency
-        // and aggregate the results, including incoming transfers
+        // and aggregate the results, including incoming transfers and credit card transactions
         const accountsWithCurrency = accounts.filter(a => a.currency === selectedCurrency);
         const accountIdsInCurrency = new Set(accountsWithCurrency.map(a => a.id));
+        const creditCardsWithCurrency = creditCards.filter(card => {
+          const linkedAccount = accounts.find(a => a.id === card.linkedAccountId);
+          return linkedAccount?.currency === selectedCurrency;
+        });
+        const creditCardIdsInCurrency = new Set(creditCardsWithCurrency.map(card => card.id));
 
-        if (accountsWithCurrency.length > 0) {
-          // Fetch trend data for each account
-          const trendPromises = accountsWithCurrency.map(account =>
-            getTrendData(user!.uid, year, 1, year, 12, account.id)
-          );
+        if (accountsWithCurrency.length > 0 || creditCardsWithCurrency.length > 0) {
+          // Fetch trend data for each account and each credit card
+          const trendPromises = [
+            ...accountsWithCurrency.map(account =>
+              getTrendData(user!.uid, year, 1, year, 12, account.id)
+            ),
+            ...creditCardsWithCurrency.map(card =>
+              // Trend data for credit cards needs to be calculated monthly since getTrendData expects an accountId
+              Promise.all(
+                Array.from({ length: 12 }, (_, i) => i + 1).map(async (m) => {
+                  const startDate = `${year}-${String(m).padStart(2, '0')}-01`;
+                  const endDate = `${year}-${String(m).padStart(2, '0')}-31`;
+                  const txs = await getTransactions(user!.uid, { startDate, endDate });
+                  const ccTxs = txs.filter(t => t.creditCardId === card.id);
+                  const income = ccTxs.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+                  const expenses = ccTxs.filter(t => t.type === 'expense' || t.type === 'transfer').reduce((sum, t) => sum + t.amount, 0);
+                  return {
+                    month: `${year}-${String(m).padStart(2, '0')}`,
+                    income,
+                    expenses
+                  };
+                })
+              )
+            )
+          ];
 
           const trendsPerAccount = await Promise.all(trendPromises);
 
@@ -433,11 +480,22 @@ export function Reports() {
         accountId: selectedAccountId || undefined,
       });
 
-      // If currency filter is applied (but not specific account), filter by account IDs
+      // If currency filter is applied (but not specific account), filter by account and credit card IDs
       let filteredTransactions = transactions;
       if (selectedCurrency && !selectedAccountId) {
         const accountIdsInCurrency = new Set(accountsToCalculate.map(a => a.id));
-        filteredTransactions = transactions.filter(t => t.accountId && accountIdsInCurrency.has(t.accountId));
+        const creditCardIdsInCurrency = new Set(
+          creditCards
+            .filter(card => {
+              const linkedAccount = accounts.find(a => a.id === card.linkedAccountId);
+              return linkedAccount?.currency === selectedCurrency;
+            })
+            .map(card => card.id)
+        );
+        filteredTransactions = transactions.filter(t =>
+          (t.accountId && accountIdsInCurrency.has(t.accountId)) ||
+          (t.creditCardId && creditCardIdsInCurrency.has(t.creditCardId))
+        );
       }
 
       // Fetch all user transactions to find incoming transfers to these accounts
@@ -540,11 +598,22 @@ export function Reports() {
         accountId: selectedAccountId || undefined,
       });
 
-      // If currency filter is applied (but not specific account), filter by account IDs
+      // If currency filter is applied (but not specific account), filter by account and credit card IDs
       let filteredTransactions = transactions;
       if (selectedCurrency && !selectedAccountId) {
         const accountIdsInCurrency = new Set(accountsToCalculate.map(a => a.id));
-        filteredTransactions = transactions.filter(t => t.accountId && accountIdsInCurrency.has(t.accountId));
+        const creditCardIdsInCurrency = new Set(
+          creditCards
+            .filter(card => {
+              const linkedAccount = accounts.find(a => a.id === card.linkedAccountId);
+              return linkedAccount?.currency === selectedCurrency;
+            })
+            .map(card => card.id)
+        );
+        filteredTransactions = transactions.filter(t =>
+          (t.accountId && accountIdsInCurrency.has(t.accountId)) ||
+          (t.creditCardId && creditCardIdsInCurrency.has(t.creditCardId))
+        );
       }
 
       // Fetch all user transactions to find incoming transfers to these accounts
@@ -721,9 +790,9 @@ export function Reports() {
             <ChevronRight className="h-3 w-3 lg:h-4 lg:w-4" />
           </Button>
         </div>
-        <Button 
-          variant="secondary" 
-          onClick={handleExport} 
+        <Button
+          variant="secondary"
+          onClick={handleExport}
           leftIcon={<Download className="h-3 w-3 lg:h-4 lg:w-4 flex-shrink-0" />}
           className="text-xs lg:text-sm px-2 lg:px-4 py-1 lg:py-2 h-7 lg:h-auto whitespace-nowrap"
         >
@@ -757,9 +826,9 @@ export function Reports() {
                 <ResponsiveContainer width="100%" height={180}>
                   <BarChart data={incomeBreakdown.slice(0, 5)} layout="vertical" margin={{ left: -20, right: 20, top: 5, bottom: 5 }} barSize={24}>
                     <XAxis type="number" hide />
-                    <YAxis 
-                      type="category" 
-                      dataKey="categoryName" 
+                    <YAxis
+                      type="category"
+                      dataKey="categoryName"
                       width={90}
                       tick={{ fontSize: 10 }}
                       tickFormatter={(value) => {
@@ -812,9 +881,9 @@ export function Reports() {
                 <ResponsiveContainer width="100%" height={180}>
                   <BarChart data={expenseBreakdown.slice(0, 5)} layout="vertical" margin={{ left: -20, right: 20, top: 5, bottom: 5 }} barSize={24}>
                     <XAxis type="number" hide />
-                    <YAxis 
-                      type="category" 
-                      dataKey="categoryName" 
+                    <YAxis
+                      type="category"
+                      dataKey="categoryName"
                       width={90}
                       tick={{ fontSize: 10 }}
                       tickFormatter={(value) => {
@@ -901,7 +970,7 @@ export function Reports() {
           <ResponsiveContainer width="100%" height={250}>
             <LineChart data={trendData} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--color-slate-light, #E2E8F0)" />
-              
+
               {/* Zero reference line */}
               <ReferenceLine
                 y={0}
@@ -915,7 +984,7 @@ export function Reports() {
                   fontSize: 10
                 }}
               />
-              
+
               <XAxis
                 dataKey="month"
                 stroke="var(--color-slate, #64748B)"
@@ -941,20 +1010,20 @@ export function Reports() {
                 formatter={(value, name) => {
                   const numValue = Number(value);
                   const formattedValue = formatCurrency(numValue, selectedCurrency || 'BRL');
-                  
+
                   if (name === t('reports.projectedBalance')) {
                     const isNegative = numValue < 0;
                     const isWarning = numValue > 0 && numValue < warningThreshold;
-                    
+
                     const status = isNegative
                       ? ` (${t('reports.balanceIsNegative')})`
                       : isWarning
-                      ? ` (${t('reports.balanceApproachingZero')})`
-                      : '';
-                    
+                        ? ` (${t('reports.balanceApproachingZero')})`
+                        : '';
+
                     return [formattedValue + status, name];
                   }
-                  
+
                   return [formattedValue, name];
                 }}
                 contentStyle={{
@@ -971,7 +1040,7 @@ export function Reports() {
                 wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }}
                 iconSize={8}
               />
-              
+
               {/* Income line */}
               <Line
                 type="monotone"
@@ -982,7 +1051,7 @@ export function Reports() {
                 dot={{ r: 3 }}
                 activeDot={{ r: 5 }}
               />
-              
+
               {/* Expenses line */}
               <Line
                 type="monotone"
@@ -993,7 +1062,7 @@ export function Reports() {
                 dot={{ r: 3 }}
                 activeDot={{ r: 5 }}
               />
-              
+
               {/* Projected balance line with custom dots */}
               <Line
                 type="monotone"

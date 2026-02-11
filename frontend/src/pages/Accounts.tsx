@@ -12,33 +12,20 @@ import {
   setDefaultAccount,
   calculateAccountBalance,
 } from '../services/accountService';
+import { getCreditCards } from '../services/creditCardService';
 import { formatDate } from '../utils/format';
-import type { Account } from '../types';
-import { Edit2, Trash2, Star, Wallet, Banknote, DollarSign, Euro, PoundSterling, JapaneseYen, SwissFranc, ChevronDown, ChevronUp } from 'lucide-react';
+import type { Account, CreditCard } from '../types';
+import { Edit2, Trash2, Star, Wallet, Banknote, DollarSign, Euro, PoundSterling, JapaneseYen, SwissFranc, ChevronDown, ChevronUp, CreditCard as CreditCardIcon } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { PageDescription } from '../components/PageDescription';
 
-const CURRENCY_ICONS: Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
-  USD: DollarSign,
-  EUR: Euro,
-  GBP: PoundSterling,
-  JPY: JapaneseYen,
-  CHF: SwissFranc,
-};
-
-function CashCurrencyIcon({ currency, className, style }: { currency: string; className?: string; style?: React.CSSProperties }) {
-  const IconComponent = CURRENCY_ICONS[currency];
-  if (IconComponent) return <IconComponent className={className} style={style} />;
-  // Fallback: text-based symbol for currencies without a lucide icon (e.g. BRL → R$)
-  const symbols: Record<string, string> = { BRL: 'R$', ARS: '$', CLP: '$', COP: '$', MXN: '$', PEN: 'S/', CNY: '¥', KRW: '₩', INR: '₹', TRY: '₺' };
-  const symbol = symbols[currency] || currency;
-  return <span className={className} style={{ ...style, fontWeight: 700, fontSize: '0.75em', lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{symbol}</span>;
-}
+import { CashCurrencyIcon } from '../components/CashCurrencyIcon';
 
 export function Accounts() {
   const { user } = useAuth();
   const { t } = useTranslation();
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
   const [accountBalances, setAccountBalances] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
@@ -60,16 +47,20 @@ export function Accounts() {
   const loadAccounts = async () => {
     setLoading(true);
     try {
-      const data = await getAccounts(user!.uid);
+      const [accountsData, creditCardsData] = await Promise.all([
+        getAccounts(user!.uid),
+        getCreditCards(user!.uid)
+      ]);
       // Cash accounts are auto-created by backend POST /accounts
 
-      const sortedData = data.sort((a, b) =>
+      const sortedData = accountsData.sort((a, b) =>
         a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
       );
       setAccounts(sortedData);
+      setCreditCards(creditCardsData);
 
       const balances: Record<string, number> = {};
-      for (const account of data) {
+      for (const account of accountsData) {
         const calculatedBalance = await calculateAccountBalance(account.id, user!.uid);
         balances[account.id] = calculatedBalance;
       }
@@ -332,6 +323,37 @@ export function Accounts() {
                         {t('common.delete')}
                       </button>
                     </div>
+
+                    {/* Credit Cards - Mini Cards Style */}
+                    {creditCards.filter(card => card.linkedAccountId === account.id).length > 0 && (
+                      <div className="mt-3 flex flex-col items-end gap-2">
+                        {creditCards
+                          .filter(card => card.linkedAccountId === account.id)
+                          .map(card => (
+                            <div
+                              key={card.id}
+                              className="relative w-36 h-20 rounded-xl p-3 shadow-sm flex flex-col justify-between overflow-hidden transition-transform hover:scale-105"
+                              style={{ backgroundColor: card.color || '#3b82f6' }}
+                            >
+                              {/* Decorator */}
+                              <div className="absolute top-0 right-0 w-16 h-16 bg-white/10 rounded-full -mr-8 -mt-8 blur-xl"></div>
+                              <div className="absolute bottom-0 left-0 w-12 h-12 bg-black/10 rounded-full -ml-6 -mb-6 blur-lg"></div>
+
+                              <div className="relative z-10 flex justify-between items-start">
+                                <CreditCardIcon className="text-white/80 w-3.5 h-3.5" />
+                              </div>
+
+                              <div className="relative z-10 text-right">
+                                <p className="text-white font-semibold text-[10px] truncate mb-0.5">{card.name}</p>
+                                <p className="text-white/90 text-[9px] font-medium tracking-wide">
+                                  Limit: {formatCurrency(card.creditLimit, account.currency)}
+                                </p>
+                              </div>
+                            </div>
+                          ))
+                        }
+                      </div>
+                    )}
                   </div>
                 </Card>
               ))}

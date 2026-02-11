@@ -13,7 +13,11 @@ export function VoiceHeroButton() {
     const {
         currentPageType,
         isEditing,
+        isRecording,
+        isModalActive,
         requestOpenModal,
+        startRecording,
+        stopRecording,
         hasConsent,
         showConsentModal,
         requestConsent,
@@ -25,13 +29,13 @@ export function VoiceHeroButton() {
     const getIcon = () => {
         switch (currentPageType) {
             case 'transaction':
-                return isEditing ? <Mic size={28} /> : <Plus size={28} />;
+                return (isEditing || isModalActive) ? <Mic size={28} className={cn(isRecording && "animate-pulse")} /> : <Plus size={28} />;
             case 'category':
-                return isEditing ? <Mic size={28} /> : <Tag size={24} />;
+                return (isEditing || isModalActive) ? <Mic size={28} /> : <Tag size={24} />;
             case 'account':
-                return isEditing ? <Mic size={28} /> : <Landmark size={24} />;
+                return (isEditing || isModalActive) ? <Mic size={28} /> : <Landmark size={24} />;
             case 'budget':
-                return isEditing ? <Mic size={28} /> : <PiggyBank size={24} />;
+                return (isEditing || isModalActive) ? <Mic size={28} /> : <PiggyBank size={24} />;
             default:
                 return <Plus size={28} />;
         }
@@ -79,6 +83,17 @@ export function VoiceHeroButton() {
             requestConsent();
             return;
         }
+
+        if (isRecording) {
+            stopRecording();
+            return;
+        }
+
+        if (isModalActive) {
+            startRecording();
+            return;
+        }
+
         // Request the page to open its form modal
         requestOpenModal();
     };
