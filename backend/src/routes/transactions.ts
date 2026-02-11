@@ -61,7 +61,7 @@ app.post('/', async (c) => {
     const validated = transactionSchema.parse(body);
 
     const firebase = new FirebaseService(c.env);
-    
+
     // Extract recurringCount from validated data (not stored on transaction)
     const { recurringCount, ...transactionData } = validated;
 
@@ -74,14 +74,14 @@ app.post('/', async (c) => {
         isPaid: boolean;
         id: string;
       }>;
-      
+
       const currentBill = allBills.find(
         bill => bill.creditCardId === transactionData.creditCardId && !bill.isClosed && !bill.isPaid
       );
 
       if (currentBill) {
         transactionData.billId = currentBill.id;
-        
+
         // Update the bill total
         const bill = await firebase.getDocument('creditCardBills', currentBill.id) as { totalAmount: number };
         await firebase.updateDocument('creditCardBills', currentBill.id, {
@@ -159,6 +159,70 @@ app.post('/', async (c) => {
   }
 });
 
+// Endpoint to manually trigger recurring instance generation for a transaction
+app.post('/:id/generate-recurring', async (c) => {
+  try {
+    const transactionId = c.req.param('id');
+    const firebase = new FirebaseService(c.env);
+
+    // Fetch the transaction
+    const transaction = await firebase.getDocument('transactions', transactionId);
+
+    if (!transaction) {
+      return c.json({ success: false, error: 'Transaction not found' }, 404);
+    }
+
+    if (!transaction.isRecurring) {
+      return c.json({ success: false, error: 'Transaction is not recurring' }, 400);
+    }
+
+    const count = transaction.recurringCount as number | undefined;
+    let instances: unknown[] = [];
+
+    // If recurringCount is provided (> 1), generate that many instances
+    // We check > 1 because the parent is the first instance
+    if (count && count > 1) {
+      instances = await generateRecurringInstancesWithCount(
+        firebase,
+        transaction as any,
+        {
+          recurrencePattern: transaction.recurrencePattern as string,
+          recurrenceDay: transaction.recurrenceDay as number,
+          recurrenceEndDate: transaction.recurrenceEndDate as string,
+          date: transaction.date as string,
+        },
+        count - 1
+      );
+    }
+    // Otherwise use end date logic
+    else if (transaction.recurrenceEndDate) {
+      instances = await generateRecurringInstances(
+        firebase,
+        transaction as any,
+        {
+          recurrencePattern: transaction.recurrencePattern as string,
+          recurrenceDay: transaction.recurrenceDay as number,
+          recurrenceEndDate: transaction.recurrenceEndDate as string,
+          date: transaction.date as string,
+        }
+      );
+    }
+
+    return c.json({
+      success: true,
+      data: {
+        generatedCount: instances.length
+      }
+    });
+  } catch (error) {
+    console.error('Error generating recurring instances:', error);
+    return c.json(
+      { success: false, error: 'Failed to generate recurring instances' },
+      500
+    );
+  }
+});
+
 app.patch('/:id', async (c) => {
   try {
     const transactionId = c.req.param('id');
@@ -176,8 +240,8 @@ app.patch('/:id', async (c) => {
 
     // Verificar se é parte de série recorrente
     const isRecurringSeries = transaction.isRecurring ||
-                              transaction.parentTransactionId ||
-                              transaction.isRecurringInstance;
+      transaction.parentTransactionId ||
+      transaction.isRecurringInstance;
 
     if (!isRecurringSeries || editMode === 'single') {
       // Edição simples - apenas esta transação
@@ -220,40 +284,59 @@ app.delete('/:id', async (c) => {
   }
 });
 
-// Endpoint to generate recurring instances for an existing transaction
-app.post('/:id/generate-recurring', async (c) => {
-  try {
-    const transactionId = c.req.param('id');
-    const userId = c.get('userId');
-    const firebase = new FirebaseService(c.env);
+// Helper function to ensure a credit card bill exists for a given date
+async function ensureBillForDate(
+  firebase: FirebaseService,
+  userId: string,
+  creditCardId: string,
+  date: string
+): Promise<string> {
+  const transactionDate = new Date(date);
+  const month = transactionDate.getMonth() + 1;
+  const year = transactionDate.getFullYear();
 
-    // Get the parent transaction
-    const transaction = await firebase.getDocument('transactions', transactionId);
-    
-    if (!transaction) {
-      return c.json({ success: false, error: 'Transaction not found' }, 404);
-    }
+  // Find if a bill already exists for this month/year
+  const allBills = await firebase.getDocuments('creditCardBills', userId) as Array<{
+    id: string;
+    creditCardId: string;
+    month: number;
+    year: number;
+    isClosed: boolean;
+    isPaid: boolean;
+  }>;
 
-    if (transaction.userId !== userId) {
-      return c.json({ success: false, error: 'Unauthorized' }, 403);
-    }
+  const existingBill = allBills.find(
+    bill => bill.creditCardId === creditCardId && bill.month === month && bill.year === year
+  );
 
-    if (!transaction.isRecurring || !transaction.recurrencePattern) {
-      return c.json({ success: false, error: 'Transaction is not recurring' }, 400);
-    }
-
-    // Generate recurring instances
-    const instances = await generateRecurringInstances(firebase, transaction as { id: string; date: string; isRecurring?: boolean; recurrencePattern?: string; recurrenceDay?: number | null; recurrenceEndDate?: string | null; userId: string; description: string; amount: number; type: 'income' | 'expense'; categoryId: string; accountId?: string; creditCardId?: string; isCash?: boolean; billId?: string }, transaction as { recurrencePattern?: string | null; recurrenceDay?: number | null; recurrenceEndDate?: string | null; date: string });
-
-    return c.json({ success: true, data: { generatedCount: instances.length } });
-  } catch (error) {
-    console.error('Error generating recurring instances:', error);
-    return c.json(
-      { success: false, error: 'Failed to generate recurring instances' },
-      500
-    );
+  if (existingBill) {
+    return existingBill.id;
   }
-});
+
+  // If not found, create a new one
+  // First, get the credit card to know the dueDay
+  const creditCard = await firebase.getDocument('creditCards', creditCardId) as { dueDay: number };
+  const dueDay = creditCard?.dueDay || 10;
+
+  // Calculate due date for the specific month/year
+  const dueDate = new Date(year, month - 1, dueDay);
+  const dueDateStr = dueDate.toISOString().split('T')[0];
+
+  const newBill = await firebase.createDocument('creditCardBills', {
+    creditCardId,
+    userId,
+    month,
+    year,
+    dueDate: dueDateStr,
+    totalAmount: 0,
+    isClosed: false,
+    isPaid: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }) as { id: string };
+
+  return newBill.id;
+}
 
 // Helper function to generate recurring transaction instances with a specific count
 // Creates exactly 'count' number of instances based on recurrence pattern
@@ -292,8 +375,6 @@ async function generateRecurringInstancesWithCount(
     }
 
     // Create the recurring instance with isRecurringInstance and createdFromRecurring flags
-    // Include recurrencePattern so child transactions display the same as parent
-    // installmentNumber starts at 2 because parent is 1
     const instanceData: Record<string, unknown> = {
       userId: parentTransaction.userId,
       type: parentTransaction.type,
@@ -311,21 +392,34 @@ async function generateRecurringInstancesWithCount(
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    
+
     // Only add accountId if it exists (credit card transactions don't have accountId)
     if (parentTransaction.accountId) {
       instanceData.accountId = parentTransaction.accountId;
     }
-    
+
     // Add credit card fields if they exist on parent
     const parentWithCC = parentTransaction as Record<string, unknown>;
     if (parentWithCC.creditCardId) {
-      instanceData.creditCardId = parentWithCC.creditCardId;
+      const creditCardId = parentWithCC.creditCardId as string;
+      instanceData.creditCardId = creditCardId;
+
+      // Ensure bill exists for this date and link it
+      const billId = await ensureBillForDate(firebase, parentTransaction.userId, creditCardId, dateStr);
+      instanceData.billId = billId;
+
+      // Update bill total
+      const bill = await firebase.getDocument('creditCardBills', billId) as { totalAmount: number };
+      await firebase.updateDocument('creditCardBills', billId, {
+        totalAmount: (bill?.totalAmount || 0) + parentTransaction.amount,
+        updatedAt: new Date().toISOString(),
+      });
     }
+
     if (parentWithCC.isCash) {
       instanceData.isCash = parentWithCC.isCash;
     }
-    
+
     const instance = await firebase.createDocument('transactions', instanceData);
 
     instances.push(instance);
@@ -402,8 +496,6 @@ async function generateRecurringInstances(
     // Only create if no instance exists for this date
     if (existingInstances.length === 0) {
       // Create the recurring instance with isRecurringInstance flag
-      // Include recurrencePattern so child transactions display the same as parent
-      // installmentNumber starts at 2 because parent is 1
       const instanceData: Record<string, unknown> = {
         userId: parentTransaction.userId,
         type: parentTransaction.type,
@@ -420,21 +512,34 @@ async function generateRecurringInstances(
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
-      
+
       // Only add accountId if it exists (credit card transactions don't have accountId)
       if (parentTransaction.accountId) {
         instanceData.accountId = parentTransaction.accountId;
       }
-      
+
       // Add credit card fields if they exist on parent
       const parentWithCC = parentTransaction as Record<string, unknown>;
       if (parentWithCC.creditCardId) {
-        instanceData.creditCardId = parentWithCC.creditCardId;
+        const creditCardId = parentWithCC.creditCardId as string;
+        instanceData.creditCardId = creditCardId;
+
+        // Ensure bill exists for this date and link it
+        const billId = await ensureBillForDate(firebase, parentTransaction.userId, creditCardId, dateStr);
+        instanceData.billId = billId;
+
+        // Update bill total
+        const bill = await firebase.getDocument('creditCardBills', billId) as { totalAmount: number };
+        await firebase.updateDocument('creditCardBills', billId, {
+          totalAmount: (bill?.totalAmount || 0) + parentTransaction.amount,
+          updatedAt: new Date().toISOString(),
+        });
       }
+
       if (parentWithCC.isCash) {
         instanceData.isCash = parentWithCC.isCash;
       }
-      
+
       const instance = await firebase.createDocument('transactions', instanceData);
 
       instances.push(instance);
@@ -449,7 +554,6 @@ async function generateRecurringInstances(
 }
 
 // Helper function to update a recurring series of transactions
-// Updates multiple transactions based on editMode: 'forward' | 'all'
 async function updateRecurringSeries(
   firebase: FirebaseService,
   transaction: Record<string, unknown>,
@@ -462,17 +566,15 @@ async function updateRecurringSeries(
   const userId = transaction.userId as string;
 
   // Buscar todas as transações da série (pai + filhas)
-  const seriesTransactions = await firebase.queryDocuments('transactions', [
-    { field: 'userId', op: '==', value: userId },
-  ]);
+  const seriesTransactions = await firebase.getDocuments('transactions', userId);
 
   // Filtrar transações que pertencem a esta série
-  const series = seriesTransactions.filter((t: Record<string, unknown>) =>
+  const series = seriesTransactions.filter((t: any) =>
     t.id === parentId || t.parentTransactionId === parentId
   );
 
   // Ordenar por installmentNumber (pai geralmente tem 1 ou undefined)
-  const sortedSeries = series.sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
+  const sortedSeries = series.sort((a: any, b: any) => {
     const numA = (a.installmentNumber as number) || 1;
     const numB = (b.installmentNumber as number) || 1;
     return numA - numB;
@@ -486,7 +588,7 @@ async function updateRecurringSeries(
   if (editMode === 'forward') {
     // Atualizar da selecionada em diante
     transactionsToUpdate = sortedSeries.filter(
-      (t: Record<string, unknown>) => ((t.installmentNumber as number) || 1) >= currentInstallment
+      (t: any) => ((t.installmentNumber as number) || 1) >= currentInstallment
     );
   } else {
     // 'all' - atualizar todas da série
@@ -501,19 +603,31 @@ async function updateRecurringSeries(
   if (updates.categoryId !== undefined) allowedUpdates.categoryId = updates.categoryId;
   if (updates.accountId !== undefined) allowedUpdates.accountId = updates.accountId;
 
-  // Atualizar todas as transações em paralelo
+  // Se o valor mudou, precisamos atualizar os totais das faturas também
+  const amountChanged = updates.amount !== undefined && updates.amount !== transaction.amount;
+  const diff = amountChanged ? (updates.amount as number) - (transaction.amount as number) : 0;
+
+  // Atualizar todas as transações e faturas se necessário
   await Promise.all(
-    transactionsToUpdate.map((t: Record<string, unknown>) =>
-      firebase.updateDocument('transactions', t.id as string, {
+    transactionsToUpdate.map(async (t: any) => {
+      await firebase.updateDocument('transactions', t.id as string, {
         ...allowedUpdates,
         updatedAt: new Date().toISOString(),
-      })
-    )
+      });
+
+      // Se mudou o valor e é cartão de crédito, atualizar a fatura
+      if (amountChanged && t.creditCardId && t.billId) {
+        const bill = await firebase.getDocument('creditCardBills', t.billId) as { totalAmount: number };
+        await firebase.updateDocument('creditCardBills', t.billId, {
+          totalAmount: (bill?.totalAmount || 0) + diff,
+          updatedAt: new Date().toISOString(),
+        });
+      }
+    })
   );
 }
 
 // Helper function to get the next date based on recurrence pattern
-// Handles 'monthly', 'weekly', and 'yearly' patterns
 function getNextDate(
   currentDate: Date,
   pattern: string | null | undefined,
@@ -523,14 +637,11 @@ function getNextDate(
 
   switch (pattern) {
     case 'weekly':
-      // Move to next week (7 days)
       nextDate.setDate(nextDate.getDate() + 7);
       break;
 
     case 'yearly':
-      // Move to next year
       nextDate.setFullYear(nextDate.getFullYear() + 1);
-      // If recurrenceDay is specified, use it; otherwise use the current day
       const targetDayYearly = recurrenceDay !== null && recurrenceDay !== undefined
         ? recurrenceDay
         : currentDate.getDate();
@@ -544,9 +655,7 @@ function getNextDate(
 
     case 'monthly':
     default:
-      // Move to next month
       nextDate.setMonth(nextDate.getMonth() + 1);
-      // If recurrenceDay is specified, use it; otherwise use the current day
       const targetDayMonthly = recurrenceDay !== null && recurrenceDay !== undefined
         ? recurrenceDay
         : currentDate.getDate();

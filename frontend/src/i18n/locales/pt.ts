@@ -298,6 +298,7 @@ export const ptTranslations = {
     dueDay: 'Vencimento',
     open: 'Aberta',
     highUsageWarning: 'Limite quase esgotado!',
+    billHistory: 'Histórico de Faturas',
     form: {
       name: 'Nome do Cartão',
       namePlaceholder: 'Ex: Nubank, Itaú, etc.',
@@ -336,6 +337,7 @@ export const ptTranslations = {
     payBill: 'Pagar Fatura',
     payWithAccount: 'Pagar com conta',
     selectAccount: 'Selecione uma conta',
+    upcoming: 'Próximas Faturas',
     confirmClose: 'Tem certeza que deseja fechar esta fatura?',
     confirmPay: 'Confirmar pagamento da fatura?',
     loadError: 'Erro ao carregar dados da fatura',

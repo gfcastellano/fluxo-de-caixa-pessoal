@@ -9,6 +9,8 @@ export interface ParsedTransaction {
   date: string;
   accountId?: string;
   toAccountId?: string;
+  creditCardId?: string;
+  installments?: number;
   isRecurring?: boolean;
   recurrencePattern?: 'monthly' | 'weekly' | 'yearly' | null;
   recurrenceDay?: number | null;
@@ -30,10 +32,10 @@ export class OpenAIService {
   async transcribeAudio(audioBuffer: ArrayBuffer, language: string): Promise<string> {
     // Convert ArrayBuffer to Uint8Array for Cloudflare Workers compatibility
     const uint8Array = new Uint8Array(audioBuffer);
-    
+
     // Create a File object instead of Blob for better compatibility
     const file = new File([uint8Array], 'audio.webm', { type: 'audio/webm' });
-    
+
     const formData = new FormData();
     formData.append('file', file);
     formData.append('model', 'whisper-1');
@@ -68,7 +70,8 @@ export class OpenAIService {
     categories: Category[],
     language: string = 'en',
     defaultDescription: string = 'Voice transaction',
-    accounts: { id: string; name: string; isCash?: boolean }[] = []
+    accounts: { id: string; name: string; isCash?: boolean }[] = [],
+    creditCards: { id: string; name: string }[] = []
   ): Promise<ParsedTransaction> {
     const now = new Date();
     const today = now.toISOString().split('T')[0];
@@ -76,7 +79,7 @@ export class OpenAIService {
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth() + 1;
     const currentDay = now.getDate();
-    
+
     // Build category mapping for the prompt
     const categoryList = categories
       .map(c => `"${c.name}" (ID: ${c.id}, Type: ${c.type})`)
@@ -93,7 +96,7 @@ export class OpenAIService {
       pt: 'Return the description in Portuguese (Português)',
       es: 'Return the description in Spanish (Español)',
     };
-    
+
     const langInstruction = languageInstructions[language] || languageInstructions.en;
 
     const prompt = `Parse the following voice command into a transaction object.
@@ -111,6 +114,9 @@ ${categoryList}
 Available accounts:
 ${accountList}
 
+Available credit cards:
+${creditCards.map(c => `"${c.name}" (ID: ${c.id})`).join('\n') || 'No credit cards available'}
+
 Voice command: "${transcription}"
 
 Extract and return ONLY a JSON object with these exact fields:
@@ -118,9 +124,10 @@ Extract and return ONLY a JSON object with these exact fields:
 - type: "income", "expense", or "transfer" (determine from context - words like "spent", "paid", "bought" indicate expense; "received", "earned", "got" indicate income; "transfer", "withdraw", "saque", "sacar", "mover", "enviar para", "transferir", "retirar" indicate transfer)
 - description: string (what the transaction is for, keep it concise, ${langInstruction})
 - categoryId: string (match to most appropriate category ID based on description, or empty string if uncertain. For transfers, pick the best matching transfer-type category: use "Withdrawal" category for withdrawals/cash keywords like "saque"/"sacar"/"withdraw"/"retirar", use "Transfer" category for generic transfers like "transferir"/"mover"/"enviar")
-- date: string in YYYY-MM-DD format (default to "${today}" if not specified)
 - accountId: string (match to account ID if user mentions an account name like "from account X", "na conta Y", "en la cuenta Z", or empty string if not specified. For transfers, this is the SOURCE account)
 - toAccountId: string (for transfers only: the DESTINATION account ID. If user says "saque"/"sacar"/"withdraw cash", set this to the cash account (marked Cash: true) with the same currency. Empty string if not a transfer)
+- creditCardId: string (if the user mentions a credit card name like "no cartão X", "on card Y", or mentions an expense that should go to a credit card. If a credit card is used, accountId should be empty)
+- installments: number (if the user mentions installments like "3 vezes", "3 installments", "em 3x", default to 1) 
 - isRecurring: boolean (true if user mentions recurring patterns like "every month", "monthly", "semanal", "cada mes", "todo mes", false otherwise)
 - recurrencePattern: "monthly", "weekly", "yearly", or null (extract from context - "every month"/"cada mes"/"mensal" = monthly, "every week"/"cada semana"/"semanal" = weekly, "every year"/"cada ano"/"anual" = yearly)
 - recurrenceDay: number or null (day of month for monthly, day of week 1-7 for weekly, day of year for yearly - extract if mentioned, otherwise null)
@@ -181,22 +188,22 @@ Response must be valid JSON only, no markdown, no explanation.`;
     };
 
     const content = data.choices[0]?.message?.content || '';
-    
+
     // Extract JSON from the response (handle markdown code blocks)
-    const jsonMatch = content.match(/```json\s*([\s\S]*?)```/) || 
-                      content.match(/```\s*([\s\S]*?)```/) ||
-                      [null, content];
-    
+    const jsonMatch = content.match(/```json\s*([\s\S]*?)```/) ||
+      content.match(/```\s*([\s\S]*?)```/) ||
+      [null, content];
+
     const jsonString = jsonMatch[1]?.trim() || content.trim();
-    
+
     try {
       const parsed = JSON.parse(jsonString) as Partial<ParsedTransaction>;
-      
+
       // Validate required fields
       if (typeof parsed.amount !== 'number' || parsed.amount <= 0) {
         throw new Error('Invalid or missing amount');
       }
-      
+
       if (!parsed.type || !['income', 'expense', 'transfer'].includes(parsed.type)) {
         throw new Error('Invalid or missing type');
       }
@@ -213,6 +220,8 @@ Response must be valid JSON only, no markdown, no explanation.`;
         date: parsed.date ?? today,
         accountId: parsed.accountId ?? '',
         toAccountId: parsed.toAccountId ?? '',
+        creditCardId: parsed.creditCardId ?? '',
+        installments: parsed.installments ?? 1,
         isRecurring: parsed.isRecurring ?? false,
         recurrencePattern: parsed.recurrencePattern ?? null,
         recurrenceDay: parsed.recurrenceDay ?? null,
@@ -232,14 +241,15 @@ Response must be valid JSON only, no markdown, no explanation.`;
     currentTransaction: Transaction,
     categories: Category[],
     language: string = 'en',
-    accounts: { id: string; name: string; isCash?: boolean }[] = []
+    accounts: { id: string; name: string; isCash?: boolean }[] = [],
+    creditCards: { id: string; name: string }[] = []
   ): Promise<Partial<Transaction>> {
     const now = new Date();
     const today = now.toISOString().split('T')[0];
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth() + 1;
     const currentDay = now.getDate();
-    
+
     const categoryList = categories
       .map(c => `"${c.name}" (ID: ${c.id}, Type: ${c.type})`)
       .join('\n');
@@ -281,6 +291,9 @@ ${categoryList}
 Available accounts:
 ${accountList}
 
+Available credit cards:
+${creditCards.map(c => `"${c.name}" (ID: ${c.id})`).join('\n') || 'No credit cards available'}
+
 Voice command: "${transcription}"
 
 Analyze the voice command and determine what changes the user wants to make to the current transaction.
@@ -294,6 +307,8 @@ Possible fields to update:
 - date: string in YYYY-MM-DD format (if the user mentions a different date - use current date ${today} as reference for relative dates like "yesterday", "next week", etc.)
 - accountId: string (if the user mentions a different source account, match to account ID from available accounts)
 - toAccountId: string (for transfers: the destination account ID. If changing to transfer type and user says "saque"/"cash", use the cash account)
+- creditCardId: string (if changing payment method to credit card or choosing a different card)
+- installments: number (if the user mentions a different number of installments)
 - isRecurring: boolean (if the user wants to set or unset recurring status)
 - recurrencePattern: "monthly", "weekly", "yearly", or null (if the user mentions recurring pattern changes)
 - recurrenceDay: number or null (if the user mentions a specific day for recurrence)
@@ -354,39 +369,47 @@ Response must be valid JSON only, no markdown, no explanation.`;
     };
 
     const content = data.choices[0]?.message?.content || '';
-    
-    const jsonMatch = content.match(/```json\s*([\s\S]*?)```/) || 
-                      content.match(/```\s*([\s\S]*?)```/) ||
-                      [null, content];
-    
+
+    const jsonMatch = content.match(/```json\s*([\s\S]*?)```/) ||
+      content.match(/```\s*([\s\S]*?)```/) ||
+      [null, content];
+
     const jsonString = jsonMatch[1]?.trim() || content.trim();
-    
+
     try {
       const parsed = JSON.parse(jsonString) as Partial<Transaction>;
-      
+
       // Validate and clean up the updates
       const updates: Partial<Transaction> = {};
-      
+
       if (parsed.amount !== undefined && typeof parsed.amount === 'number' && parsed.amount > 0) {
         updates.amount = parsed.amount;
       }
-      
+
       if (parsed.type !== undefined && ['income', 'expense', 'transfer'].includes(parsed.type)) {
         updates.type = parsed.type;
       }
-      
+
       if (parsed.description !== undefined && typeof parsed.description === 'string' && parsed.description.trim()) {
         updates.description = parsed.description.trim();
       }
-      
+
       if (parsed.categoryId !== undefined && typeof parsed.categoryId === 'string') {
         updates.categoryId = parsed.categoryId;
       }
-      
+
       if (parsed.date !== undefined && typeof parsed.date === 'string') {
         updates.date = parsed.date;
       }
-      
+
+      if (parsed.creditCardId !== undefined && typeof parsed.creditCardId === 'string') {
+        updates.creditCardId = parsed.creditCardId;
+      }
+
+      if (parsed.installments !== undefined && typeof parsed.installments === 'number') {
+        updates.installments = parsed.installments;
+      }
+
       return updates;
     } catch (error) {
       throw new Error(`Failed to parse transaction updates: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -405,7 +428,7 @@ Response must be valid JSON only, no markdown, no explanation.`;
       pt: 'Return the name in Portuguese (Português)',
       es: 'Return the name in Spanish (Español)',
     };
-    
+
     const langInstruction = languageInstructions[language] || languageInstructions.en;
 
     const prompt = `Parse the following voice command into a category object.
@@ -461,25 +484,25 @@ Response must be valid JSON only, no markdown, no explanation.`;
     };
 
     const content = data.choices[0]?.message?.content || '';
-    
+
     const jsonMatch = content.match(/```json\s*([\s\S]*?)```/) ||
-                      content.match(/```\s*([\s\S]*?)```/) ||
-                      [null, content];
-    
+      content.match(/```\s*([\s\S]*?)```/) ||
+      [null, content];
+
     const jsonString = jsonMatch[1]?.trim() || content.trim();
-    
+
     try {
       const parsed = JSON.parse(jsonString) as Partial<{ name: string; type: string; color: string }>;
-      
+
       // Validate required fields
       if (!parsed.name || typeof parsed.name !== 'string') {
         throw new Error('Invalid or missing name');
       }
-      
+
       if (!parsed.type || !['income', 'expense'].includes(parsed.type)) {
         throw new Error('Invalid or missing type');
       }
-      
+
       if (!parsed.color || typeof parsed.color !== 'string') {
         parsed.color = parsed.type === 'income' ? '#4ECDC4' : '#FF6B6B';
       }
@@ -504,7 +527,7 @@ Response must be valid JSON only, no markdown, no explanation.`;
   ): Promise<{ categoryId: string; amount: number; period: 'monthly' | 'yearly'; startDate: string; matchedCategory: string | null }> {
     const now = new Date();
     const today = now.toISOString().split('T')[0];
-    
+
     const categoryList = categories
       .map(c => `"${c.name}" (ID: ${c.id}, Type: ${c.type})`)
       .join('\n');
@@ -514,7 +537,7 @@ Response must be valid JSON only, no markdown, no explanation.`;
       pt: '- "Orçamento mensal de 1000 reais para transporte" → {"categoryId": "...", "amount": 1000, "period": "monthly", "startDate": "${today}", "matchedCategory": "Transport"}\n- "Orçamento anual de 5000 para férias" → {"categoryId": "...", "amount": 5000, "period": "yearly", "startDate": "${today}", "matchedCategory": "Vacation"}',
       es: '- "Presupuesto mensual de 1000 para transporte" → {"categoryId": "...", "amount": 1000, "period": "monthly", "startDate": "${today}", "matchedCategory": "Transport"}\n- "Presupuesto anual de 5000 para vacaciones" → {"categoryId": "...", "amount": 5000, "period": "yearly", "startDate": "${today}", "matchedCategory": "Vacation"}',
     };
-    
+
     const examples = periodExamples[language] || periodExamples.en;
 
     const prompt = `Parse the following voice command into a budget object.
@@ -587,21 +610,21 @@ Response must be valid JSON only, no markdown, no explanation.`;
     };
 
     const content = data.choices[0]?.message?.content || '';
-    
+
     const jsonMatch = content.match(/```json\s*([\s\S]*?)```/) ||
-                      content.match(/```\s*([\s\S]*?)```/) ||
-                      [null, content];
-    
+      content.match(/```\s*([\s\S]*?)```/) ||
+      [null, content];
+
     const jsonString = jsonMatch[1]?.trim() || content.trim();
-    
+
     try {
       const parsed = JSON.parse(jsonString) as Partial<{ categoryId: string; amount: number; period: string; startDate: string; matchedCategory: string | null }>;
-      
+
       // Validate required fields
       if (typeof parsed.amount !== 'number' || parsed.amount <= 0) {
         throw new Error('Invalid or missing amount');
       }
-      
+
       if (!parsed.period || !['monthly', 'yearly'].includes(parsed.period)) {
         parsed.period = 'monthly';
       }
@@ -630,7 +653,7 @@ Response must be valid JSON only, no markdown, no explanation.`;
   ): Promise<Partial<Budget> & { matchedCategory?: string | null }> {
     const now = new Date();
     const today = now.toISOString().split('T')[0];
-    
+
     const categoryList = categories
       .map(c => `"${c.name}" (ID: ${c.id}, Type: ${c.type})`)
       .join('\n');
@@ -640,7 +663,7 @@ Response must be valid JSON only, no markdown, no explanation.`;
       pt: '- "Mude o período para anual" → {"period": "yearly"}\n- "Altere o valor para 1000" → {"amount": 1000}\n- "Mude a categoria para transporte" → {"categoryId": "...", "matchedCategory": "Transport"}',
       es: '- "Cambie el período a anual" → {"period": "yearly"}\n- "Actualice el monto a 1000" → {"amount": 1000}\n- "Cambie la categoría a transporte" → {"categoryId": "...", "matchedCategory": "Transport"}',
     };
-    
+
     const examples = periodExamples[language] || periodExamples.en;
 
     const prompt = `You are helping update an existing budget based on a voice command.
@@ -718,39 +741,39 @@ Response must be valid JSON only, no markdown, no explanation.`;
     };
 
     const content = data.choices[0]?.message?.content || '';
-    
+
     const jsonMatch = content.match(/```json\s*([\s\S]*?)```/) ||
-                      content.match(/```\s*([\s\S]*?)```/) ||
-                      [null, content];
-    
+      content.match(/```\s*([\s\S]*?)```/) ||
+      [null, content];
+
     const jsonString = jsonMatch[1]?.trim() || content.trim();
-    
+
     try {
       const parsed = JSON.parse(jsonString) as Partial<Budget> & { matchedCategory?: string | null };
-      
+
       // Validate and clean up the updates
       const updates: Partial<Budget> & { matchedCategory?: string | null } = {};
-      
+
       if (parsed.categoryId !== undefined && typeof parsed.categoryId === 'string') {
         updates.categoryId = parsed.categoryId;
       }
-      
+
       if (parsed.amount !== undefined && typeof parsed.amount === 'number' && parsed.amount > 0) {
         updates.amount = parsed.amount;
       }
-      
+
       if (parsed.period !== undefined && ['monthly', 'yearly'].includes(parsed.period)) {
         updates.period = parsed.period as 'monthly' | 'yearly';
       }
-      
+
       if (parsed.startDate !== undefined && typeof parsed.startDate === 'string') {
         updates.startDate = parsed.startDate;
       }
-      
+
       if (parsed.matchedCategory !== undefined) {
         updates.matchedCategory = parsed.matchedCategory;
       }
-      
+
       return updates;
     } catch (error) {
       throw new Error(`Failed to parse budget updates: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -769,7 +792,7 @@ Response must be valid JSON only, no markdown, no explanation.`;
       pt: 'Return the name in Portuguese (Português)',
       es: 'Return the name in Spanish (Español)',
     };
-    
+
     const langInstruction = languageInstructions[language] || languageInstructions.en;
 
     const prompt = `Parse the following voice command into an account object.
@@ -827,25 +850,25 @@ Response must be valid JSON only, no markdown, no explanation.`;
     };
 
     const content = data.choices[0]?.message?.content || '';
-    
+
     const jsonMatch = content.match(/```json\s*([\s\S]*?)```/) ||
-                      content.match(/```\s*([\s\S]*?)```/) ||
-                      [null, content];
-    
+      content.match(/```\s*([\s\S]*?)```/) ||
+      [null, content];
+
     const jsonString = jsonMatch[1]?.trim() || content.trim();
-    
+
     try {
       const parsed = JSON.parse(jsonString) as Partial<{ name: string; currency: string; balance: number; initialBalance: number; isDefault: boolean }>;
-      
+
       // Validate required fields
       if (!parsed.name || typeof parsed.name !== 'string') {
         throw new Error('Invalid or missing name');
       }
-      
+
       if (!parsed.currency || typeof parsed.currency !== 'string') {
         parsed.currency = 'USD';
       }
-      
+
       if (typeof parsed.balance !== 'number') {
         parsed.balance = 0;
       }

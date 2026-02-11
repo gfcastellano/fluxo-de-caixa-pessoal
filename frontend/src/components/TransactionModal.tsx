@@ -53,12 +53,12 @@ export function TransactionModal({
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
   const [selectedToAccountId, setSelectedToAccountId] = useState<string>('');
-  
+
   // Credit card states
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
   const [selectedCreditCardId, setSelectedCreditCardId] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<'account' | 'credit_card' | 'cash'>('account');
-  
+
   // Installment states for credit card
   const [installments, setInstallments] = useState<number>(1);
   const [isInstallmentMode, setIsInstallmentMode] = useState(false);
@@ -93,12 +93,12 @@ export function TransactionModal({
           console.error('Error fetching accounts:', error);
         }
       };
-      
+
       const fetchCreditCards = async () => {
         try {
           const userCreditCards = await getCreditCards(userId);
           setCreditCards(userCreditCards);
-          
+
           if (transaction?.creditCardId) {
             setSelectedCreditCardId(transaction.creditCardId);
             setPaymentMethod('credit_card');
@@ -116,7 +116,7 @@ export function TransactionModal({
           console.error('Error fetching credit cards:', error);
         }
       };
-      
+
       fetchAccounts();
       fetchCreditCards();
     }
@@ -175,7 +175,7 @@ export function TransactionModal({
               ? instances // If editing a child, instances already include parent
               : instances;
             setSeriesTransactions(allSeries);
-            
+
             // Set default edit mode to 'single' for child instances
             if (transaction.parentTransactionId || transaction.isRecurringInstance) {
               setEditMode('single');
@@ -233,7 +233,7 @@ export function TransactionModal({
     }
 
     const totalAmount = parseFloat(formData.amount.toString().replace(',', '.'));
-    
+
     // Calculate installment amount if in installment mode
     const installmentAmount = isInstallmentMode && installments > 1
       ? totalAmount / installments
@@ -244,7 +244,7 @@ export function TransactionModal({
       type: validType,
       amount: installmentAmount,
     };
-    
+
     // Add credit card, account, or cash info based on payment method
     if (paymentMethod === 'credit_card' && selectedCreditCardId) {
       transactionData.creditCardId = selectedCreditCardId;
@@ -267,7 +267,7 @@ export function TransactionModal({
       // Store total amount and installment info
       transactionData.totalInstallments = installments;
       transactionData.installmentNumber = 1;
-    } else if (isRecurring && !isEditing) {
+    } else if (isRecurring && !isEditing && paymentMethod !== 'credit_card') {
       transactionData.isRecurring = true;
       transactionData.recurrencePattern = recurrencePattern;
       if (recurrenceDay !== '') {
@@ -718,7 +718,7 @@ export function TransactionModal({
                   />
                 </button>
               </div>
-              
+
               {isInstallmentMode && (
                 <div className="space-y-3">
                   <div>
@@ -739,7 +739,7 @@ export function TransactionModal({
                       </span>
                     </div>
                   </div>
-                  
+
                   {formData.amount && parseFloat(formData.amount) > 0 && (
                     <div className="text-xs text-slate bg-white/50 rounded-md p-2">
                       <div className="flex justify-between mb-1">
@@ -782,7 +782,7 @@ export function TransactionModal({
                 </select>
               </div>
             )}
-            
+
             {/* Show credit card selection when payment method is credit card */}
             {formData.type === 'expense' && paymentMethod === 'credit_card' && (
               <div>
@@ -898,7 +898,7 @@ export function TransactionModal({
         </div>
       )}
 
-      {!isEditing && (
+      {!isEditing && paymentMethod !== 'credit_card' && (
         <div className="border-t border-slate/10 pt-3 mt-3 sm:pt-4 sm:mt-4">
           <div className="flex items-center gap-2 mb-3 sm:mb-4">
             <input

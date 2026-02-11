@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, ArrowLeftRight, Tags, Landmark, PiggyBank, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, ArrowLeftRight, Tags, Landmark, PiggyBank, BarChart3, CreditCard } from 'lucide-react';
 import { VoiceHeroButton } from './VoiceHeroButton';
 import { VoiceConsentModal } from './VoiceConsentModal';
 import { useVoice } from '../context/VoiceContext';
@@ -20,6 +20,7 @@ const middleItems: NavItem[] = [
     { name: 'Transações', href: '/transactions', icon: ArrowLeftRight, voiceEnabled: true },
     { name: 'Categorias', href: '/categories', icon: Tags, voiceEnabled: true },
     { name: 'Contas', href: '/accounts', icon: Landmark, voiceEnabled: true },
+    { name: 'Cartões', href: '/credit-cards', icon: CreditCard, voiceEnabled: true },
     { name: 'Orçamentos', href: '/budgets', icon: PiggyBank, voiceEnabled: true },
 ];
 

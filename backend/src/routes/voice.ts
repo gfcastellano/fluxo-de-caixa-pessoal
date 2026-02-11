@@ -90,6 +90,15 @@ app.post('/transactions/update', async (c) => {
       // Continue without accounts - GPT will return empty accountId
     }
 
+    // Step 2.5: Get user's credit cards for parsing
+    let creditCards: { id: string; name: string }[] = [];
+    try {
+      const cardsData = await firebase.getDocuments('creditCards', currentTransaction.userId);
+      creditCards = (cardsData as { id: string; name: string }[]).map(card => ({ id: card.id, name: card.name }));
+    } catch (error) {
+      // Continue without credit cards
+    }
+
     // Step 3: Parse the voice command for updates
     let updates: Partial<Transaction>;
     try {
@@ -98,7 +107,8 @@ app.post('/transactions/update', async (c) => {
         currentTransaction,
         categories,
         language,
-        accounts
+        accounts,
+        creditCards
       );
     } catch (error) {
       console.error('Parsing error:', error);
@@ -219,6 +229,15 @@ app.post('/transactions/update-pending', async (c) => {
       // Continue without accounts - GPT will return empty accountId
     }
 
+    // Step 2.5: Get user's credit cards for parsing
+    let creditCards: { id: string; name: string }[] = [];
+    try {
+      const cardsData = await firebase.getDocuments('creditCards', userId);
+      creditCards = (cardsData as { id: string; name: string }[]).map(card => ({ id: card.id, name: card.name }));
+    } catch (error) {
+      // Continue without credit cards
+    }
+
     // Step 3: Parse the voice command for updates
     let updates: Partial<Transaction>;
     try {
@@ -227,7 +246,8 @@ app.post('/transactions/update-pending', async (c) => {
         currentTransaction,
         categories,
         language,
-        accounts
+        accounts,
+        creditCards
       );
     } catch (error) {
       console.error('Parsing error:', error);
@@ -331,6 +351,15 @@ app.post('/transactions', async (c) => {
       // Continue without accounts - GPT will return empty accountId
     }
 
+    // Step 3.5: Get user's credit cards for parsing
+    let creditCards: { id: string; name: string }[] = [];
+    try {
+      const cardsData = await firebase.getDocuments('creditCards', userId);
+      creditCards = (cardsData as { id: string; name: string }[]).map(card => ({ id: card.id, name: card.name }));
+    } catch (error) {
+      // Continue without credit cards
+    }
+
     // Step 4: Parse transcription into transaction data
     let parsedTransaction: {
       amount: number;
@@ -340,6 +369,8 @@ app.post('/transactions', async (c) => {
       date: string;
       accountId?: string;
       toAccountId?: string;
+      creditCardId?: string;
+      installments?: number;
       isRecurring?: boolean;
       recurrencePattern?: 'monthly' | 'weekly' | 'yearly' | null;
       recurrenceDay?: number | null;
@@ -348,7 +379,7 @@ app.post('/transactions', async (c) => {
 
     try {
       const defaultDescription = getDefaultTranslation(language, 'description');
-      parsedTransaction = await openai.parseTransaction(transcription, categories, language, defaultDescription, accounts);
+      parsedTransaction = await openai.parseTransaction(transcription, categories, language, defaultDescription, accounts, creditCards);
     } catch (error) {
       console.error('Parsing error:', error);
       return c.json(

@@ -12,6 +12,7 @@ import {
   deleteCreditCard,
   calculateAvailableLimit,
 } from '../services/creditCardService';
+import { BillHistoryModal } from '../components/BillHistoryModal';
 import { getCurrentBill, getCreditCardBillsByCard } from '../services/creditCardBillService';
 import { getAccounts } from '../services/accountService';
 import type { CreditCard, CreditCardBill, Account } from '../types';
@@ -35,6 +36,8 @@ export function CreditCards() {
   const [selectedBill, setSelectedBill] = useState<CreditCardBill | null>(null);
   const [selectedCardForBill, setSelectedCardForBill] = useState<CreditCard | null>(null);
   const [isBillModalOpen, setIsBillModalOpen] = useState(false);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [selectedCardForHistory, setSelectedCardForHistory] = useState<CreditCard | null>(null);
 
   const modal = usePageModal<CreditCard>();
 
@@ -52,6 +55,16 @@ export function CreditCards() {
     setSelectedCardForBill(null);
   };
 
+  const handleViewHistory = (card: CreditCard) => {
+    setSelectedCardForHistory(card);
+    setIsHistoryModalOpen(true);
+  };
+
+  const handleCloseHistoryModal = () => {
+    setIsHistoryModalOpen(false);
+    setSelectedCardForHistory(null);
+  };
+
   useEffect(() => {
     if (user) {
       loadData();
@@ -67,15 +80,15 @@ export function CreditCards() {
 
       // Load credit cards
       const cards = await getCreditCards(user!.uid);
-      
+
       // Load details for each card
       const cardsWithDetails = await Promise.all(
         cards.map(async (card) => {
           const linkedAccount = userAccounts.find(a => a.id === card.linkedAccountId);
-          
+
           // Get current bill
           const currentBill = await getCurrentBill(card.id);
-          
+
           // Calculate available limit
           const availableLimit = await calculateAvailableLimit(card.id, card.creditLimit);
 
@@ -206,6 +219,14 @@ export function CreditCards() {
         onBillUpdated={loadData}
       />
 
+      <BillHistoryModal
+        isOpen={isHistoryModalOpen}
+        onClose={handleCloseHistoryModal}
+        creditCard={selectedCardForHistory}
+        userId={user?.uid || ''}
+        onBillUpdated={loadData}
+      />
+
       {creditCards.length === 0 ? (
         <Card className="bg-white/40 backdrop-blur-xl border-white/60">
           <CardContent className="py-8 sm:py-12">
@@ -225,7 +246,7 @@ export function CreditCards() {
           {creditCards.map((card) => {
             const limitUsed = card.creditLimit - (card.availableLimit || 0);
             const limitPercentage = getLimitUsagePercentage(card.creditLimit, card.availableLimit || 0);
-            
+
             return (
               <Card
                 key={card.id}
@@ -258,6 +279,13 @@ export function CreditCards() {
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
                       <button
+                        onClick={() => handleViewHistory(card)}
+                        className="p-1.5 text-neutral-400 hover:text-blue hover:bg-blue/5 rounded-lg transition-colors"
+                        title={t('creditCards.billHistory') || 'Histórico'}
+                      >
+                        <FileText className="h-4 w-4" />
+                      </button>
+                      <button
                         onClick={() => modal.openEdit(card)}
                         className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-white/60 rounded-lg transition-colors"
                       >
@@ -282,7 +310,7 @@ export function CreditCards() {
                         {formatCurrency(card.availableLimit || 0)}
                       </span>
                     </div>
-                    
+
                     {/* Progress bar */}
                     <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
                       <div
@@ -290,7 +318,7 @@ export function CreditCards() {
                         style={{ width: `${limitPercentage}%` }}
                       />
                     </div>
-                    
+
                     <div className="flex items-center justify-between mt-1 text-xs text-neutral-400">
                       <span>{t('creditCards.used') || 'Usado'}: {formatCurrency(limitUsed)}</span>
                       <span>{t('creditCards.totalLimit') || 'Limite'}: {formatCurrency(card.creditLimit)}</span>

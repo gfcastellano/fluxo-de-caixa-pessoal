@@ -11,10 +11,13 @@ import { getTranslatedCategoryName } from '../utils/categoryTranslations';
 import { getTransactions } from '../services/transactionService';
 import { getAccounts, calculateAccountBalance } from '../services/accountService';
 import { getCategories } from '../services/categoryService';
-import type { Transaction, Account, Category } from '../types';
-import { TrendingUp, TrendingDown, ArrowRightLeft, Wallet, Plus, Calendar } from 'lucide-react';
+import { getCreditCards } from '../services/creditCardService';
+import { getCreditCardBills } from '../services/creditCardBillService';
+import type { Transaction, Account, Category, CreditCard, CreditCardBill } from '../types';
+import { TrendingUp, TrendingDown, ArrowRightLeft, Wallet, Plus, Calendar, CreditCard as CreditCardIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PageDescription } from '../components/PageDescription';
+import { cn } from '../utils/cn';
 
 interface CurrencySummary {
   income: number;
@@ -30,6 +33,8 @@ export function Dashboard() {
   const [currencySummaries, setCurrencySummaries] = useState<Record<string, CurrencySummary>>({});
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
+  const [creditCardBills, setCreditCardBills] = useState<CreditCardBill[]>([]);
   const [accountBalances, setAccountBalances] = useState<Record<string, number>>({});
   const [accountCurrencyMap, setAccountCurrencyMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -58,10 +63,12 @@ export function Dashboard() {
       const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
       const endDate = `${year}-${String(month).padStart(2, '0')}-31`;
 
-      const [transactions, accountsData, categoriesData] = await Promise.all([
+      const [transactions, accountsData, categoriesData, creditCardsData, billsData] = await Promise.all([
         getTransactions(user!.uid, { startDate, endDate }),
         getAccounts(user!.uid),
         getCategories(user!.uid),
+        getCreditCards(user!.uid),
+        getCreditCardBills(user!.uid),
       ]);
 
       const accountCurrencyMap: Record<string, string> = {};
@@ -121,6 +128,8 @@ export function Dashboard() {
         balances[account.id] = calculatedBalance;
       }
       setAccountBalances(balances);
+      setCreditCards(creditCardsData);
+      setCreditCardBills(billsData);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
@@ -321,6 +330,96 @@ export function Dashboard() {
           )}
         </CardContent>
       </Card>
+
+      {/* Credit Cards Summary */}
+      {creditCards.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
+          <Card className="bg-white/40 backdrop-blur-xl border-white/60 sm:col-span-1 lg:col-span-1">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-slate flex items-center gap-2">
+                <CreditCardIcon className="h-4 w-4" />
+                {t('creditCards.title')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {creditCards.map(card => {
+                  const currentBill = creditCardBills.find(
+                    b => b.creditCardId === card.id && !b.isClosed && !b.isPaid
+                  );
+                  const usage = currentBill ? (currentBill.totalAmount / card.creditLimit) * 100 : 0;
+
+                  return (
+                    <div key={card.id} className="space-y-1">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="font-medium text-ink" style={{ color: card.color }}>{card.name}</span>
+                        <span className="text-slate">{formatCurrency(currentBill?.totalAmount || 0)}</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-neutral-100 rounded-full overflow-hidden">
+                        <div
+                          className={cn("h-full transition-all duration-500",
+                            usage > 90 ? "bg-rose" : usage > 70 ? "bg-amber-500" : "bg-blue"
+                          )}
+                          style={{ width: `${Math.min(usage, 100)}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-[10px] text-slate/60">
+                        <span>{t('creditCards.used')} {usage.toFixed(0)}%</span>
+                        <span>{t('creditCards.limit')}: {formatCurrency(card.creditLimit)}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Upcoming Bills */}
+          <Card className="bg-white/40 backdrop-blur-xl border-white/60 sm:col-span-1 lg:col-span-2">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-slate flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                {t('creditCardBills.upcoming')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {creditCards.map(card => {
+                  const openBill = creditCardBills.find(
+                    b => b.creditCardId === card.id && !b.isPaid
+                  );
+                  if (!openBill) return null;
+
+                  return (
+                    <div key={card.id} className="flex items-center justify-between p-2 rounded-xl bg-white/30 border border-white/50">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/50 flex-shrink-0">
+                          <CreditCardIcon className="h-4 w-4" style={{ color: card.color }} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-ink truncate">{card.name}</p>
+                          <p className="text-[10px] text-slate truncate">
+                            {t('creditCardBills.dueDate')}: {new Date(openBill.dueDate).toLocaleDateString('pt-BR')}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right ml-2">
+                        <p className="text-xs font-bold text-ink">{formatCurrency(openBill.totalAmount)}</p>
+                        <span className={cn(
+                          "text-[9px] px-1.5 py-0.5 rounded-full font-medium",
+                          openBill.isClosed ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"
+                        )}>
+                          {openBill.isClosed ? t('creditCardBills.closed') : t('creditCardBills.open')}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                }).filter(Boolean)}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
     </div>
   );

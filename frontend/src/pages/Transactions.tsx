@@ -303,7 +303,7 @@ export function Transactions() {
         // Extract editMode from data if present (for recurring transactions)
         const { editMode, ...transactionData } = data as Partial<Transaction> & { editMode?: 'single' | 'forward' | 'all' };
         await updateTransaction(editingTransaction.id, transactionData, editMode);
-        
+
         // If bulk edit (forward or all), reload all transactions to get updated data
         if (editMode === 'forward' || editMode === 'all') {
           await loadTransactions(false);
@@ -323,17 +323,23 @@ export function Transactions() {
         }
       } else {
         const newTransaction = await createTransaction(user.uid, data as any);
-        // Add to list if within current filter range
-        const enrichedTransaction = {
-          ...newTransaction,
-          category: categories.find((c) => c.id === newTransaction.categoryId),
-          account: accounts.find((a) => a.id === newTransaction.accountId),
-        };
-        setTransactions(prev => [enrichedTransaction, ...prev]);
 
-        // Highlight the new item for 5 seconds
-        setHighlightedId(newTransaction.id);
-        setTimeout(() => setHighlightedId(null), 5000);
+        // If it's a recurring transaction (including installments), reload to get all generated instances
+        if (newTransaction.isRecurring || (data as any).recurringCount > 1) {
+          await loadTransactions(false);
+        } else {
+          // Add to list if within current filter range
+          const enrichedTransaction = {
+            ...newTransaction,
+            category: categories.find((c) => c.id === newTransaction.categoryId),
+            account: accounts.find((a) => a.id === newTransaction.accountId),
+          };
+          setTransactions(prev => [enrichedTransaction, ...prev]);
+
+          // Highlight the new item for 5 seconds
+          setHighlightedId(newTransaction.id);
+          setTimeout(() => setHighlightedId(null), 5000);
+        }
       }
       handleCloseModal();
     } catch (error) {
@@ -410,7 +416,7 @@ export function Transactions() {
       // If it's a recurring transaction (parent or child)
       if (t.isRecurring || t.parentTransactionId || t.isRecurringInstance) {
         const parentId = t.isRecurring ? t.id : t.parentTransactionId!;
-        
+
         if (!groups.has(parentId)) {
           groups.set(parentId, {
             parentId,
@@ -427,7 +433,7 @@ export function Transactions() {
             account: t.account,
           });
         }
-        
+
         const group = groups.get(parentId)!;
         group.transactions.push(t);
         group.occurrencesInPeriod++;
@@ -768,44 +774,44 @@ export function Transactions() {
                   .map((transaction) => {
                     const installmentDisplay = formatInstallment(transaction);
                     return (
-                    <div
-                      key={transaction.id}
-                      className={cn(
-                        "card-glass p-3 space-y-2 hover:shadow-glass-hover transition-all duration-1000",
-                        highlightedId === transaction.id ? "animate-highlight scale-[1.02]" : ""
-                      )}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-ink text-xs truncate">
-                            {transaction.description}
-                            {installmentDisplay && <span className="text-blue ml-1">({installmentDisplay})</span>}
-                          </p>
-                          <p className="text-[10px] text-slate mt-0.5">{formatDate(transaction.date)}</p>
+                      <div
+                        key={transaction.id}
+                        className={cn(
+                          "card-glass p-3 space-y-2 hover:shadow-glass-hover transition-all duration-1000",
+                          highlightedId === transaction.id ? "animate-highlight scale-[1.02]" : ""
+                        )}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-ink text-xs truncate">
+                              {transaction.description}
+                              {installmentDisplay && <span className="text-blue ml-1">({installmentDisplay})</span>}
+                            </p>
+                            <p className="text-[10px] text-slate mt-0.5">{formatDate(transaction.date)}</p>
+                          </div>
+                          <div className={`text-right font-bold text-sm ${transaction.type === 'income' ? 'text-emerald' : transaction.type === 'transfer' ? 'text-blue' : 'text-rose'}`}>
+                            {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount, transaction.account?.currency)}
+                          </div>
                         </div>
-                        <div className={`text-right font-bold text-sm ${transaction.type === 'income' ? 'text-emerald' : transaction.type === 'transfer' ? 'text-blue' : 'text-rose'}`}>
-                          {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount, transaction.account?.currency)}
+                        <div className="flex items-center justify-between pt-1.5 border-t border-slate/10">
+                          <div className="flex items-center gap-1.5 text-[10px]">
+                            <span className="px-1.5 py-0.5 rounded-full bg-slate/5 text-slate">
+                              {transaction.category ? t(getTranslatedCategoryName(transaction.category.name)) : t('common.category')}
+                            </span>
+                            <span style={{ color: transaction.account?.color }}>{transaction.account?.name}</span>
+                          </div>
+                          <div className="flex gap-0.5">
+                            <button onClick={() => handleOpenEditModal(transaction)} className="p-1.5 text-slate hover:bg-slate/10 rounded-full touch-target">
+                              <Edit2 size={14} />
+                            </button>
+                            <button onClick={() => handleDelete(transaction.id)} className="p-1.5 text-rose hover:bg-rose/10 rounded-full touch-target">
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center justify-between pt-1.5 border-t border-slate/10">
-                        <div className="flex items-center gap-1.5 text-[10px]">
-                          <span className="px-1.5 py-0.5 rounded-full bg-slate/5 text-slate">
-                            {transaction.category ? t(getTranslatedCategoryName(transaction.category.name)) : t('common.category')}
-                          </span>
-                          <span style={{ color: transaction.account?.color }}>{transaction.account?.name}</span>
-                        </div>
-                        <div className="flex gap-0.5">
-                          <button onClick={() => handleOpenEditModal(transaction)} className="p-1.5 text-slate hover:bg-slate/10 rounded-full touch-target">
-                            <Edit2 size={14} />
-                          </button>
-                          <button onClick={() => handleDelete(transaction.id)} className="p-1.5 text-rose hover:bg-rose/10 rounded-full touch-target">
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
               </div>
 
               {/* ============================================
@@ -900,7 +906,7 @@ export function Transactions() {
                               </div>
                             </td>
                           </tr>
-                          
+
                           {/* Expanded Instance Rows */}
                           {isExpanded && group.transactions.map((transaction) => {
                             const installmentDisplay = formatInstallment(transaction);

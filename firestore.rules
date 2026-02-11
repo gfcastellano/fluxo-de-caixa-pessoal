@@ -3,88 +3,17 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ---------- Helpers ----------
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isOwnerByUserId(data) {
-      return isSignedIn() && data.userId == request.auth.uid;
-    }
-
-    // On create: ensure the new doc belongs to the caller
-    function isCreatingOwnDoc() {
-      return isSignedIn()
-        && request.resource.data.userId is string
-        && request.resource.data.userId == request.auth.uid;
-    }
-
-    // On update: keep userId immutable + still owned by caller
-    function isUpdatingOwnDoc() {
-      return isSignedIn()
-        && resource.data.userId is string
-        && request.resource.data.userId == resource.data.userId
-        && resource.data.userId == request.auth.uid;
-    }
-
-    // Generic rule for collections that store userId
-    function ownerCRUD() {
-      return false; // placeholder to avoid misuse
-    }
-
-    // ---------- Default: deny everything ----------
-    match /{document=**} {
-      allow read, write: if false;
-    }
-
-    // ---------- User-scoped collections ----------
-    match /accounts/{id} {
-      allow read, delete: if isOwnerByUserId(resource.data);
-      allow create: if isCreatingOwnDoc();
-      allow update: if isUpdatingOwnDoc();
-    }
-
-    match /budgets/{id} {
-      allow read, delete: if isOwnerByUserId(resource.data);
-      allow create: if isCreatingOwnDoc();
-      allow update: if isUpdatingOwnDoc();
-    }
-
-    match /categories/{id} {
-      allow read, delete: if isOwnerByUserId(resource.data);
-      allow create: if isCreatingOwnDoc();
-      allow update: if isUpdatingOwnDoc();
-    }
-
-    match /creditCards/{id} {
-      allow read, delete: if isOwnerByUserId(resource.data);
-      allow create: if isCreatingOwnDoc();
-      allow update: if isUpdatingOwnDoc();
-    }
-
-    match /transactions/{id} {
-      allow read, delete: if isOwnerByUserId(resource.data);
-      allow create: if isCreatingOwnDoc();
-      allow update: if isUpdatingOwnDoc();
-    }
-
-    // Your current rules already had userSettings/{userId} keyed by uid:
-    match /userSettings/{userId} {
-      allow read, write: if isSignedIn() && request.auth.uid == userId;
-    }
-
-    // If you have a /users collection (common):
-    // Two safe options:
-    // (A) If docs are keyed by uid: /users/{uid}
-    // (B) If docs have userId field like other collections
+    // This rule allows anyone with your Firestore database reference to view, edit,
+    // and delete all data in your Firestore database. It is useful for getting
+    // started, but it is configured to expire after 30 days because it
+    // leaves your app open to attackers. At that time, all client
+    // requests to your Firestore database will be denied.
     //
-    // Your screenshot shows a 'users' collection but doesn't show fields.
-    // We'll implement the safer keyed-by-uid version:
-    match /users/{uid} {
-      allow read, write: if isSignedIn() && request.auth.uid == uid;
+    // Make sure to write security rules for your app before that time, or else
+    // all client requests to your Firestore database will be denied until you Update
+    // your rules
+    match /{document=**} {
+      allow read, write: if request.time < timestamp.date(2026, 3, 4);
     }
-
-    // If instead your /users docs are NOT keyed by uid and use userId field,
-    // tell me and we’ll switch this block to the same pattern as above.
   }
 }
