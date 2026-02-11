@@ -30,7 +30,7 @@ Esta sessão focou na **consolidação e centralização da entrada de voz**, mo
 - [x] **Ícones Dinâmicos de Moeda:** Implementar exibição do símbolo da moeda (R$, $, €) para contas em dinheiro.
 - [x] **Cartões nas Contas:** Exibir os cartões de crédito vinculados dentro dos cards de suas respectivas contas.
 - [x] **Consolidar Entrada de Voz:** Remover botões de microfone dos modais e usar apenas o botão central. (Concluído hoje)
-- [/] **Release para Produção:** Commitar, push, merge para `main` e deploy.
+- [x] **Release para Produção:** Commitar, push, merge para `main` e deploy. (Concluído em 11/02/2026)
 
 ### 2. Status do Módulo de Cartão de Crédito: **COMPLETO** ✅
 - [x] **Lógica de "Melhor Dia":** Transações após o fechamento vão para a próxima fatura.
