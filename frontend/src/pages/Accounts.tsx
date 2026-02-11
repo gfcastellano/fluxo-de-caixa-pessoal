@@ -14,7 +14,8 @@ import {
 } from '../services/accountService';
 import { getCreditCards } from '../services/creditCardService';
 import { formatDate } from '../utils/format';
-import type { Account, CreditCard } from '../types';
+import { getCreditCardBills } from '../services/creditCardBillService';
+import type { Account, CreditCard, CreditCardBill } from '../types';
 import { Edit2, Trash2, Star, Wallet, Banknote, DollarSign, Euro, PoundSterling, JapaneseYen, SwissFranc, ChevronDown, ChevronUp, CreditCard as CreditCardIcon } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { PageDescription } from '../components/PageDescription';
@@ -27,6 +28,7 @@ export function Accounts() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
   const [accountBalances, setAccountBalances] = useState<Record<string, number>>({});
+  const [cardBillAmounts, setCardBillAmounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
   /* New state for highlighting */
@@ -47,9 +49,10 @@ export function Accounts() {
   const loadAccounts = async () => {
     setLoading(true);
     try {
-      const [accountsData, creditCardsData] = await Promise.all([
+      const [accountsData, creditCardsData, billsData] = await Promise.all([
         getAccounts(user!.uid),
-        getCreditCards(user!.uid)
+        getCreditCards(user!.uid),
+        getCreditCardBills(user!.uid)
       ]);
       // Cash accounts are auto-created by backend POST /accounts
 
@@ -58,6 +61,15 @@ export function Accounts() {
       );
       setAccounts(sortedData);
       setCreditCards(creditCardsData);
+
+      // Map card bill amounts (current open bills)
+      const billAmounts: Record<string, number> = {};
+      billsData.forEach(bill => {
+        if (!bill.isClosed && !bill.isPaid) {
+          billAmounts[bill.creditCardId] = (billAmounts[bill.creditCardId] || 0) + bill.totalAmount;
+        }
+      });
+      setCardBillAmounts(billAmounts);
 
       const balances: Record<string, number> = {};
       for (const account of accountsData) {
@@ -345,9 +357,14 @@ export function Accounts() {
 
                               <div className="relative z-10 text-right">
                                 <p className="text-white font-semibold text-[10px] truncate mb-0.5">{card.name}</p>
-                                <p className="text-white/90 text-[9px] font-medium tracking-wide">
-                                  Limit: {formatCurrency(card.creditLimit, account.currency)}
-                                </p>
+                                <div className="space-y-0.5">
+                                  <p className="text-white/90 text-[9px] font-medium tracking-wide">
+                                    {t('creditCards.bill')}: {formatCurrency(cardBillAmounts[card.id] || 0, account.currency)}
+                                  </p>
+                                  <p className="text-white/70 text-[8px] font-medium tracking-wide uppercase">
+                                    {t('creditCards.limit')}: {formatCurrency(card.creditLimit, account.currency)}
+                                  </p>
+                                </div>
                               </div>
                             </div>
                           ))

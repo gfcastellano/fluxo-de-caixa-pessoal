@@ -219,6 +219,15 @@ export const esTranslations = {
     overBudget: 'Sobre el Presupuesto',
     onTrack: 'Dentro del Plan',
     exceeded: 'Excedido',
+    showDetails: 'Ver detalles',
+    hideDetails: 'Ocultar detalles',
+    details: {
+      date: 'Fecha',
+      description: 'Descripción',
+      category: 'Categoría',
+      account: 'Cuenta',
+      amount: 'Monto'
+    },
     period: {
       monthly: 'Mensual',
       yearly: 'Anual',
@@ -271,6 +280,8 @@ export const esTranslations = {
   // Credit Cards
   creditCards: {
     title: 'Tarjetas de Crédito',
+    bill: 'Factura',
+    limit: 'Límite',
     addNew: 'Añadir Tarjeta',
     editCard: 'Editar Tarjeta',
     deleteConfirm: '¿Estás seguro de que quieres eliminar esta tarjeta?',
@@ -359,6 +370,7 @@ export const esTranslations = {
     totalBalance: 'Saldo inicial del mes',
     calculatedBalance: 'Saldo calculado mes siguiente',
     projectedBalance: 'Saldo Proyectado',
+    composition: 'Composición',
     noData: 'No hay datos disponibles para el período seleccionado',
     selectPeriod: 'Selecciona el Período',
     thisMonth: 'Este Mes',

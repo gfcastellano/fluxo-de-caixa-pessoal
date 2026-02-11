@@ -219,6 +219,15 @@ export const enTranslations = {
     overBudget: 'Over Budget',
     onTrack: 'On Track',
     exceeded: 'Exceeded',
+    showDetails: 'Show details',
+    hideDetails: 'Hide details',
+    details: {
+      date: 'Date',
+      description: 'Description',
+      category: 'Category',
+      account: 'Account',
+      amount: 'Amount'
+    },
     period: {
       monthly: 'Monthly',
       yearly: 'Yearly',
@@ -271,6 +280,8 @@ export const enTranslations = {
   // Credit Cards
   creditCards: {
     title: 'Credit Cards',
+    bill: 'Bill',
+    limit: 'Limit',
     addNew: 'Add Credit Card',
     editCard: 'Edit Credit Card',
     deleteConfirm: 'Are you sure you want to delete this credit card?',
@@ -359,6 +370,7 @@ export const enTranslations = {
     totalBalance: 'Month Start Balance',
     calculatedBalance: 'Calculated balance next month',
     projectedBalance: 'Projected Balance',
+    composition: 'Composition',
     noData: 'No data available for the selected period',
     selectPeriod: 'Select Period',
     thisMonth: 'This Month',

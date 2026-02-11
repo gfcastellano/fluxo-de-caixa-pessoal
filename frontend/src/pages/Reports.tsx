@@ -10,11 +10,11 @@ import {
 } from '../services/reportService';
 import { getAccounts } from '../services/accountService';
 import { getCreditCards } from '../services/creditCardService';
-import { getTransactions } from '../services/transactionService';
+import { getTransactions, getAllTransactionsWithRecurring } from '../services/transactionService';
 import { getCategories } from '../services/categoryService';
-import type { MonthlySummary, CategoryBreakdown, Account, CreditCard } from '../types';
+import type { MonthlySummary, CategoryBreakdown, Account, CreditCard, Transaction } from '../types';
 import { formatCurrency, formatMonthYear, getCurrentMonth } from '../utils/format';
-import { getCategoryTranslationKey } from '../utils/categoryTranslations';
+import { getCategoryTranslationKey, getTranslatedCategoryName } from '../utils/categoryTranslations';
 import {
   PieChart,
   Pie,
@@ -31,7 +31,7 @@ import {
   Line,
   ReferenceLine,
 } from 'recharts';
-import { Download, TrendingUp, TrendingDown, Calendar, PiggyBank, Calculator, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Download, TrendingUp, TrendingDown, Calendar, PiggyBank, Calculator, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { PageDescription } from '../components/PageDescription';
 
 export function Reports() {
@@ -57,6 +57,80 @@ export function Reports() {
   const [calculatedBalance, setCalculatedBalance] = useState<number>(0);
   const [totalAccountBalance, setTotalAccountBalance] = useState<number>(0);
   const [monthlyBalance, setMonthlyBalance] = useState<number>(0);
+  const [periodTransactions, setPeriodTransactions] = useState<Transaction[]>([]);
+  const [categoriesState, setCategoriesState] = useState<any[]>([]);
+
+  // Helper function to translate category name using the context's t function
+  const translateCategory = (name: string): string => {
+    const key = getCategoryTranslationKey(name);
+    return key ? t(key) : name;
+  };
+
+  // Custom Tooltip component for the bar charts
+  const CategoryTooltip = ({ active, payload, transactions, currency, t }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      const categoryId = data.categoryId;
+      const isIncomingTransfer = categoryId === 'incoming-transfer';
+      const isOutgoingTransfer = categoryId === 'outgoing-transfer';
+
+      // Filter transactions for this category
+      const categoryTxs = transactions
+        .filter((tx: Transaction) => {
+          if (isIncomingTransfer) {
+            return tx.type === 'transfer' && tx.toAccountId && filteredAccountIds.includes(tx.toAccountId);
+          }
+          if (isOutgoingTransfer) {
+            return tx.type === 'transfer' && tx.accountId && filteredAccountIds.includes(tx.accountId);
+          }
+          // For regular categories, ensure ID match and prefer strict category association
+          return tx.categoryId === categoryId;
+        })
+        .sort((a: Transaction, b: Transaction) => b.amount - a.amount)
+        .slice(0, 10);
+
+      return (
+        <div className="bg-white/95 backdrop-blur-xl p-4 rounded-2xl border border-white/60 shadow-[0_20px_50px_rgba(0,0,0,0.1)] min-w-[280px] animate-in fade-in zoom-in duration-200">
+          <div className="flex items-center justify-between mb-3 border-b border-slate/10 pb-2">
+            <div className="flex flex-col">
+              <span className="font-bold text-ink text-sm tracking-tight">{translateCategory(data.categoryName)}</span>
+              <span className="text-[10px] text-slate font-medium uppercase tracking-wider">{t('reports.composition')}</span>
+            </div>
+            <span className="font-black text-ink text-base">
+              {formatCurrency(data.amount, currency)}
+            </span>
+          </div>
+          <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
+            {categoryTxs.map((tx: Transaction) => (
+              <div key={tx.id} className="flex items-center justify-between text-[11px] gap-4 group">
+                <div className="flex flex-col flex-grow truncate">
+                  <span className="text-ink font-semibold truncate group-hover:text-blue transition-colors">{tx.description}</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-slate/60 text-[9px] font-medium">{new Date(tx.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</span>
+                    {tx.type === 'transfer' && (
+                      <span className="text-blue/60 text-[8px] border border-blue/20 rounded px-1 scale-90">Transf.</span>
+                    )}
+                  </div>
+                </div>
+                <span className={`font-bold whitespace-nowrap tabular-nums ${tx.type === 'income' ? 'text-emerald' : tx.type === 'expense' ? 'text-rose' : 'text-blue'}`}>
+                  {formatCurrency(tx.amount, currency)}
+                </span>
+              </div>
+            ))}
+            {categoryTxs.length === 0 && (
+              <p className="text-[11px] text-slate italic py-2 text-center bg-slate/5 rounded-lg">{t('reports.noData')}</p>
+            )}
+            {transactions.filter((tx: Transaction) => tx.categoryId === categoryId).length > 10 && (
+              <p className="text-[9px] text-slate/50 text-center pt-1 border-t border-slate/5 italic">
+                + {transactions.filter((tx: Transaction) => tx.categoryId === categoryId).length - 10} {t('common.more')}
+              </p>
+            )}
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
 
   // Get unique currencies from accounts
   const availableCurrencies = useMemo(() => {
@@ -67,19 +141,15 @@ export function Reports() {
   // Get filtered accounts based on selected currency
   const filteredAccounts = useMemo(() => {
     if (!selectedCurrency) return accounts;
-    return accounts.filter(account => account.currency === selectedCurrency);
+    return accounts.filter((account: Account) => account.currency === selectedCurrency);
   }, [accounts, selectedCurrency]);
 
   // Get account IDs for the selected currency (for API filtering)
   const filteredAccountIds = useMemo(() => {
-    return filteredAccounts.map(account => account.id);
+    return filteredAccounts.map((account: Account) => account.id);
   }, [filteredAccounts]);
 
-  // Helper function to get translated category name
-  const getTranslatedCategoryName = (categoryName: string): string => {
-    const translationKey = getCategoryTranslationKey(categoryName);
-    return translationKey ? t(translationKey) : categoryName;
-  };
+
 
   // Chart gradient configuration
   const CHART_GRADIENT_COLORS = {
@@ -170,14 +240,16 @@ export function Reports() {
 
   const loadAccounts = async () => {
     try {
-      const [accountsData, creditCardsData] = await Promise.all([
+      const [accountsData, creditCardsData, categoriesData] = await Promise.all([
         getAccounts(user!.uid),
-        getCreditCards(user!.uid)
+        getCreditCards(user!.uid),
+        getCategories(user!.uid)
       ]);
       setAccounts(accountsData);
       setCreditCards(creditCardsData);
+      setCategoriesState(categoriesData);
     } catch (error) {
-      console.error('Error loading accounts and credit cards:', error);
+      console.error('Error loading accounts, credit cards and categories:', error);
     }
   };
 
@@ -195,13 +267,21 @@ export function Reports() {
         getCategoryBreakdown(user!.uid, year, month, 'income', accountId),
       ]);
 
-      // Filter breakdown data by currency if a currency is selected and no specific account
-      if (selectedCurrency && !selectedAccountId) {
-        // When currency is selected but no specific account, we need to fetch transactions
-        // for all accounts with that currency and calculate category breakdowns client-side
-        const accountIdsInCurrency = new Set(filteredAccountIds);
+      const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+      const endDate = `${year}-${String(month).padStart(2, '0')}-31`;
 
-        // Find credit card IDs that belong to the selected currency
+      // Fetch all transactions for the period to show in the drill-down
+      const allPeriodTransactions = await getTransactions(user!.uid, {
+        startDate,
+        endDate,
+        accountId: selectedAccountId || undefined,
+      });
+
+      // Filter translations by currency if a currency is selected and no specific account
+      if (selectedCurrency && !selectedAccountId) {
+        // When currency is selected but no specific account, we need to filter transactions
+        // for all accounts with that currency
+        const accountIdsInCurrency = new Set(filteredAccounts.map(a => a.id));
         const creditCardIdsInCurrency = new Set(
           creditCards
             .filter(card => {
@@ -211,35 +291,19 @@ export function Reports() {
             .map(card => card.id)
         );
 
-        const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-        const endDate = `${year}-${String(month).padStart(2, '0')}-31`;
-
-        // Fetch transactions and categories for all accounts and credit cards with the selected currency
-        const [allTransactions, categories] = await Promise.all([
-          Promise.all([
-            ...Array.from(accountIdsInCurrency).map(accountId =>
-              getTransactions(user!.uid, { startDate, endDate, accountId })
-            ),
-            ...Array.from(creditCardIdsInCurrency).map(creditCardId =>
-              getTransactions(user!.uid, { startDate, endDate }).then(txs =>
-                txs.filter(t => t.creditCardId === creditCardId)
-              )
-            )
-          ]).then(results => results.flat()),
-          getCategories(user!.uid),
-        ]);
-
-        // Fetch all user transactions to find incoming transfers to these accounts
-        const allUserTransactions = await getTransactions(user!.uid, { startDate, endDate });
-        const incomingTransfers = allUserTransactions.filter(
-          t => t.type === 'transfer' && t.toAccountId && accountIdsInCurrency.has(t.toAccountId)
+        const filteredTxs = allPeriodTransactions.filter(t =>
+          (t.accountId && accountIdsInCurrency.has(t.accountId)) ||
+          (t.creditCardId && creditCardIdsInCurrency.has(t.creditCardId))
         );
 
-        // Create category map for lookup
+        setPeriodTransactions(filteredTxs);
+
+        // Fetch categories for mapping names and colors in breakdown calculation
+        const categories = await getCategories(user!.uid);
         const categoryMap = new Map(categories.map(c => [c.id, c]));
 
         // Calculate expense breakdown from filtered transactions (expenses + outgoing transfers)
-        const expenseTransactions = allTransactions.filter(t => t.type === 'expense' || t.type === 'transfer');
+        const expenseTransactions = filteredTxs.filter(t => t.type === 'expense' || t.type === 'transfer');
         const expenseCategoryTotals = new Map<string, number>();
         expenseTransactions.forEach(t => {
           const current = expenseCategoryTotals.get(t.categoryId) || 0;
@@ -260,18 +324,26 @@ export function Reports() {
           .sort((a, b) => b.amount - a.amount);
 
         // Calculate income breakdown from filtered transactions (income + incoming transfers)
-        const incomeTransactions = allTransactions.filter(t => t.type === 'income');
+        const incomeTransactions = filteredTxs.filter(t => t.type === 'income');
         const incomeCategoryTotals = new Map<string, number>();
         incomeTransactions.forEach(t => {
           const current = incomeCategoryTotals.get(t.categoryId) || 0;
           incomeCategoryTotals.set(t.categoryId, current + t.amount);
         });
-        // Add incoming transfers to income breakdown (use a special category or account name)
-        incomingTransfers.forEach(t => {
+
+        // For incoming transfers, we need to look at ALL transactions to find transfers TO these accounts
+        const allUserTransactionsForPeriod = await getTransactions(user!.uid, { startDate, endDate });
+        const incomingTransfersToTheseAccounts = allUserTransactionsForPeriod.filter(
+          t => t.type === 'transfer' && t.toAccountId && accountIdsInCurrency.has(t.toAccountId)
+        );
+
+        // Add incoming transfers to income breakdown
+        incomingTransfersToTheseAccounts.forEach(t => {
           const transferCategoryId = 'incoming-transfer';
           const current = incomeCategoryTotals.get(transferCategoryId) || 0;
           incomeCategoryTotals.set(transferCategoryId, current + t.amount);
         });
+
         const totalIncome = Array.from(incomeCategoryTotals.values()).reduce((sum, amount) => sum + amount, 0);
         const filteredIncomeBreakdown: CategoryBreakdown[] = Array.from(incomeCategoryTotals.entries())
           .map(([categoryId, amount]) => {
@@ -291,15 +363,10 @@ export function Reports() {
         setIncomeBreakdown(filteredIncomeBreakdown);
 
         // Calculate summary from filtered transactions for the selected currency
-        // Income includes: income transactions + incoming transfers
-        const filteredIncome = allTransactions
-          .filter(t => t.type === 'income')
-          .reduce((sum, t) => sum + t.amount, 0)
-          + incomingTransfers.reduce((sum, t) => sum + t.amount, 0);
-        // Expenses include: expenses + outgoing transfers
-        const filteredExpenses = allTransactions
-          .filter(t => t.type === 'expense' || t.type === 'transfer')
-          .reduce((sum, t) => sum + t.amount, 0);
+        const filteredIncome = incomeTransactions.reduce((sum, t) => sum + t.amount, 0)
+          + incomingTransfersToTheseAccounts.reduce((sum, t) => sum + t.amount, 0);
+        const filteredExpenses = expenseTransactions.reduce((sum, t) => sum + t.amount, 0);
+
         const filteredSummary: MonthlySummary = {
           income: filteredIncome,
           expenses: filteredExpenses,
@@ -308,10 +375,29 @@ export function Reports() {
           year: year,
         };
         setSummary(filteredSummary);
+
+        // Also update period transactions to include incoming transfers for the list view
+        // Deduplicate transactions (transfers between accounts of same currency appear twice)
+        const combinedTxs = [...filteredTxs, ...incomingTransfersToTheseAccounts];
+        const uniqueTxs = Array.from(new Map(combinedTxs.map(tx => [tx.id, tx])).values());
+        setPeriodTransactions(uniqueTxs);
       } else {
         setExpenseBreakdown(expenseData);
         setIncomeBreakdown(incomeData);
         setSummary(summaryData);
+
+        if (selectedAccountId) {
+          const allUserTransactionsForPeriod = await getTransactions(user!.uid, { startDate, endDate });
+          const incomingTransfersToThisAccount = allUserTransactionsForPeriod.filter(
+            t => t.type === 'transfer' && t.toAccountId === selectedAccountId
+          );
+
+          const combinedTxs = [...allPeriodTransactions, ...incomingTransfersToThisAccount];
+          const uniqueTxs = Array.from(new Map(combinedTxs.map(tx => [tx.id, tx])).values());
+          setPeriodTransactions(uniqueTxs);
+        } else {
+          setPeriodTransactions(allPeriodTransactions);
+        }
       }
 
       // Fetch trend data - handle currency filtering by aggregating multiple account trends
@@ -832,18 +918,13 @@ export function Reports() {
                       width={90}
                       tick={{ fontSize: 10 }}
                       tickFormatter={(value) => {
-                        const translated = getTranslatedCategoryName(value);
+                        const translated = t(getTranslatedCategoryName(value));
                         return translated.length > 14 ? translated.slice(0, 14) + '...' : translated;
                       }}
                       interval={0}
                     />
                     <Tooltip
-                      formatter={(value, name, props) => {
-                        const categoryName = props?.payload?.categoryName || name;
-                        const translatedName = getTranslatedCategoryName(categoryName);
-                        return [formatCurrency(Number(value), selectedCurrency || 'BRL'), translatedName];
-                      }}
-                      contentStyle={{ backgroundColor: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(8px)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.5)', fontSize: '12px' }}
+                      content={<CategoryTooltip transactions={periodTransactions} currency={selectedCurrency || 'BRL'} t={t} />}
                     />
                     <Bar dataKey="amount" radius={[0, 4, 4, 0]}>
                       {incomeBreakdown.slice(0, 5).map((entry, index) => (
@@ -887,18 +968,13 @@ export function Reports() {
                       width={90}
                       tick={{ fontSize: 10 }}
                       tickFormatter={(value) => {
-                        const translated = getTranslatedCategoryName(value);
+                        const translated = t(getTranslatedCategoryName(value));
                         return translated.length > 14 ? translated.slice(0, 14) + '...' : translated;
                       }}
                       interval={0}
                     />
                     <Tooltip
-                      formatter={(value, name, props) => {
-                        const categoryName = props?.payload?.categoryName || name;
-                        const translatedName = getTranslatedCategoryName(categoryName);
-                        return [formatCurrency(Number(value), selectedCurrency || 'BRL'), translatedName];
-                      }}
-                      contentStyle={{ backgroundColor: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(8px)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.5)', fontSize: '12px' }}
+                      content={<CategoryTooltip transactions={periodTransactions} currency={selectedCurrency || 'BRL'} t={t} />}
                     />
                     <Bar dataKey="amount" radius={[0, 4, 4, 0]}>
                       {expenseBreakdown.slice(0, 5).map((entry, index) => (
