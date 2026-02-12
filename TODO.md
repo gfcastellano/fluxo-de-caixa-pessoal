@@ -14,6 +14,7 @@ Esta sessão focou inicialmente na **consolidação da entrada de voz**, seguida
     *   Lógica de processamento de comandos de voz consolidada em um único `useEffect` que reage ao estado `preview` do gravador.
     *   Suporte aprimorado para criação (primeiro áudio) e atualização/correção (áudios subsequentes) de dados via voz.
     *   Melhoria no feedback visual e sonoro durante o uso da voz dentro dos formulários.
+    *   **Restaurar Hero Button nos Modais:** Reintroduzir o botão de voz "Hero" dentro dos modais para garantir acesso direto à funcionalidade de voz local.
 
 4.  **Refatoração de Relatórios e Tooltips:**
     *   Implementado o componente `CategoryTooltip` para exibir as 10 maiores transações de uma categoria ao passar o mouse nas barras.
@@ -34,6 +35,8 @@ Esta sessão focou inicialmente na **consolidação da entrada de voz**, seguida
 - [x] **Relatórios (Hover/Popup):** Implementado detalhamento de transações ao passar o mouse nas barras do gráfico de Relatórios. (Concluído)
 - [x] **Correção Bugs Relatórios:** Resolvidos problemas de duplicidade de chaves e transações repetidas nos tooltips. (Concluído)
 - [x] **Hotfix Deploy:** Correção do Dashboard (reversão de otimização de query) deployada em 12/02/2026.
+- [x] **Restaurar Hero Button nos Modais:** Reimplementar o botão de voz visualmente destacado dentro dos modais (Transação, Categoria, etc.). (Concluído em 12/02/2026)
+- [ ] **Estilizar Hero Button nos Modais:** Ajustar o visual (tamanho, margens, sombra) do botão dentro dos modais para melhor integração. | Created: 2026-02-12
 
 ### 2. Status do Módulo de Cartão de Crédito: **COMPLETO** ✅
 - [x] **Lógica de "Melhor Dia":** Transações após o fechamento vão para a próxima fatura.
@@ -114,8 +117,6 @@ Esta sessão focou inicialmente na **consolidação da entrada de voz**, seguida
   - Comments: Implementação inicial com Resend (domínio de teste). Precisa de domínio verificado para envio real.
   - Status: in progress
 
-
-- [ ] **Histórico de Permissões:** Log de alterações em quem compartilhou o quê e quando.
 
 ---
 **Arquivos Importantes Recentemente Modificados:**

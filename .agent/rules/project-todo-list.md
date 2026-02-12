@@ -8,6 +8,8 @@ Be specific on the task and give a brief context around it. Remember the next pe
 
 Never take all at once, first ask what the users wants to prioritize.
 
+Neveer give as done a taks before confirming with the user.
+
 
 📋 TODO.md Structure
 Sections:
