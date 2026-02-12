@@ -20,7 +20,9 @@ export async function getCreditCardBills(userId: string): Promise<CreditCardBill
   try {
     const q = query(
       collection(db, COLLECTION_NAME),
-      where('userId', '==', userId)
+      where('userId', '==', userId),
+      orderBy('year', 'desc'),
+      orderBy('month', 'desc')
     );
 
     const snapshot = await getDocs(q);
@@ -33,13 +35,6 @@ export async function getCreditCardBills(userId: string): Promise<CreditCardBill
         ...data,
       };
     }) as CreditCardBill[];
-
-    // Sort in memory to avoid composite index requirement
-    // TODO: Create composite index (userId + year DESC + month DESC) and move sort to query
-    bills.sort((a, b) => {
-      if (a.year !== b.year) return b.year - a.year;
-      return b.month - a.month;
-    });
 
     return bills;
   } catch (error) {

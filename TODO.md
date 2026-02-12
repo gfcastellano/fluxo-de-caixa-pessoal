@@ -33,6 +33,7 @@ Esta sessão focou inicialmente na **consolidação da entrada de voz**, seguida
 - [x] **Release para Produção:** Commitar, push, merge para `main` e deploy. (Concluído em 11/02/2026)
 - [x] **Relatórios (Hover/Popup):** Implementado detalhamento de transações ao passar o mouse nas barras do gráfico de Relatórios. (Concluído)
 - [x] **Correção Bugs Relatórios:** Resolvidos problemas de duplicidade de chaves e transações repetidas nos tooltips. (Concluído)
+- [x] **Hotfix Deploy:** Correção do Dashboard (reversão de otimização de query) deployada em 12/02/2026.
 
 ### 2. Status do Módulo de Cartão de Crédito: **COMPLETO** ✅
 - [x] **Lógica de "Melhor Dia":** Transações após o fechamento vão para a próxima fatura.
@@ -41,7 +42,7 @@ Esta sessão focou inicialmente na **consolidação da entrada de voz**, seguida
 - [x] **Visualização:** Ícones dedicados, exibição no dashboard e listagem de cartões nas contas.
 
 ### 3. Backlog Técnico (Futuro)
-- [ ] **Otimização de Query:** Voltar a usar `orderBy` no Firestore criando os índices compostos necessários. **(Revertido por causar erro no Dashboard. Necessário criar Índice Composto: `userId` + `year` (DESC) + `month` (DESC) antes de reabilitar)**.
+- [x] **Otimização de Query:** Voltar a usar `orderBy` no Firestore com índices compostos. (Concluído em 12/02/2026 após criação manual do índice)
 - [x] **Exibir Fatura Atual no Card:** Carregar o valor da fatura atual diretamente no card do cartão na tela de Contas. (Concluído em 11/02/2026)
 - [x] **Detalhamento Dinâmico de Transações nos Relatórios (Drill-down):** Implementado via Tooltips/Hover nas barras do gráfico para uma experiência mais fluida. Exibe as 10 maiores transações da categoria. (Concluído)
 - [x] **Investigar Relatórios:** Corrigido o problema onde transações de cartão de crédito eram ignoradas no relatório quando um filtro de moeda estava ativo. Também corrigida a projeção de saldo futuro no gráfico de tendências e o somatório global de transferências. (Concluído)
