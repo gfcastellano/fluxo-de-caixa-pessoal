@@ -52,12 +52,75 @@ Esta sessão focou inicialmente na **consolidação da entrada de voz**, seguida
 - [x] Suporte a categorias, contas e orçamentos via voz.
 - [x] Centralização da interface de voz no `VoiceHeroButton`.
 
+### 5. Feature: Família (Compartilhamento Granular) | Created: 2026-02-12 | Modified: 2026-02-12
+- [x] **Fase 1 — Fundação (Backend + Serviços)** — Concluído em 2026-02-12
+  - Backend: `families.ts` (CRUD famílias, convites, membros, permissões), `familyData.ts` (leitura dados compartilhados)
+  - Frontend: `familyService.ts`, `FamilyContext.tsx`, `types/family.ts`
+  - Registrado rotas em `backend/src/index.ts`, branch `feature/family-sharing`
+- [x] **Fase 2 — UI na Página de Settings** — Concluído em 2026-02-12
+  - `FamilySection.tsx` (seção principal com membros, convites, ações)
+  - `FamilyCreateModal.tsx`, `FamilyInviteModal.tsx`, `FamilySharingConfig.tsx` (permissões granulares + presets)
+  - Integrado em `Settings.tsx`, `FamilyProvider` em `App.tsx`
+  - Traduções PT/EN/ES completas, build TypeScript 0 errors
+- [x] **Fase 3 — Toggle Global de Família** — Concluído em 2026-02-12
+  - `FamilyContext.tsx`: viewMode (personal/family), sharedData cache, loadSharedData()
+  - `familyService.ts`: getSharedAccounts(), getSharedCreditCards()
+  - `FamilyToggle.tsx` (pill toggle nos 3 breakpoints do Layout)
+  - `SharedDataBadge.tsx` (badge de owner name em itens compartilhados)
+  - Integração em: Dashboard, Accounts, CreditCards, Budgets, Reports
+  - Traduções PT/EN/ES para toggle e seções compartilhadas
+  - TypeScript 0 errors
+- [x] **Fase 4 — Configuração de Compartilhamento (Modal)** — Concluído em 2026-02-12
+  - `FamilySharingModal.tsx`: Edição granular de permissões pós-convite.
+  - `FamilySection.tsx`: Botão "Edit Permissions".
+  - `familyService.ts`: `updateSharingPermissions`.
+- [x] **Fase 5 — Integração de Transações Familiares** — Concluído em 2026-02-12
+  - Backend: `GET /family-data/:familyId/transactions` (seguro por permissões).
+  - Frontend: `Transactions.tsx`, `Dashboard.tsx`, `Reports.tsx` (visualização de dados compartilhados).
+  - Fixes: `SharedAccount` type, Dashboard enrichment, Reports category mapping.
+  - Status: resolved / tested (build passed)
+
+### 6. Refinamento de UI e Correção de Layouts | Created: 2026-02-12 | Modified: 2026-02-12
+- [x] **Nomes de Proprietários (Primeiro Nome):** Atualizado `SharedDataBadge` e exibições de conta para mostrar apenas o primeiro nome (ex: "Gabriel" em vez de "Gabriel Felipe").
+- [x] **Fotos de Perfil em Badges:** Integrado `getMemberPhoto` em todos os badges de dados compartilhados (Dashboard, Contas, Cartões, Orçamentos, Transações).
+- [X] **Correção Totalizadores Família:** Resolvido bug onde os cards de resumo da família apareciam zerados (mapeamento de moedas e permissões padrão corrigidos para `showTransactions: true`).
+- [] **Correção Totalizadores Família2:** bug em que os totalizadores da familia só agregam os valores das transacoes da conta, nao dos da familia junto.
+- [x] **Exibição de Proprietário em Listas:** Adicionado o nome do proprietário abaixo do nome da conta/cartão em `Transactions.tsx` e `Dashboard.tsx` usando `SharedDataBadge`.
+- [x] **Tradução de Frequência:** Traduzidas as etiquetas de recorrência ("mensal", "semanal", "anual") em `Transactions.tsx` para todos os idiomas (PT, EN, ES).
+- [x] **Arrumar Layout do Dashboard:** Corrigido erro de sintaxe JSX que impedia a renderização correta das transferências na lista de transações recentes.
+- [x] **Arrumar Layout de Transações:** Corrigida a estrutura quebrada de JSX na coluna de contas/cartões dentro do agrupamento de transações recorrentes.
+- [x] **Enriquecimento de Dados em Relatórios:** Adicionado `ownerName` às transações familiares nos relatórios para garantir que o hover/tooltip mostre o dono corretamente.
+- [x] **Limpeza de Erros TypeScript:** Removidos tokens perdidos (chaves extras) e corrigidos tipos em `Transactions.tsx`.
+  - Status: resolved / tested (build passed)
+---
+### 7. Gestão de Membros e Segurança Avançada (Backlog) | Created: 2026-02-12 | Modified: 2026-02-12
+- [x] **Remoção de Membros:** Implementar funcionalidade para o dono da família remover membros. | Created: 2026-02-12 | Modified: 2026-02-12
+  - Comments: Implementado no backend (DELETE /members/:id) e integrado na FamilySection com confirmação visual. Donos não podem se remover.
+- [x] **Sair da Família:** Permitir que um membro saia voluntariamente de uma família. | Created: 2026-02-12 | Modified: 2026-02-12
+  - Comments: Implementado ajuste no backend para permitir self-removal e adicionado botão "Sair" na UI com confirmação.
+- [ ] **Segurança em Produção:** Implementar as Firestore Security Rules granulares propostas no estudo. | Created: 2026-02-12 | Modified: 2026-02-12
+- [x] **Limite de Membros:** Limitar a no máximo 4 membros por família (e 1 família por usuário). | Created: 2026-02-12 | Modified: 2026-02-12
+  - Comments: Implementado no backend (max 4 membros por família e restrição de 1 família por usuário - dono ou membro).
+
+- [ ] **Seletor de Família Ativa:** Adicionar UI para alternar entre diferentes famílias (atualmente fixo na primeira). | Created: 2026-02-12 | Modified: 2026-02-12
+- [x] **Mecanismo de Auto-reparo:** Sincronizar automaticamente permissões padrão caso membo aceite convite mas dados não carreguem. | Created: 2026-02-12 | Modified: 2026-02-12
+  - Status: tested (Integrado ao FamilyContext)
+- [x] **Correção Totalizadores Família:** BUG - os totalizadores não agregavam família toda. Corrigido typo de mapas e otimizada query BE (evita erro 500/índice). | Created: 2026-02-12 | Modified: 2026-02-12
+  - Status: tested (Dashboard unificado)
+
+💡 Ideas
+- [ ] **Notificações por Email:** Configurar servidor de email real e domínio. | Created: 2026-02-12 | Modified: 2026-02-12
+  - Comments: Implementação inicial com Resend (domínio de teste). Precisa de domínio verificado para envio real.
+  - Status: in progress
+
+
+- [ ] **Tema Visual Familiar:** Cores específicas ou bordas para identificar dados de membros diferentes de forma rápida.
+- [ ] **Histórico de Permissões:** Log de alterações em quem compartilhou o quê e quando.
+
 ---
 **Arquivos Importantes Recentemente Modificados:**
-- `frontend/src/context/VoiceContext.tsx` (Estado centralizado de voz e modais)
-- `frontend/src/components/VoiceHeroButton.tsx` (Lógica de toggle do microfone)
-- `frontend/src/components/Layout.tsx` (Botão flutuante mobile em modais)
-- `frontend/src/pages/Reports.tsx`, `frontend/src/services/reportService.ts` (Correção de relatórios e cartão)
-- `frontend/src/pages/Dashboard.tsx` (Correção de moedas no resumo)
-- `frontend/src/components/TransactionModal.tsx`, `CategoryModal.tsx`, `AccountModal.tsx`, `BudgetModal.tsx` (Refatoração para uso do VoiceHeroButton)
-- `frontend/src/hooks/useVoiceForm.ts` (Exposição do audioBlob para processamento)
+- `frontend/src/pages/Dashboard.tsx` & `Transactions.tsx` (Fix layout, owner name display, localized recurrence)
+- `frontend/src/context/FamilyContext.tsx` & `familyService.ts` (Family view modes and shared data)
+- `frontend/src/components/SharedDataBadge.tsx` (First name logic and photo support)
+- `frontend/src/pages/Reports.tsx` (Shared data enrichment for tooltips)
+- `frontend/src/i18n/locales/` (Translations for family and frequency)

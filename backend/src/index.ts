@@ -10,33 +10,35 @@ import voice from './routes/voice';
 import accounts from './routes/accounts';
 import creditCards from './routes/creditCards';
 import creditCardBills from './routes/creditCardBills';
+import families from './routes/families';
+import familyData from './routes/familyData';
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
 // Custom CORS middleware to handle preflight and actual requests
 app.use('*', async (c, next) => {
   const origin = c.req.header('Origin');
-  
+
   // Allow specific origins
   const allowedOrigins = [
     'http://localhost:5173',
     'https://fluxo-de-caixa-frontend.pages.dev',
     'https://281f2731.fluxo-de-caixa-frontend.pages.dev',
   ];
-  
+
   if (origin && allowedOrigins.includes(origin)) {
     c.header('Access-Control-Allow-Origin', origin);
   }
-  
+
   c.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
   c.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   c.header('Access-Control-Allow-Credentials', 'true');
-  
+
   // Handle preflight requests
   if (c.req.method === 'OPTIONS') {
     return c.body(null, 204);
   }
-  
+
   await next();
 });
 
@@ -58,6 +60,8 @@ app.route('/api/voice', voice);
 app.route('/api/accounts', accounts);
 app.route('/api/credit-cards', creditCards);
 app.route('/api/credit-card-bills', creditCardBills);
+app.route('/api/families', families);
+app.route('/api/family-data', familyData);
 
 // 404 handler
 app.notFound((c) => {
