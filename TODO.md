@@ -84,7 +84,8 @@ Esta sessão focou inicialmente na **consolidação da entrada de voz**, seguida
 - [x] **Nomes de Proprietários (Primeiro Nome):** Atualizado `SharedDataBadge` e exibições de conta para mostrar apenas o primeiro nome (ex: "Gabriel" em vez de "Gabriel Felipe").
 - [x] **Fotos de Perfil em Badges:** Integrado `getMemberPhoto` em todos os badges de dados compartilhados (Dashboard, Contas, Cartões, Orçamentos, Transações).
 - [X] **Correção Totalizadores Família:** Resolvido bug onde os cards de resumo da família apareciam zerados (mapeamento de moedas e permissões padrão corrigidos para `showTransactions: true`).
-- [] **Correção Totalizadores Família2:** bug em que os totalizadores da familia só agregam os valores das transacoes da conta, nao dos da familia junto.
+- [x] **Correção Totalizadores Família2:** bug em que os totalizadores da familia só agregam os valores das transacoes da conta, nao dos da familia junto. | Created: 2026-02-12 | Modified: 2026-02-12
+  - Comments: Resolvido removendo cards duplicados e corrigindo permissões de compartilhamento bidirecional.
 - [x] **Exibição de Proprietário em Listas:** Adicionado o nome do proprietário abaixo do nome da conta/cartão em `Transactions.tsx` e `Dashboard.tsx` usando `SharedDataBadge`.
 - [x] **Tradução de Frequência:** Traduzidas as etiquetas de recorrência ("mensal", "semanal", "anual") em `Transactions.tsx` para todos os idiomas (PT, EN, ES).
 - [x] **Arrumar Layout do Dashboard:** Corrigido erro de sintaxe JSX que impedia a renderização correta das transferências na lista de transações recentes.
@@ -106,6 +107,7 @@ Esta sessão focou inicialmente na **consolidação da entrada de voz**, seguida
   - Status: tested (Integrado ao FamilyContext)
 - [x] **Correção Totalizadores Família:** BUG - os totalizadores não agregavam família toda. Corrigido typo de mapas e otimizada query BE (evita erro 500/índice). | Created: 2026-02-12 | Modified: 2026-02-12
   - Status: tested (Dashboard unificado)
+- [x] **Correção Compartilhamento Bidirecional:** Novos membros agora compartilham automaticamente com todos os membros existentes ao entrar. | Created: 2026-02-12 | Modified: 2026-02-12
 
 💡 Ideas
 - [ ] **Notificações por Email:** Configurar servidor de email real e domínio. | Created: 2026-02-12 | Modified: 2026-02-12
@@ -117,8 +119,6 @@ Esta sessão focou inicialmente na **consolidação da entrada de voz**, seguida
 
 ---
 **Arquivos Importantes Recentemente Modificados:**
-- `frontend/src/pages/Dashboard.tsx` & `Transactions.tsx` (Fix layout, owner name display, localized recurrence)
-- `frontend/src/context/FamilyContext.tsx` & `familyService.ts` (Family view modes and shared data)
-- `frontend/src/components/SharedDataBadge.tsx` (First name logic and photo support)
-- `frontend/src/pages/Reports.tsx` (Shared data enrichment for tooltips)
-- `frontend/src/i18n/locales/` (Translations for family and frequency)
+- `backend/src/routes/families.ts` & `familyData.ts` (Permission logic fixes, bidirectional sharing)
+- `frontend/src/pages/Dashboard.tsx` (Removed duplicate summary cards)
+- `frontend/src/context/FamilyContext.tsx` & `familyService.ts` (Repair logic enhancements)
