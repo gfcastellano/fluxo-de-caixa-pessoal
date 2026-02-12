@@ -102,7 +102,6 @@ Esta sessão focou inicialmente na **consolidação da entrada de voz**, seguida
 - [x] **Limite de Membros:** Limitar a no máximo 4 membros por família (e 1 família por usuário). | Created: 2026-02-12 | Modified: 2026-02-12
   - Comments: Implementado no backend (max 4 membros por família e restrição de 1 família por usuário - dono ou membro).
 
-- [ ] **Seletor de Família Ativa:** Adicionar UI para alternar entre diferentes famílias (atualmente fixo na primeira). | Created: 2026-02-12 | Modified: 2026-02-12
 - [x] **Mecanismo de Auto-reparo:** Sincronizar automaticamente permissões padrão caso membo aceite convite mas dados não carreguem. | Created: 2026-02-12 | Modified: 2026-02-12
   - Status: tested (Integrado ao FamilyContext)
 - [x] **Correção Totalizadores Família:** BUG - os totalizadores não agregavam família toda. Corrigido typo de mapas e otimizada query BE (evita erro 500/índice). | Created: 2026-02-12 | Modified: 2026-02-12
@@ -114,7 +113,6 @@ Esta sessão focou inicialmente na **consolidação da entrada de voz**, seguida
   - Status: in progress
 
 
-- [ ] **Tema Visual Familiar:** Cores específicas ou bordas para identificar dados de membros diferentes de forma rápida.
 - [ ] **Histórico de Permissões:** Log de alterações em quem compartilhou o quê e quando.
 
 ---

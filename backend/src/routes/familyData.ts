@@ -277,17 +277,27 @@ app.post('/:familyId/repair', async (c) => {
                         updatedAt: now,
                     });
                     created++;
-                } else if (!existing.permissions?.accounts?.showTransactions || !existing.permissions?.creditCards?.showTransactions) {
-                    // Upgrade existing config to share transactions (since it's a repair/sync action)
+                } else if (!existing.permissions?.accounts?.showTransactions || !existing.permissions?.creditCards?.showTransactions || existing.permissions?.accounts?.shareAll === undefined) {
+                    // Upgrade existing config to share transactions and ensure robust defaults
+                    const currentPerms = existing.permissions || {};
+                    const currentAccounts = currentPerms.accounts || {};
+                    const currentCreditCards = currentPerms.creditCards || {};
+
                     const updatedPerms = {
-                        ...existing.permissions,
+                        ...currentPerms,
                         accounts: {
-                            ...existing.permissions.accounts,
-                            showTransactions: true
+                            shareAll: currentAccounts.shareAll !== undefined ? currentAccounts.shareAll : true,
+                            showBalance: currentAccounts.showBalance !== undefined ? currentAccounts.showBalance : true,
+                            showTransactions: true, // Force enable
+                            specificIds: currentAccounts.specificIds || []
                         },
                         creditCards: {
-                            ...existing.permissions.creditCards,
-                            showTransactions: true
+                            shareAll: currentCreditCards.shareAll !== undefined ? currentCreditCards.shareAll : true,
+                            showLimit: currentCreditCards.showLimit !== undefined ? currentCreditCards.showLimit : true,
+                            showAvailable: currentCreditCards.showAvailable !== undefined ? currentCreditCards.showAvailable : true,
+                            showBillTotal: currentCreditCards.showBillTotal !== undefined ? currentCreditCards.showBillTotal : true,
+                            showTransactions: true, // Force enable
+                            specificIds: currentCreditCards.specificIds || []
                         }
                     };
                     await firebase.updateDocument('familySharing', existing.id, {

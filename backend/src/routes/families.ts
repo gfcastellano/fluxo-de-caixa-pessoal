@@ -456,37 +456,39 @@ app.post('/invitations/:id/accept', async (c) => {
             updatedAt: now,
         });
 
-        // Resolve inviter's display name from familyMembers
-        const inviterMembers = await firebase.queryDocuments('familyMembers', [
+        // Get all current active members to establish mesh sharing
+        const currentMembers = await firebase.queryDocuments('familyMembers', [
             { field: 'familyId', op: '==', value: inv.familyId },
-            { field: 'userId', op: '==', value: inv.invitedBy },
             { field: 'status', op: '==', value: 'active' },
-        ]);
-        const inviterDisplayName = inviterMembers.length > 0
-            ? (inviterMembers[0] as { displayName: string }).displayName
-            : inv.invitedByName || 'Family Member';
+        ]) as Array<{ userId: string; displayName: string }>;
 
-        // Create sharing: inviter → acceptor (acceptor can see inviter's data)
-        await firebase.createDocument('familySharing', {
-            familyId: inv.familyId,
-            ownerUserId: inv.invitedBy,
-            ownerDisplayName: inviterDisplayName,
-            targetUserId: userId,
-            permissions: inv.permissions || DEFAULT_SHARING_PERMISSIONS,
-            createdAt: now,
-            updatedAt: now,
-        });
+        // Create bidirectional sharing with ALL existing members
+        for (const member of currentMembers) {
+            // Skip self (though strictly shouldn't happen as we just joined)
+            if (member.userId === userId) continue;
 
-        // Create sharing: acceptor → inviter (inviter can see acceptor's data)
-        await firebase.createDocument('familySharing', {
-            familyId: inv.familyId,
-            ownerUserId: userId,
-            ownerDisplayName: acceptorDisplayName,
-            targetUserId: inv.invitedBy,
-            permissions: inv.permissions || DEFAULT_SHARING_PERMISSIONS,
-            createdAt: now,
-            updatedAt: now,
-        });
+            // Share: Current Member -> New Member
+            await firebase.createDocument('familySharing', {
+                familyId: inv.familyId,
+                ownerUserId: member.userId,
+                ownerDisplayName: member.displayName,
+                targetUserId: userId,
+                permissions: DEFAULT_SHARING_PERMISSIONS,
+                createdAt: now,
+                updatedAt: now,
+            });
+
+            // Share: New Member -> Current Member
+            await firebase.createDocument('familySharing', {
+                familyId: inv.familyId,
+                ownerUserId: userId,
+                ownerDisplayName: acceptorDisplayName,
+                targetUserId: member.userId,
+                permissions: inv.permissions || DEFAULT_SHARING_PERMISSIONS,
+                createdAt: now,
+                updatedAt: now,
+            });
+        }
 
         // Update invitation status
         await firebase.updateDocument('familyInvitations', invitationId, {
@@ -543,7 +545,7 @@ app.delete('/:id/members/:memberId', async (c) => {
             { field: 'userId', op: '==', value: userId },
         ]);
         const myMembership = myMemberships[0] as { role: string } | undefined;
-        if (!myMembership || (myMembership.role !== 'owner' && myMembership.role !== 'admin')) {
+        if (!myMembership) {
             return c.json({ success: false, error: 'Unauthorized' }, 403);
         }
 
