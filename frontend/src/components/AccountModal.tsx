@@ -138,6 +138,7 @@ export function AccountModal({
       cancelLabel={t('common.cancel')}
       isRecording={voice.voiceState === 'recording'}
       onCancelRecording={voice.cancelRecording}
+      onVoiceClick={voice.voiceState === 'recording' ? voice.stopRecording : voice.startRecording}
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <Input

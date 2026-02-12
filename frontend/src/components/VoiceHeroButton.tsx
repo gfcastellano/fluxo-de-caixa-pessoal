@@ -1,19 +1,35 @@
 import { useTranslation } from 'react-i18next';
 import { Plus, Mic, Tag, Landmark, PiggyBank } from 'lucide-react';
 import { VoiceConsentModal } from './VoiceConsentModal';
-import { useVoice } from '../context/VoiceContext';
+import { useVoice, type VoicePageType } from '../context/VoiceContext';
 import { cn } from '../utils/cn';
+
+interface VoiceHeroButtonProps {
+    /** Override the default click handler */
+    onClick?: () => void;
+    /** Override the recording state */
+    isRecording?: boolean;
+    /** Override the page type for icon selection */
+    pageType?: VoicePageType;
+    /** Additional CSS classes */
+    className?: string;
+}
 
 /**
  * VoiceHeroButton - The central floating action button for voice input.
- * When clicked, it opens the corresponding form modal for the current page.
+ * Can be used globally (connected to context) or locally (driven by props).
  */
-export function VoiceHeroButton() {
+export function VoiceHeroButton({
+    onClick,
+    isRecording: propIsRecording,
+    pageType,
+    className
+}: VoiceHeroButtonProps = {}) {
     const { t } = useTranslation();
     const {
         currentPageType,
         isEditing,
-        isRecording,
+        isRecording: ctxIsRecording,
         isModalActive,
         requestOpenModal,
         startRecording,
@@ -25,17 +41,21 @@ export function VoiceHeroButton() {
         declineConsent,
     } = useVoice();
 
+    // Determine effective state (prop overrides context)
+    const isRecording = propIsRecording !== undefined ? propIsRecording : ctxIsRecording;
+    const effectivePageType = pageType !== undefined ? pageType : currentPageType;
+
     // Determine the icon based on page type
     const getIcon = () => {
-        switch (currentPageType) {
+        switch (effectivePageType) {
             case 'transaction':
-                return (isEditing || isModalActive) ? <Mic size={28} className={cn(isRecording && "animate-pulse")} /> : <Plus size={28} />;
+                return (isEditing || isModalActive || isRecording) ? <Mic size={28} className={cn(isRecording && "animate-pulse")} /> : <Plus size={28} />;
             case 'category':
-                return (isEditing || isModalActive) ? <Mic size={28} /> : <Tag size={24} />;
+                return (isEditing || isModalActive || isRecording) ? <Mic size={28} className={cn(isRecording && "animate-pulse")} /> : <Tag size={24} />;
             case 'account':
-                return (isEditing || isModalActive) ? <Mic size={28} /> : <Landmark size={24} />;
+                return (isEditing || isModalActive || isRecording) ? <Mic size={28} className={cn(isRecording && "animate-pulse")} /> : <Landmark size={24} />;
             case 'budget':
-                return (isEditing || isModalActive) ? <Mic size={28} /> : <PiggyBank size={24} />;
+                return (isEditing || isModalActive || isRecording) ? <Mic size={28} className={cn(isRecording && "animate-pulse")} /> : <PiggyBank size={24} />;
             default:
                 return <Plus size={28} />;
         }
@@ -45,7 +65,7 @@ export function VoiceHeroButton() {
     const getAriaLabel = () => {
         if (isEditing) return t('voice.updateByVoice', 'Atualizar por voz');
 
-        switch (currentPageType) {
+        switch (effectivePageType) {
             case 'transaction':
                 return t('voice.addTransaction', 'Adicionar transação');
             case 'category':
@@ -61,9 +81,10 @@ export function VoiceHeroButton() {
 
     // Get context label
     const getContextLabel = () => {
+        if (isRecording) return t('voice.listening', 'Ouvindo...');
         if (isEditing) return t('voice.edit', 'Editar');
 
-        switch (currentPageType) {
+        switch (effectivePageType) {
             case 'transaction':
                 return t('voice.add', 'Novo');
             case 'category':
@@ -77,13 +98,23 @@ export function VoiceHeroButton() {
         }
     };
 
-    const handleClick = () => {
-        // Check consent before requesting modal
+    const handleClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        // Check consent before proceeding
         if (!hasConsent) {
             requestConsent();
             return;
         }
 
+        // Use custom handler if provided (e.g. inside modal)
+        if (onClick) {
+            onClick();
+            return;
+        }
+
+        // Default global behavior
         if (isRecording) {
             stopRecording();
             return;
@@ -99,14 +130,16 @@ export function VoiceHeroButton() {
     };
 
     return (
-        <div className="relative group">
+        <div className={cn("relative group", className)}>
             {/* Main Button */}
             <button
+                type="button" // Prevent form submission if placed inside form
                 onClick={handleClick}
                 className={cn(
                     "relative flex items-center justify-center w-14 h-14 rounded-full shadow-float-button transition-all duration-300 z-10",
                     "bg-gradient-to-br from-blue to-blue-hover text-white hover:scale-105",
-                    "active:scale-95 focus:outline-none focus:ring-4 focus:ring-blue/20"
+                    "active:scale-95 focus:outline-none focus:ring-4 focus:ring-blue/20",
+                    isRecording && "ring-4 ring-red-500/30 from-red-500 to-red-600 animate-pulse"
                 )}
                 aria-label={getAriaLabel()}
             >
@@ -114,11 +147,11 @@ export function VoiceHeroButton() {
             </button>
 
             {/* Context Label */}
-            <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] font-medium text-slate">
+            <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] font-medium text-slate pointer-events-none">
                 {getContextLabel()}
             </div>
 
-            {/* Voice Consent Modal */}
+            {/* Voice Consent Modal - Only relevant if this button triggers consent requests */}
             <VoiceConsentModal
                 isOpen={showConsentModal}
                 onAccept={acceptConsent}

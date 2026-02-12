@@ -3,6 +3,7 @@ import { X, Check } from 'lucide-react';
 import { Button } from './Button';
 import { cn } from '../utils/cn';
 import { Portal } from './Portal';
+import { VoiceHeroButton } from './VoiceHeroButton';
 
 interface BaseModalProps {
     isOpen: boolean;
@@ -27,6 +28,7 @@ interface BaseModalProps {
     onVoiceClick?: () => void;
 }
 
+
 // ... (sound effect function code remains unchanged)
 
 export function BaseModal({
@@ -44,6 +46,7 @@ export function BaseModal({
     isEditing = false,
     isRecording = false,
     onCancelRecording,
+    onVoiceClick,
 }: BaseModalProps) {
     if (!isOpen) return null;
 
@@ -85,8 +88,19 @@ export function BaseModal({
                             <form onSubmit={onSubmit} className="space-y-4">
                                 {children}
 
+                                {/* Voice Hero Button (Inline) */}
+                                {onVoiceClick && (
+                                    <div className="flex justify-center py-2 animate-fade-in">
+                                        <VoiceHeroButton
+                                            onClick={onVoiceClick}
+                                            isRecording={isRecording}
+                                            className="shadow-lg hover:shadow-xl scale-90"
+                                        />
+                                    </div>
+                                )}
+
                                 {/* Action buttons */}
-                                <div className="flex flex-row gap-3 pt-4">
+                                <div className="flex flex-row gap-3 pt-2">
                                     <Button
                                         type="submit"
                                         disabled={isSubmitDisabled}
