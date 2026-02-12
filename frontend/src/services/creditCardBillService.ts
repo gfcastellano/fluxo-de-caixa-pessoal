@@ -35,6 +35,7 @@ export async function getCreditCardBills(userId: string): Promise<CreditCardBill
     }) as CreditCardBill[];
 
     // Sort in memory to avoid composite index requirement
+    // TODO: Create composite index (userId + year DESC + month DESC) and move sort to query
     bills.sort((a, b) => {
       if (a.year !== b.year) return b.year - a.year;
       return b.month - a.month;
@@ -89,11 +90,18 @@ export async function getCurrentBill(creditCardId: string): Promise<CreditCardBi
       return null;
     }
 
-    const doc = snapshot.docs[0];
-    return {
+    const bills = snapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
-    } as CreditCardBill;
+    })) as CreditCardBill[];
+
+    // Sort by date ascending to get the earliest open bill (e.g. current month instead of future months)
+    bills.sort((a, b) => {
+      if (a.year !== b.year) return a.year - b.year;
+      return a.month - b.month;
+    });
+
+    return bills[0];
   } catch (error) {
     console.error('Error fetching current bill:', error);
     throw error;

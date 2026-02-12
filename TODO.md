@@ -1,8 +1,7 @@
 # Próximos Passos e Contexto - Sessão de 11/02/2026 (Continuação)
 
 ## Contexto Atual
-Esta sessão focou na **consolidação e centralização da entrada de voz**, movendo o controle principal para o `VoiceHeroButton` e removendo redundâncias dos modais. Além disso, foram feitas correções críticas nos relatórios para transações de cartão de crédito.
-Esta sessão focou na **consolidação e centralização da entrada de voz**, movendo o controle principal para o `VoiceHeroButton` e removendo redundâncias dos modais.
+Esta sessão focou inicialmente na **consolidação da entrada de voz**, seguida por uma **grande refatoração dos Relatórios**. O objetivo foi substituir o sistema de drill-down (tabelas expandidas) por um sistema de **Tooltips dinâmicos** nos gráficos de barras, permitindo visualizar detalhes sem sair da visão geral.
 
 ### O que foi feito:
 1.  **Centralização da Voz:**
@@ -16,11 +15,12 @@ Esta sessão focou na **consolidação e centralização da entrada de voz**, mo
     *   Suporte aprimorado para criação (primeiro áudio) e atualização/correção (áudios subsequentes) de dados via voz.
     *   Melhoria no feedback visual e sonoro durante o uso da voz dentro dos formulários.
 
-4.  **Correção dos Relatórios:**
-    *   Incluído suporte a transações de cartão de crédito nos filtros de moeda dos relatórios.
-    *   Corrigida a projeção de saldo futuro no gráfico de tendências (balanço planejado).
-    *   Ajustada a lógica de transferências globais (ignorar na visão "Todas as Contas" para evitar duplicidade de despesa).
-    *   Corrigido o mapeamento de moedas para cartões de crédito no Dashboard.
+4.  **Refatoração de Relatórios e Tooltips:**
+    *   Implementado o componente `CategoryTooltip` para exibir as 10 maiores transações de uma categoria ao passar o mouse nas barras.
+    *   **Correção de Duplicidade:** Resolvido o problema onde transferências internas apareciam duas vezes nos relatórios. Implementada deduplicação por ID de transação.
+    *   **Correção de Chaves (React Keys):** Corrigido o erro de `duplicate key` no console ao renderizar listas de transações no hover.
+    *   **Filtros de Transferência:** Refinada a lógica para que "Saques" e outras transferências apareçam apenas em suas categorias corretas e não poluam outras barras.
+    *   **Traduções:** Adicionadas chaves de tradução para os novos elementos visuais em PT, EN e ES.
 
 ## Tarefas Pendentes (To-Do)
 
@@ -31,6 +31,8 @@ Esta sessão focou na **consolidação e centralização da entrada de voz**, mo
 - [x] **Cartões nas Contas:** Exibir os cartões de crédito vinculados dentro dos cards de suas respectivas contas.
 - [x] **Consolidar Entrada de Voz:** Remover botões de microfone dos modais e usar apenas o botão central. (Concluído hoje)
 - [x] **Release para Produção:** Commitar, push, merge para `main` e deploy. (Concluído em 11/02/2026)
+- [x] **Relatórios (Hover/Popup):** Implementado detalhamento de transações ao passar o mouse nas barras do gráfico de Relatórios. (Concluído)
+- [x] **Correção Bugs Relatórios:** Resolvidos problemas de duplicidade de chaves e transações repetidas nos tooltips. (Concluído)
 
 ### 2. Status do Módulo de Cartão de Crédito: **COMPLETO** ✅
 - [x] **Lógica de "Melhor Dia":** Transações após o fechamento vão para a próxima fatura.
@@ -39,8 +41,9 @@ Esta sessão focou na **consolidação e centralização da entrada de voz**, mo
 - [x] **Visualização:** Ícones dedicados, exibição no dashboard e listagem de cartões nas contas.
 
 ### 3. Backlog Técnico (Futuro)
-- [ ] **Otimização de Query:** Voltar a usar `orderBy` no Firestore criando os índices compostos necessários.
-- [ ] **Exibir Fatura Atual no Card:** Carregar o valor da fatura atual diretamente no card do cartão na tela de Contas.
+- [ ] **Otimização de Query:** Voltar a usar `orderBy` no Firestore criando os índices compostos necessários. **(Revertido por causar erro no Dashboard. Necessário criar Índice Composto: `userId` + `year` (DESC) + `month` (DESC) antes de reabilitar)**.
+- [x] **Exibir Fatura Atual no Card:** Carregar o valor da fatura atual diretamente no card do cartão na tela de Contas. (Concluído em 11/02/2026)
+- [x] **Detalhamento Dinâmico de Transações nos Relatórios (Drill-down):** Implementado via Tooltips/Hover nas barras do gráfico para uma experiência mais fluida. Exibe as 10 maiores transações da categoria. (Concluído)
 - [x] **Investigar Relatórios:** Corrigido o problema onde transações de cartão de crédito eram ignoradas no relatório quando um filtro de moeda estava ativo. Também corrigida a projeção de saldo futuro no gráfico de tendências e o somatório global de transferências. (Concluído)
 
 ### 4. Gestão de Transações via Voz (COMPLETO)
