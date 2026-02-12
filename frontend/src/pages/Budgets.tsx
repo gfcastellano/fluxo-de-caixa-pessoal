@@ -20,10 +20,14 @@ import { Plus, Edit2, Trash2 } from 'lucide-react';
 import { getCurrentMonth } from '../utils/format';
 import { cn } from '../utils/cn';
 import { PageDescription } from '../components/PageDescription';
+import { useFamily } from '../context/FamilyContext';
+import { SharedDataBadge } from '../components/SharedDataBadge';
+import { PiggyBank } from 'lucide-react';
 
 export function Budgets() {
   const { user } = useAuth();
   const { t } = useTranslation();
+  const { viewMode, sharedData, getMemberPhoto } = useFamily();
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [budgetStatuses, setBudgetStatuses] = useState<Map<string, BudgetStatus>>(
@@ -164,91 +168,150 @@ export function Budgets() {
 
       <div className="flex-1 min-h-0 overflow-y-auto sm:overflow-visible">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-6 pb-4 sm:pb-0">
-        {budgets.length === 0 ? (
-          <Card className="md:col-span-2 bg-white/40 backdrop-blur-xl border-white/60">
-            <CardContent className="text-center py-6 sm:py-8 p-3 sm:p-6">
-              <p className="text-xs sm:text-sm text-neutral-500">{t('budgets.noBudgets')}</p>
-              <Button onClick={() => handleOpenModal()} className="mt-3 sm:mt-4 w-full sm:w-auto whitespace-nowrap text-xs sm:text-sm h-7 sm:h-9" leftIcon={<Plus className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />}>
-                {t('budgets.addNew')}
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          budgets.map((budget) => {
-            const status = budgetStatuses.get(budget.id);
-            const percentage = status?.percentage || 0;
-            const isOverBudget = status?.isOverBudget || false;
+          {budgets.length === 0 ? (
+            <Card className="md:col-span-2 bg-white/40 backdrop-blur-xl border-white/60">
+              <CardContent className="text-center py-6 sm:py-8 p-3 sm:p-6">
+                <p className="text-xs sm:text-sm text-neutral-500">{t('budgets.noBudgets')}</p>
+                <Button onClick={() => handleOpenModal()} className="mt-3 sm:mt-4 w-full sm:w-auto whitespace-nowrap text-xs sm:text-sm h-7 sm:h-9" leftIcon={<Plus className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />}>
+                  {t('budgets.addNew')}
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            budgets.map((budget) => {
+              const status = budgetStatuses.get(budget.id);
+              const percentage = status?.percentage || 0;
+              const isOverBudget = status?.isOverBudget || false;
 
-            return (
-              <Card
-                key={budget.id}
-                className={cn(
-                  "transition-all duration-1000 bg-white/40 backdrop-blur-xl border-white/60",
-                  highlightedId === budget.id ? "animate-highlight scale-[1.02]" : ""
-                )}
-              >
-                <CardHeader className="flex flex-row items-center justify-between pb-1.5 sm:pb-2 p-3 sm:p-6">
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <div
-                      className="w-3 h-3 sm:w-4 sm:h-4 rounded-full ring-2 ring-white shadow-sm flex-shrink-0"
-                      style={{ backgroundColor: getCategoryColor(budget.categoryId) }}
-                    />
-                    <CardTitle className="text-sm sm:text-lg font-bold text-ink truncate">
-                      {getCategoryName(budget.categoryId)}
-                    </CardTitle>
-                  </div>
-                  <div className="flex flex-wrap gap-0.5 sm:gap-1">
-                    <button
-                      onClick={() => handleOpenModal(budget)}
-                      className="p-1.5 sm:p-2 text-neutral-600 hover:bg-white hover:shadow-sm rounded-lg transition-all"
-                    >
-                      <Edit2 className="h-3 w-3 sm:h-4 sm:w-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(budget.id)}
-                      className="p-1.5 sm:p-2 text-danger-600 hover:bg-danger-50 rounded-lg transition-colors"
-                    >
-                      <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
-                    </button>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
-                  <div className="space-y-2 sm:space-y-4">
-                    <div className="flex justify-between text-xs sm:text-sm">
-                      <span className="text-neutral-600 font-medium">
-                        {t('budgets.spent')}: {formatCurrency(status?.spent || 0)}
-                      </span>
-                      <span className="text-neutral-600 font-medium">
-                        {t('budgets.form.amount')}: {formatCurrency(budget.amount)}
-                      </span>
-                    </div>
-                    <div className="relative h-2.5 sm:h-4 bg-slate/10 rounded-full overflow-hidden">
+              return (
+                <Card
+                  key={budget.id}
+                  className={cn(
+                    "transition-all duration-1000 bg-white/40 backdrop-blur-xl border-white/60",
+                    highlightedId === budget.id ? "animate-highlight scale-[1.02]" : ""
+                  )}
+                >
+                  <CardHeader className="flex flex-row items-center justify-between pb-1.5 sm:pb-2 p-3 sm:p-6">
+                    <div className="flex items-center gap-2 sm:gap-3">
                       <div
-                        className={`absolute top-0 left-0 h-full transition-all ${isOverBudget ? 'bg-red-500' : 'bg-emerald-500'}`}
-                        style={{ width: `${Math.min(percentage, 100)}%` }}
+                        className="w-3 h-3 sm:w-4 sm:h-4 rounded-full ring-2 ring-white shadow-sm flex-shrink-0"
+                        style={{ backgroundColor: getCategoryColor(budget.categoryId) }}
                       />
+                      <CardTitle className="text-sm sm:text-lg font-bold text-ink truncate">
+                        {getCategoryName(budget.categoryId)}
+                      </CardTitle>
                     </div>
-                    <div className="flex justify-between text-xs sm:text-sm">
-                      <span className={`font-bold ${isOverBudget ? 'text-red-600' : 'text-emerald-600'}`}>
-                        {percentage.toFixed(1)}% {t('budgets.spent').toLowerCase()}
-                      </span>
-                      <span className="text-neutral-600 font-medium">
-                        {t('budgets.remaining')}: {formatCurrency(status?.remaining || 0)}
-                      </span>
+                    <div className="flex flex-wrap gap-0.5 sm:gap-1">
+                      <button
+                        onClick={() => handleOpenModal(budget)}
+                        className="p-1.5 sm:p-2 text-neutral-600 hover:bg-white hover:shadow-sm rounded-lg transition-all"
+                      >
+                        <Edit2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(budget.id)}
+                        className="p-1.5 sm:p-2 text-danger-600 hover:bg-danger-50 rounded-lg transition-colors"
+                      >
+                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                      </button>
                     </div>
-                    {isOverBudget && (
-                      <p className="text-xs sm:text-sm text-red-600 bg-red-50 p-1.5 sm:p-2 rounded-lg border border-red-100">
-                        {t('budgets.overBudget')} {formatCurrency(Math.abs(status?.remaining || 0))}
-                      </p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })
-        )}
+                  </CardHeader>
+                  <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
+                    <div className="space-y-2 sm:space-y-4">
+                      <div className="flex justify-between text-xs sm:text-sm">
+                        <span className="text-neutral-600 font-medium">
+                          {t('budgets.spent')}: {formatCurrency(status?.spent || 0)}
+                        </span>
+                        <span className="text-neutral-600 font-medium">
+                          {t('budgets.form.amount')}: {formatCurrency(budget.amount)}
+                        </span>
+                      </div>
+                      <div className="relative h-2.5 sm:h-4 bg-slate/10 rounded-full overflow-hidden">
+                        <div
+                          className={`absolute top-0 left-0 h-full transition-all ${isOverBudget ? 'bg-red-500' : 'bg-emerald-500'}`}
+                          style={{ width: `${Math.min(percentage, 100)}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-xs sm:text-sm">
+                        <span className={`font-bold ${isOverBudget ? 'text-red-600' : 'text-emerald-600'}`}>
+                          {percentage.toFixed(1)}% {t('budgets.spent').toLowerCase()}
+                        </span>
+                        <span className="text-neutral-600 font-medium">
+                          {t('budgets.remaining')}: {formatCurrency(status?.remaining || 0)}
+                        </span>
+                      </div>
+                      {isOverBudget && (
+                        <p className="text-xs sm:text-sm text-red-600 bg-red-50 p-1.5 sm:p-2 rounded-lg border border-red-100">
+                          {t('budgets.overBudget')} {formatCurrency(Math.abs(status?.remaining || 0))}
+                        </p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })
+          )}
         </div>
       </div>
+
+      {/* Family Shared Budgets */}
+      {viewMode === 'family' && sharedData.some(m => m.budgets && m.budgets.length > 0) && (
+        <div className="mt-4">
+          <Card className="bg-violet-50/40 backdrop-blur-xl border-violet-200/40">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-violet-700 flex items-center gap-2">
+                <PiggyBank className="h-4 w-4" />
+                {t('family.shared.budgets')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {sharedData.map(member =>
+                  member.budgets?.map(budget => {
+                    const percentage = budget.spent !== undefined ? (budget.spent / budget.amount) * 100 : 0;
+                    const isOver = percentage > 100;
+                    return (
+                      <div key={`${member.ownerUserId}-${budget.id}`} className="p-3 rounded-xl bg-white/50 border border-violet-100/50">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-ink">{budget.categoryName}</span>
+                            <SharedDataBadge ownerName={(budget.ownerName || '').split(' ')[0]} photoURL={getMemberPhoto(budget.ownerUserId)} />
+                          </div>
+                        </div>
+                        <div className="flex justify-between text-xs mb-1">
+                          <span className="text-slate">
+                            {budget.spent !== undefined ? formatCurrency(budget.spent) : '—'}
+                          </span>
+                          <span className="text-slate">{formatCurrency(budget.amount)}</span>
+                        </div>
+                        <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
+                          <div
+                            className={cn(
+                              "h-full transition-all duration-500",
+                              isOver ? 'bg-red-500' : percentage > 70 ? 'bg-amber-500' : 'bg-violet-500'
+                            )}
+                            style={{ width: `${Math.min(percentage, 100)}%` }}
+                          />
+                        </div>
+                        <div className="flex justify-between text-xs mt-1">
+                          <span className={cn('font-bold', isOver ? 'text-red-600' : 'text-violet-600')}>
+                            {percentage.toFixed(1)}%
+                          </span>
+                          {budget.remaining !== undefined && (
+                            <span className="text-slate">
+                              {formatCurrency(budget.remaining)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Budget Modal */}
       <BudgetModal

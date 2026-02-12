@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { usePageModal } from '../hooks/usePageModal';
-import { Card, CardContent } from '../components/Card';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/Card';
 import { AccountModal } from '../components/AccountModal';
 import {
   getAccounts,
@@ -21,10 +21,13 @@ import { cn } from '../utils/cn';
 import { PageDescription } from '../components/PageDescription';
 
 import { CashCurrencyIcon } from '../components/CashCurrencyIcon';
+import { useFamily } from '../context/FamilyContext';
+import { SharedDataBadge } from '../components/SharedDataBadge';
 
 export function Accounts() {
   const { user } = useAuth();
   const { t } = useTranslation();
+  const { viewMode, sharedData, getMemberPhoto } = useFamily();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
   const [accountBalances, setAccountBalances] = useState<Record<string, number>>({});
@@ -377,6 +380,47 @@ export function Accounts() {
             </div>
           </div>
 
+        </div>
+      )}
+
+      {/* Family Shared Accounts */}
+      {viewMode === 'family' && sharedData.some(m => m.accounts && m.accounts.length > 0) && (
+        <div className="mt-4">
+          <Card className="bg-violet-50/40 backdrop-blur-xl border-violet-200/40">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-violet-700 flex items-center gap-2">
+                <Wallet className="h-4 w-4" />
+                {t('family.shared.accounts')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                {sharedData.map(member =>
+                  member.accounts?.map(acc => (
+                    <div key={`${member.ownerUserId}-${acc.id}`} className="flex items-center justify-between p-3 rounded-xl bg-white/50 border border-violet-100/50">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-9 h-9 rounded-lg bg-violet-100 flex items-center justify-center flex-shrink-0">
+                          <Wallet size={16} className="text-violet-600" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-ink truncate">{acc.name}</p>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="text-[11px] text-slate">{acc.currency}</span>
+                            <SharedDataBadge ownerName={(acc.ownerName || '').split(' ')[0]} photoURL={getMemberPhoto(acc.ownerUserId)} />
+                          </div>
+                        </div>
+                      </div>
+                      {acc.balance !== undefined && (
+                        <p className={`text-base font-bold tabular-nums ${acc.balance >= 0 ? 'text-ink' : 'text-red-600'}`}>
+                          {formatCurrency(acc.balance, acc.currency)}
+                        </p>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>

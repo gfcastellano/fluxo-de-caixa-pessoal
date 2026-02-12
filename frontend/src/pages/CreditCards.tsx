@@ -19,6 +19,8 @@ import type { CreditCard, CreditCardBill, Account } from '../types';
 import { Edit2, Trash2, CreditCard as CreditCardIcon, Plus, Calendar, DollarSign, AlertCircle, FileText } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { PageDescription } from '../components/PageDescription';
+import { useFamily } from '../context/FamilyContext';
+import { SharedDataBadge } from '../components/SharedDataBadge';
 
 interface CreditCardWithDetails extends CreditCard {
   currentBill?: CreditCardBill;
@@ -29,6 +31,7 @@ interface CreditCardWithDetails extends CreditCard {
 export function CreditCards() {
   const { user } = useAuth();
   const { t } = useTranslation();
+  const { viewMode, sharedData, getMemberPhoto } = useFamily();
   const [creditCards, setCreditCards] = useState<CreditCardWithDetails[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
@@ -387,6 +390,56 @@ export function CreditCards() {
               </Card>
             );
           })}
+        </div>
+      )}
+
+      {/* Family Shared Credit Cards */}
+      {viewMode === 'family' && sharedData.some(m => m.creditCards && m.creditCards.length > 0) && (
+        <div className="mt-4">
+          <Card className="bg-violet-50/40 backdrop-blur-xl border-violet-200/40">
+            <div className="p-4">
+              <h3 className="text-sm font-medium text-violet-700 flex items-center gap-2 mb-3">
+                <CreditCardIcon className="h-4 w-4" />
+                {t('family.shared.creditCards')}
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {sharedData.map(member =>
+                  member.creditCards?.map(card => (
+                    <div key={`${member.ownerUserId}-${card.id}`} className="p-3 rounded-xl bg-white/50 border border-violet-100/50">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div
+                            className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                            style={{ backgroundColor: `${card.color || '#8b5cf6'}15` }}
+                          >
+                            <CreditCardIcon size={16} style={{ color: card.color || '#8b5cf6' }} />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-ink truncate">{card.name}</p>
+                            <SharedDataBadge ownerName={(card.ownerName || '').split(' ')[0]} photoURL={getMemberPhoto(card.ownerUserId)} />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        {card.creditLimit !== undefined && (
+                          <div>
+                            <p className="text-slate">{t('creditCards.limit')}</p>
+                            <p className="font-bold text-ink">{formatCurrency(card.creditLimit)}</p>
+                          </div>
+                        )}
+                        {card.billTotal !== undefined && (
+                          <div>
+                            <p className="text-slate">{t('creditCards.bill')}</p>
+                            <p className="font-bold text-ink">{formatCurrency(card.billTotal)}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </Card>
         </div>
       )}
     </div>

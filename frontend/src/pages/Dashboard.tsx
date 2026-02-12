@@ -9,6 +9,7 @@ import { Button } from '../components/Button';
 import { formatCurrency, formatMonthYear, getCurrentMonth } from '../utils/format';
 import { getTranslatedCategoryName } from '../utils/categoryTranslations';
 import { getTransactions } from '../services/transactionService';
+import { getFamilyTransactions, repairSharing } from '../services/familyService';
 import { getAccounts, calculateAccountBalance } from '../services/accountService';
 import { getCategories } from '../services/categoryService';
 import { getCreditCards } from '../services/creditCardService';
@@ -16,10 +17,12 @@ import { getCreditCardBills } from '../services/creditCardBillService';
 import type { Transaction, Account, Category, CreditCard, CreditCardBill } from '../types';
 import { enrichTransactions } from '../utils/transactionEnrichment';
 import { CashCurrencyIcon } from '../components/CashCurrencyIcon';
-import { TrendingUp, TrendingDown, ArrowRightLeft, Wallet, Plus, Calendar, CreditCard as CreditCardIcon, Landmark } from 'lucide-react';
+import { TrendingUp, TrendingDown, ArrowRightLeft, Wallet, Plus, Calendar, CreditCard as CreditCardIcon, Landmark, PiggyBank, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PageDescription } from '../components/PageDescription';
 import { cn } from '../utils/cn';
+import { useFamily } from '../context/FamilyContext';
+import { SharedDataBadge } from '../components/SharedDataBadge';
 
 interface CurrencySummary {
   income: number;
@@ -33,6 +36,7 @@ export function Dashboard() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [currencySummaries, setCurrencySummaries] = useState<Record<string, CurrencySummary>>({});
+  const [familyCurrencySummaries, setFamilyCurrencySummaries] = useState<Record<string, CurrencySummary>>({});
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
@@ -43,12 +47,13 @@ export function Dashboard() {
 
   // Access voice context for Hero button modal trigger
   const { shouldOpenModal, clearModalRequest } = useVoice();
+  const { viewMode, sharedData, activeFamily, getMemberPhoto } = useFamily();
 
   useEffect(() => {
     if (user) {
       loadData();
     }
-  }, [user]);
+  }, [user, viewMode, activeFamily?.id, sharedData]); // Reload when view mode, family, or shared data changes
 
   // When Hero button is clicked on Dashboard, navigate to /transactions to add
   useEffect(() => {
@@ -74,12 +79,83 @@ export function Dashboard() {
         getCreditCardBills(user!.uid),
       ]);
 
+      let allTransactions = transactions;
+      let sharedTransactions: Transaction[] = [];
+
+      // Fetch shared transactions if in family mode
+      if (viewMode === 'family' && activeFamily) {
+        try {
+          let familyResponse = await getFamilyTransactions(activeFamily.id, {
+            startDate,
+            endDate
+          });
+
+          // If we have family members but no transactions, try to repair sharing configs once
+          if (familyResponse.success && familyResponse.data && familyResponse.data.length === 0 && activeFamily.members?.length > 1) {
+            console.log('[Dashboard] No shared transactions found, triggering sharing repair...');
+            await repairSharing(activeFamily.id);
+            // Re-fetch after repair
+            familyResponse = await getFamilyTransactions(activeFamily.id, { startDate, endDate });
+          }
+
+          if (familyResponse.success && familyResponse.data) {
+            console.log(`[Dashboard] Fetched ${familyResponse.data.length} shared transactions`);
+            // Enrich shared transactions with account/card info from sharedData
+            const flatSharedAccounts = sharedData.flatMap(m => m.accounts || []);
+            const flatSharedCards = sharedData.flatMap(m => m.creditCards || []);
+
+            const enrichedFamilyData = familyResponse.data.map(tx => {
+              let account = tx.account;
+              let creditCard = tx.creditCard;
+
+              if (!account && tx.accountId) {
+                const found = flatSharedAccounts.find(a => a.id === tx.accountId);
+                if (found) {
+                  account = {
+                    id: found.id,
+                    name: found.name,
+                    color: found.color,
+                    currency: found.currency,
+                    type: found.type,
+                    icon: found.icon || '',
+                    balance: found.balance,
+                    initialBalance: 0,
+                    userId: tx.ownerUserId || ''
+                  } as any;
+                }
+              }
+              if (!creditCard && tx.creditCardId) {
+                const found = flatSharedCards.find(c => c.id === tx.creditCardId);
+                if (found) {
+                  creditCard = {
+                    id: found.id,
+                    name: found.name,
+                    color: found.color,
+                    creditLimit: found.creditLimit,
+                    closingDay: 1,
+                    dueDay: 1,
+                    userId: tx.ownerUserId || ''
+                  } as any;
+                }
+              }
+
+              return { ...tx, account, creditCard, isShared: true };
+            });
+
+            sharedTransactions = enrichedFamilyData;
+            allTransactions = [...allTransactions, ...enrichedFamilyData];
+            console.log(`[Dashboard] Combined pool: ${allTransactions.length} transactions`);
+          }
+        } catch (err) {
+          console.error('Failed to load family transactions', err);
+        }
+      }
+
       const accountCurrencyMap: Record<string, string> = {};
       accountsData.forEach((account) => {
         accountCurrencyMap[account.id] = account.currency;
       });
 
-      // Map credit card IDs to currencies
       const cardCurrencyMap: Record<string, string> = {};
       creditCardsData.forEach(card => {
         const linkedAccount = accountsData.find(a => a.id === card.linkedAccountId);
@@ -88,14 +164,40 @@ export function Dashboard() {
         }
       });
 
-      const summaries: Record<string, CurrencySummary> = {};
+      // Build shared item currency maps
+      const sharedAccountCurrencyMap: Record<string, string> = {};
+      const sharedCardCurrencyMap: Record<string, string> = {};
 
+      sharedData.forEach(member => {
+        member.accounts?.forEach(acc => {
+          sharedAccountCurrencyMap[acc.id] = acc.currency;
+        });
+        member.creditCards?.forEach(card => {
+          // If we have accounts for this member, try to find the linked one's currency
+          const linkedAccount = member.accounts?.find(a => a.id === (card as any).linkedAccountId);
+          if (linkedAccount) {
+            sharedCardCurrencyMap[card.id] = linkedAccount.currency;
+          } else {
+            // Default to BRL for shared cards if we can't find the linked account currency
+            sharedCardCurrencyMap[card.id] = 'BRL';
+          }
+        });
+      });
+
+      const getTransactionCurrency = (tx: any) => {
+        if (tx.accountId) {
+          return accountCurrencyMap[tx.accountId] || sharedAccountCurrencyMap[tx.accountId] || 'BRL';
+        }
+        if (tx.creditCardId) {
+          return cardCurrencyMap[tx.creditCardId] || sharedCardCurrencyMap[tx.creditCardId] || 'BRL';
+        }
+        return 'BRL';
+      };
+
+      const summaries: Record<string, CurrencySummary> = {};
+      // Top cards: Personal data only
       transactions.forEach((transaction) => {
-        const currency = transaction.accountId
-          ? accountCurrencyMap[transaction.accountId]
-          : transaction.creditCardId
-            ? cardCurrencyMap[transaction.creditCardId]
-            : 'BRL';
+        const currency = getTransactionCurrency(transaction);
 
         if (!summaries[currency]) {
           summaries[currency] = { income: 0, expenses: 0, balance: 0 };
@@ -106,7 +208,6 @@ export function Dashboard() {
         } else if (transaction.type === 'expense') {
           summaries[currency].expenses += transaction.amount;
         }
-        // transfers are internal movements and don't affect income/expense summaries
       });
 
       Object.keys(summaries).forEach((currency) => {
@@ -114,17 +215,68 @@ export function Dashboard() {
       });
 
       setCurrencySummaries(summaries);
-      setCurrencySummaries(summaries);
+
+      // Calculate family summaries (Combined: Me + Shared)
+      const fSummaries: Record<string, CurrencySummary> = {};
+
+      // Use allTransactions if in family mode, otherwise just the local pool
+      const familyPool = viewMode === 'family' ? allTransactions : transactions;
+
+      familyPool.forEach((transaction) => {
+        const currency = getTransactionCurrency(transaction);
+
+        if (!fSummaries[currency]) {
+          fSummaries[currency] = { income: 0, expenses: 0, balance: 0 };
+        }
+
+        if (transaction.type === 'income') {
+          fSummaries[currency].income += transaction.amount;
+        } else if (transaction.type === 'expense') {
+          fSummaries[currency].expenses += transaction.amount;
+        }
+      });
+
+      Object.keys(fSummaries).forEach((currency) => {
+        fSummaries[currency].balance = fSummaries[currency].income - fSummaries[currency].expenses;
+      });
+
+      setFamilyCurrencySummaries(fSummaries);
 
       // Enrich transactions with account and category data for display
+      // We need to include shared accounts/cards in the enrichment process
+      const flatSharedAccounts = sharedData.flatMap(m => m.accounts || []).map(a => ({
+        id: a.id,
+        name: a.name,
+        color: a.color,
+        currency: a.currency,
+        type: a.type,
+        icon: a.icon || '',
+        balance: a.balance,
+        initialBalance: 0,
+        userId: a.ownerUserId || '',
+        ownerName: a.ownerName
+      } as any));
+
+      const flatSharedCards = sharedData.flatMap(m => m.creditCards || []).map(c => ({
+        id: c.id,
+        name: c.name,
+        color: c.color,
+        creditLimit: c.creditLimit,
+        closingDay: 1,
+        dueDay: 1,
+        userId: c.ownerUserId || '',
+        ownerName: c.ownerName,
+        linkedAccountId: (c as any).linkedAccountId
+      } as any));
+
       const enrichedTransactions = enrichTransactions(
-        transactions,
-        accountsData,
+        allTransactions,
+        [...accountsData, ...flatSharedAccounts],
         categoriesData,
-        creditCardsData
+        [...creditCardsData, ...flatSharedCards]
       );
 
-      setRecentTransactions(enrichedTransactions.slice(0, 5));
+      setRecentTransactions(enrichedTransactions.slice(0, 10));
       setAccounts(accountsData);
       setAccountCurrencyMap(accountCurrencyMap);
 
@@ -164,10 +316,10 @@ export function Dashboard() {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
         {/* Income Card */}
-        <Card hoverable className="bg-white/40 backdrop-blur-xl border-white/60 min-h-[80px] lg:min-h-[120px]" style={{ borderLeftWidth: '4px', borderLeftColor: `rgba(34, 197, 94, ${Math.min(Object.values(currencySummaries).reduce((sum, s) => sum + s.income, 0) / 20000 + 0.3, 1)})` }}>
+        <Card hoverable className="bg-white/40 backdrop-blur-xl border-white/60 min-h-[80px] lg:min-h-[120px]" style={{ borderLeftWidth: '4px', borderLeftColor: `rgba(34, 197, 94, ${Math.min(Object.values(viewMode === 'family' ? familyCurrencySummaries : currencySummaries).reduce((sum, s) => sum + s.income, 0) / 20000 + 0.3, 1)})` }}>
           <CardHeader className="flex flex-row items-center justify-between pb-1 lg:pb-2">
             <CardTitle className="text-xs lg:text-sm font-medium text-slate truncate">
-              {t('dashboard.totalIncome')}
+              {t('dashboard.totalIncome')} {viewMode === 'family' && '(Família)'}
             </CardTitle>
             <div className="p-1.5 lg:p-2 bg-emerald/10 rounded-xl flex-shrink-0">
               <TrendingUp className="h-3 w-3 lg:h-4 lg:w-4 text-emerald" />
@@ -175,12 +327,12 @@ export function Dashboard() {
           </CardHeader>
           <CardContent className="pt-0">
             <div className="space-y-0.5 lg:space-y-1">
-              {Object.keys(currencySummaries).length === 0 ? (
+              {Object.keys(viewMode === 'family' ? familyCurrencySummaries : currencySummaries).length === 0 ? (
                 <div className="text-base lg:text-xl font-bold text-emerald tabular-nums truncate">
                   {formatCurrency(0)}
                 </div>
               ) : (
-                Object.entries(currencySummaries).map(([currency, summary]) => (
+                Object.entries(viewMode === 'family' ? familyCurrencySummaries : currencySummaries).map(([currency, summary]) => (
                   <div key={currency} className="text-base lg:text-xl font-bold text-emerald tabular-nums tracking-tight truncate">
                     {formatCurrency(summary.income, currency)}
                   </div>
@@ -191,10 +343,10 @@ export function Dashboard() {
         </Card>
 
         {/* Expenses Card */}
-        <Card hoverable className="bg-white/40 backdrop-blur-xl border-white/60 min-h-[80px] lg:min-h-[120px]" style={{ borderLeftWidth: '4px', borderLeftColor: `rgba(255, 92, 138, ${Math.min(Object.values(currencySummaries).reduce((sum, s) => sum + s.expenses, 0) / 15000 + 0.3, 1)})` }}>
+        <Card hoverable className="bg-white/40 backdrop-blur-xl border-white/60 min-h-[80px] lg:min-h-[120px]" style={{ borderLeftWidth: '4px', borderLeftColor: `rgba(255, 92, 138, ${Math.min(Object.values(viewMode === 'family' ? familyCurrencySummaries : currencySummaries).reduce((sum, s) => sum + s.expenses, 0) / 15000 + 0.3, 1)})` }}>
           <CardHeader className="flex flex-row items-center justify-between pb-1 lg:pb-2">
             <CardTitle className="text-xs lg:text-sm font-medium text-slate truncate">
-              {t('dashboard.totalExpenses')}
+              {t('dashboard.totalExpenses')} {viewMode === 'family' && '(Família)'}
             </CardTitle>
             <div className="p-1.5 lg:p-2 bg-rose/10 rounded-xl flex-shrink-0">
               <TrendingDown className="h-3 w-3 lg:h-4 lg:w-4 text-rose" />
@@ -202,12 +354,12 @@ export function Dashboard() {
           </CardHeader>
           <CardContent className="pt-0">
             <div className="space-y-0.5 lg:space-y-1">
-              {Object.keys(currencySummaries).length === 0 ? (
+              {Object.keys(viewMode === 'family' ? familyCurrencySummaries : currencySummaries).length === 0 ? (
                 <div className="text-base lg:text-xl font-bold text-rose tabular-nums truncate">
                   {formatCurrency(0)}
                 </div>
               ) : (
-                Object.entries(currencySummaries).map(([currency, summary]) => (
+                Object.entries(viewMode === 'family' ? familyCurrencySummaries : currencySummaries).map(([currency, summary]) => (
                   <div key={currency} className="text-base lg:text-xl font-bold text-rose tabular-nums tracking-tight truncate">
                     {formatCurrency(summary.expenses, currency)}
                   </div>
@@ -218,23 +370,23 @@ export function Dashboard() {
         </Card>
 
         {/* Balance Card */}
-        <Card hoverable className="bg-white/40 backdrop-blur-xl border-white/60 min-h-[80px] lg:min-h-[120px] sm:col-span-2 lg:col-span-1" style={{ borderLeftWidth: '4px', borderLeftColor: Object.values(currencySummaries).reduce((sum, s) => sum + s.balance, 0) >= 0 ? `rgba(34, 197, 94, ${Math.min(Object.values(currencySummaries).reduce((sum, s) => sum + s.balance, 0) / 20000 + 0.3, 1)})` : `rgba(255, 92, 138, ${Math.min(Math.abs(Object.values(currencySummaries).reduce((sum, s) => sum + s.balance, 0)) / 20000 + 0.3, 1)})` }}>
+        <Card hoverable className="bg-white/40 backdrop-blur-xl border-white/60 min-h-[80px] lg:min-h-[120px] sm:col-span-2 lg:col-span-1" style={{ borderLeftWidth: '4px', borderLeftColor: Object.values(viewMode === 'family' ? familyCurrencySummaries : currencySummaries).reduce((sum, s) => sum + s.balance, 0) >= 0 ? `rgba(34, 197, 94, ${Math.min(Object.values(viewMode === 'family' ? familyCurrencySummaries : currencySummaries).reduce((sum, s) => sum + s.balance, 0) / 20000 + 0.3, 1)})` : `rgba(255, 92, 138, ${Math.min(Math.abs(Object.values(viewMode === 'family' ? familyCurrencySummaries : currencySummaries).reduce((sum, s) => sum + s.balance, 0)) / 20000 + 0.3, 1)})` }}>
           <CardHeader className="flex flex-row items-center justify-between pb-1 lg:pb-2">
             <CardTitle className="text-xs lg:text-sm font-medium text-slate truncate">
-              {t('dashboard.currentBalance')}
+              {t('dashboard.currentBalance')} {viewMode === 'family' && '(Família)'}
             </CardTitle>
-            <div className={`p-1.5 lg:p-2 rounded-xl flex-shrink-0 ${Object.values(currencySummaries).reduce((sum, s) => sum + s.balance, 0) >= 0 ? 'bg-emerald/10' : 'bg-rose/10'}`}>
-              <Wallet className={`h-3 w-3 lg:h-4 lg:w-4 ${Object.values(currencySummaries).reduce((sum, s) => sum + s.balance, 0) >= 0 ? 'text-emerald' : 'text-rose'}`} />
+            <div className={`p-1.5 lg:p-2 rounded-xl flex-shrink-0 ${Object.values(viewMode === 'family' ? familyCurrencySummaries : currencySummaries).reduce((sum, s) => sum + s.balance, 0) >= 0 ? 'bg-emerald/10' : 'bg-rose/10'}`}>
+              <Wallet className={`h-3 w-3 lg:h-4 lg:w-4 ${Object.values(viewMode === 'family' ? familyCurrencySummaries : currencySummaries).reduce((sum, s) => sum + s.balance, 0) >= 0 ? 'text-emerald' : 'text-rose'}`} />
             </div>
           </CardHeader>
           <CardContent className="pt-0">
             <div className="space-y-0.5 lg:space-y-1">
-              {Object.keys(currencySummaries).length === 0 ? (
+              {Object.keys(viewMode === 'family' ? familyCurrencySummaries : currencySummaries).length === 0 ? (
                 <div className="text-base lg:text-xl font-bold text-emerald tabular-nums truncate">
                   {formatCurrency(0)}
                 </div>
               ) : (
-                Object.entries(currencySummaries).map(([currency, summary]) => (
+                Object.entries(viewMode === 'family' ? familyCurrencySummaries : currencySummaries).map(([currency, summary]) => (
                   <div
                     key={currency}
                     className={`text-base lg:text-xl font-bold tabular-nums tracking-tight truncate ${summary.balance >= 0 ? 'text-emerald' : 'text-rose'
@@ -248,6 +400,92 @@ export function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Family Summary Cards */}
+      {viewMode === 'family' && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4 mt-2 mb-4">
+          {/* Family Income */}
+          <Card hoverable className="bg-purple-50/40 backdrop-blur-xl border-purple-200/60 min-h-[80px] lg:min-h-[120px]" style={{ borderLeftWidth: '4px', borderLeftColor: '#a855f7' }}>
+            <CardHeader className="flex flex-row items-center justify-between pb-1 lg:pb-2">
+              <CardTitle className="text-xs lg:text-sm font-medium text-purple-900 truncate">
+                {t('dashboard.totalIncome')} (Família)
+              </CardTitle>
+              <div className="p-1.5 lg:p-2 bg-purple-100 rounded-xl flex-shrink-0">
+                <Users className="h-3 w-3 lg:h-4 lg:w-4 text-purple-600" />
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="space-y-0.5 lg:space-y-1">
+                {Object.keys(familyCurrencySummaries).length === 0 ? (
+                  <div className="text-base lg:text-xl font-bold text-purple-700 tabular-nums truncate">
+                    {formatCurrency(0)}
+                  </div>
+                ) : (
+                  Object.entries(familyCurrencySummaries).map(([currency, summary]) => (
+                    <div key={currency} className="text-base lg:text-xl font-bold text-purple-700 tabular-nums tracking-tight truncate">
+                      {formatCurrency(summary.income, currency)}
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Family Expenses */}
+          <Card hoverable className="bg-purple-50/40 backdrop-blur-xl border-purple-200/60 min-h-[80px] lg:min-h-[120px]" style={{ borderLeftWidth: '4px', borderLeftColor: '#a855f7' }}>
+            <CardHeader className="flex flex-row items-center justify-between pb-1 lg:pb-2">
+              <CardTitle className="text-xs lg:text-sm font-medium text-purple-900 truncate">
+                {t('dashboard.totalExpenses')} (Família)
+              </CardTitle>
+              <div className="p-1.5 lg:p-2 bg-purple-100 rounded-xl flex-shrink-0">
+                <Users className="h-3 w-3 lg:h-4 lg:w-4 text-purple-600" />
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="space-y-0.5 lg:space-y-1">
+                {Object.keys(familyCurrencySummaries).length === 0 ? (
+                  <div className="text-base lg:text-xl font-bold text-purple-700 tabular-nums truncate">
+                    {formatCurrency(0)}
+                  </div>
+                ) : (
+                  Object.entries(familyCurrencySummaries).map(([currency, summary]) => (
+                    <div key={currency} className="text-base lg:text-xl font-bold text-purple-700 tabular-nums tracking-tight truncate">
+                      {formatCurrency(summary.expenses, currency)}
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Family Balance */}
+          <Card hoverable className="bg-purple-50/40 backdrop-blur-xl border-purple-200/60 min-h-[80px] lg:min-h-[120px] sm:col-span-2 lg:col-span-1" style={{ borderLeftWidth: '4px', borderLeftColor: '#a855f7' }}>
+            <CardHeader className="flex flex-row items-center justify-between pb-1 lg:pb-2">
+              <CardTitle className="text-xs lg:text-sm font-medium text-purple-900 truncate">
+                {t('dashboard.currentBalance')} (Família)
+              </CardTitle>
+              <div className="p-1.5 lg:p-2 bg-purple-100 rounded-xl flex-shrink-0">
+                <Users className="h-3 w-3 lg:h-4 lg:w-4 text-purple-600" />
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="space-y-0.5 lg:space-y-1">
+                {Object.keys(familyCurrencySummaries).length === 0 ? (
+                  <div className="text-base lg:text-xl font-bold text-purple-700 tabular-nums truncate">
+                    {formatCurrency(0)}
+                  </div>
+                ) : (
+                  Object.entries(familyCurrencySummaries).map(([currency, summary]) => (
+                    <div key={currency} className="text-base lg:text-xl font-bold text-purple-700 tabular-nums tracking-tight truncate">
+                      {formatCurrency(summary.balance, currency)}
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Recent Transactions */}
       <Card className="bg-white/40 backdrop-blur-xl border-white/60 flex-1">
@@ -302,33 +540,55 @@ export function Dashboard() {
                         <span className="text-slate/40 flex-shrink-0">•</span>
 
                         {transaction.creditCard ? (
-                          <div className="flex items-center gap-1">
-                            <CreditCardIcon size={12} className="text-slate flex-shrink-0" />
-                            <span className="font-medium" style={{ color: transaction.creditCard.color }}>
-                              {transaction.creditCard.name}
-                            </span>
-                            {transaction.creditCard.linkedAccount && (
-                              <span className="text-slate/50 text-[10px]">
-                                via {transaction.creditCard.linkedAccount.name}
+                          <div className="flex flex-col">
+                            <div className="flex items-center gap-1">
+                              <CreditCardIcon size={12} className="text-slate flex-shrink-0" />
+                              <span className="font-medium" style={{ color: transaction.creditCard.color }}>
+                                {transaction.creditCard.name}
                               </span>
+                              {transaction.creditCard.linkedAccount && (
+                                <span className="text-slate/50 text-[10px]">
+                                  via {transaction.creditCard.linkedAccount.name}
+                                </span>
+                              )}
+                            </div>
+                            {viewMode === 'family' && (transaction as any).isShared && (
+                              <div className="mt-0.5">
+                                <SharedDataBadge
+                                  ownerName={((transaction.creditCard as any)?.ownerName || '').split(' ')[0]}
+                                  photoURL={transaction.ownerUserId ? getMemberPhoto(transaction.ownerUserId) : undefined}
+                                  className="scale-75 origin-left"
+                                />
+                              </div>
                             )}
                           </div>
                         ) : (
                           transaction.account && (
-                            <div className="flex items-center gap-1">
-                              {transaction.toAccountId ? (
-                                <ArrowRightLeft size={12} className="text-slate flex-shrink-0" />
-                              ) : transaction.account.isCash ? (
-                                <CashCurrencyIcon currency={transaction.account.currency} className="w-3 h-3 text-slate flex-shrink-0" style={{ color: transaction.account.color }} />
-                              ) : (
-                                <Landmark size={12} className="text-slate flex-shrink-0" />
-                              )}
-                              <span className="font-medium" style={{ color: transaction.account.color }}>{transaction.account.name}</span>
-                              {transaction.type === 'transfer' && transaction.toAccount && (
-                                <>
-                                  <span className="text-slate/40 flex-shrink-0">→</span>
-                                  <span className="font-medium" style={{ color: transaction.toAccount.color }}>{transaction.toAccount.name}</span>
-                                </>
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-1">
+                                {transaction.toAccountId ? (
+                                  <ArrowRightLeft size={12} className="text-slate flex-shrink-0" />
+                                ) : transaction.account.isCash ? (
+                                  <CashCurrencyIcon currency={transaction.account.currency} className="w-3 h-3 text-slate flex-shrink-0" style={{ color: transaction.account.color }} />
+                                ) : (
+                                  <Landmark size={12} className="text-slate flex-shrink-0" />
+                                )}
+                                <span className="font-medium" style={{ color: transaction.account.color }}>{transaction.account.name}</span>
+                                {transaction.type === 'transfer' && transaction.toAccount && (
+                                  <>
+                                    <span className="text-slate/40 flex-shrink-0">→</span>
+                                    <span className="font-medium" style={{ color: transaction.toAccount.color }}>{transaction.toAccount.name}</span>
+                                  </>
+                                )}
+                              </div>
+                              {viewMode === 'family' && (transaction as any).isShared && (
+                                <div className="mt-0.5">
+                                  <SharedDataBadge
+                                    ownerName={((transaction.account as any)?.ownerName || '').split(' ')[0]}
+                                    photoURL={transaction.ownerUserId ? getMemberPhoto(transaction.ownerUserId) : undefined}
+                                    className="scale-75 origin-left"
+                                  />
+                                </div>
                               )}
                             </div>
                           )
@@ -361,95 +621,223 @@ export function Dashboard() {
       </Card>
 
       {/* Credit Cards Summary */}
-      {creditCards.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
-          <Card className="bg-white/40 backdrop-blur-xl border-white/60 sm:col-span-1 lg:col-span-1">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-slate flex items-center gap-2">
-                <CreditCardIcon className="h-4 w-4" />
-                {t('creditCards.title')}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {creditCards.map(card => {
-                  const currentBill = creditCardBills.find(
-                    b => b.creditCardId === card.id && !b.isClosed && !b.isPaid
-                  );
-                  const usage = currentBill ? (currentBill.totalAmount / card.creditLimit) * 100 : 0;
+      {
+        creditCards.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
+            <Card className="bg-white/40 backdrop-blur-xl border-white/60 sm:col-span-1 lg:col-span-1">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-slate flex items-center gap-2">
+                  <CreditCardIcon className="h-4 w-4" />
+                  {t('creditCards.title')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {creditCards.map(card => {
+                    const currentBill = creditCardBills.find(
+                      b => b.creditCardId === card.id && !b.isClosed && !b.isPaid
+                    );
+                    const usage = currentBill ? (currentBill.totalAmount / card.creditLimit) * 100 : 0;
 
-                  return (
-                    <div key={card.id} className="space-y-1">
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="font-medium text-ink" style={{ color: card.color }}>{card.name}</span>
-                        <span className="text-slate">{formatCurrency(currentBill?.totalAmount || 0)}</span>
+                    return (
+                      <div key={card.id} className="space-y-1">
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="font-medium text-ink" style={{ color: card.color }}>{card.name}</span>
+                          <span className="text-slate">{formatCurrency(currentBill?.totalAmount || 0)}</span>
+                        </div>
+                        <div className="h-1.5 w-full bg-neutral-100 rounded-full overflow-hidden">
+                          <div
+                            className={cn("h-full transition-all duration-500",
+                              usage > 90 ? "bg-rose" : usage > 70 ? "bg-amber-500" : "bg-blue"
+                            )}
+                            style={{ width: `${Math.min(usage, 100)}%` }}
+                          />
+                        </div>
+                        <div className="flex justify-between text-[10px] text-slate/60">
+                          <span>{t('creditCards.used')} {usage.toFixed(0)}%</span>
+                          <span>{t('creditCards.limit')}: {formatCurrency(card.creditLimit)}</span>
+                        </div>
                       </div>
-                      <div className="h-1.5 w-full bg-neutral-100 rounded-full overflow-hidden">
-                        <div
-                          className={cn("h-full transition-all duration-500",
-                            usage > 90 ? "bg-rose" : usage > 70 ? "bg-amber-500" : "bg-blue"
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Upcoming Bills */}
+            <Card className="bg-white/40 backdrop-blur-xl border-white/60 sm:col-span-1 lg:col-span-2">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-slate flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  {t('creditCardBills.upcoming')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {creditCards.map(card => {
+                    const openBill = creditCardBills.find(
+                      b => b.creditCardId === card.id && !b.isPaid
+                    );
+                    if (!openBill) return null;
+
+                    return (
+                      <div key={card.id} className="flex items-center justify-between p-2 rounded-xl bg-white/30 border border-white/50">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/50 flex-shrink-0">
+                            <CreditCardIcon className="h-4 w-4" style={{ color: card.color }} />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold text-ink truncate">{card.name}</p>
+                            <p className="text-[10px] text-slate truncate">
+                              {t('creditCardBills.dueDate')}: {new Date(openBill.dueDate).toLocaleDateString('pt-BR')}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right ml-2">
+                          <p className="text-xs font-bold text-ink">{formatCurrency(openBill.totalAmount)}</p>
+                          <span className={cn(
+                            "text-[9px] px-1.5 py-0.5 rounded-full font-medium",
+                            openBill.isClosed ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"
+                          )}>
+                            {openBill.isClosed ? t('creditCardBills.closed') : t('creditCardBills.open')}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  }).filter(Boolean)}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )
+      }
+
+      {/* ====================================
+          FAMILY SHARED DATA SECTION
+          ==================================== */}
+      {
+        viewMode === 'family' && sharedData.length > 0 && (
+          <div className="mt-2 space-y-4">
+            {/* Family Accounts */}
+            {sharedData.some(m => m.accounts && m.accounts.length > 0) && (
+              <Card className="bg-violet-50/40 backdrop-blur-xl border-violet-200/40">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-violet-700 flex items-center gap-2">
+                    <Landmark className="h-4 w-4" />
+                    {t('family.shared.accounts')}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {sharedData.map(member =>
+                      member.accounts?.map(acc => (
+                        <div key={`${member.ownerUserId}-${acc.id}`} className="flex items-center justify-between p-2.5 rounded-xl bg-white/50 border border-violet-100/50">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center flex-shrink-0">
+                              <Landmark size={14} className="text-violet-600" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-ink truncate">{acc.name}</p>
+                              <SharedDataBadge ownerName={(acc.ownerName || '').split(' ')[0]} photoURL={getMemberPhoto(acc.ownerUserId)} />
+                            </div>
+                          </div>
+                          {acc.balance !== undefined && (
+                            <p className="text-sm font-bold tabular-nums text-ink">
+                              {formatCurrency(acc.balance, acc.currency)}
+                            </p>
                           )}
-                          style={{ width: `${Math.min(usage, 100)}%` }}
-                        />
-                      </div>
-                      <div className="flex justify-between text-[10px] text-slate/60">
-                        <span>{t('creditCards.used')} {usage.toFixed(0)}%</span>
-                        <span>{t('creditCards.limit')}: {formatCurrency(card.creditLimit)}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Upcoming Bills */}
-          <Card className="bg-white/40 backdrop-blur-xl border-white/60 sm:col-span-1 lg:col-span-2">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-slate flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                {t('creditCardBills.upcoming')}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {creditCards.map(card => {
-                  const openBill = creditCardBills.find(
-                    b => b.creditCardId === card.id && !b.isPaid
-                  );
-                  if (!openBill) return null;
-
-                  return (
-                    <div key={card.id} className="flex items-center justify-between p-2 rounded-xl bg-white/30 border border-white/50">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/50 flex-shrink-0">
-                          <CreditCardIcon className="h-4 w-4" style={{ color: card.color }} />
                         </div>
-                        <div className="min-w-0">
-                          <p className="text-xs font-semibold text-ink truncate">{card.name}</p>
-                          <p className="text-[10px] text-slate truncate">
-                            {t('creditCardBills.dueDate')}: {new Date(openBill.dueDate).toLocaleDateString('pt-BR')}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right ml-2">
-                        <p className="text-xs font-bold text-ink">{formatCurrency(openBill.totalAmount)}</p>
-                        <span className={cn(
-                          "text-[9px] px-1.5 py-0.5 rounded-full font-medium",
-                          openBill.isClosed ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"
-                        )}>
-                          {openBill.isClosed ? t('creditCardBills.closed') : t('creditCardBills.open')}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                }).filter(Boolean)}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+                      ))
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
-    </div>
+            {/* Family Credit Cards */}
+            {sharedData.some(m => m.creditCards && m.creditCards.length > 0) && (
+              <Card className="bg-violet-50/40 backdrop-blur-xl border-violet-200/40">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-violet-700 flex items-center gap-2">
+                    <CreditCardIcon className="h-4 w-4" />
+                    {t('family.shared.creditCards')}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {sharedData.map(member =>
+                      member.creditCards?.map(card => (
+                        <div key={`${member.ownerUserId}-${card.id}`} className="flex items-center justify-between p-2.5 rounded-xl bg-white/50 border border-violet-100/50">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${card.color}15` }}>
+                              <CreditCardIcon size={14} style={{ color: card.color }} />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-ink truncate">{card.name}</p>
+                              <SharedDataBadge ownerName={(card.ownerName || '').split(' ')[0]} photoURL={getMemberPhoto(card.ownerUserId)} />
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            {card.billTotal !== undefined && (
+                              <p className="text-xs font-bold text-ink">{formatCurrency(card.billTotal)}</p>
+                            )}
+                            {card.creditLimit !== undefined && (
+                              <p className="text-[10px] text-slate">{t('creditCards.limit')}: {formatCurrency(card.creditLimit)}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Family Budgets */}
+            {sharedData.some(m => m.budgets && m.budgets.length > 0) && (
+              <Card className="bg-violet-50/40 backdrop-blur-xl border-violet-200/40">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-violet-700 flex items-center gap-2">
+                    <PiggyBank className="h-4 w-4" />
+                    {t('family.shared.budgets')}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {sharedData.map(member =>
+                      member.budgets?.map(budget => {
+                        const percentage = budget.spent !== undefined ? (budget.spent / budget.amount) * 100 : 0;
+                        return (
+                          <div key={`${member.ownerUserId}-${budget.id}`} className="p-2.5 rounded-xl bg-white/50 border border-violet-100/50">
+                            <div className="flex items-center justify-between text-xs mb-1">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-medium text-ink">{budget.categoryName}</span>
+                                <SharedDataBadge ownerName={(budget.ownerName || '').split(' ')[0]} photoURL={getMemberPhoto(budget.ownerUserId)} />
+                              </div>
+                              <span className="text-slate">
+                                {budget.spent !== undefined ? formatCurrency(budget.spent) : '—'} / {formatCurrency(budget.amount)}
+                              </span>
+                            </div>
+                            <div className="h-1.5 w-full bg-neutral-100 rounded-full overflow-hidden">
+                              <div
+                                className={cn("h-full transition-all duration-500",
+                                  percentage > 90 ? "bg-rose" : percentage > 70 ? "bg-amber-500" : "bg-violet-500"
+                                )}
+                                style={{ width: `${Math.min(percentage, 100)}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )
+      }
+
+    </div >
   );
 }

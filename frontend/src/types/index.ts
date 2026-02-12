@@ -53,6 +53,10 @@ export interface Transaction {
   // Cash payment flag
   isCash?: boolean;
   installments?: number; // Total number of installments (initial request)
+  // Shared transaction fields
+  isShared?: boolean;
+  ownerName?: string;
+  ownerUserId?: string;
 }
 
 export interface Budget {

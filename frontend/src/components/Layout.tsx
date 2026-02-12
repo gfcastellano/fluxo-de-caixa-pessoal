@@ -5,6 +5,7 @@ import { cn } from '../utils/cn';
 import { VoiceDock } from './VoiceDock';
 import { VoiceHeroButton } from './VoiceHeroButton';
 import { UserDropdown } from './UserDropdown';
+import { FamilyToggle } from './FamilyToggle';
 import { LayoutDashboard, ArrowLeftRight, Tags, Landmark, PiggyBank, BarChart3, CreditCard } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useScrollDirection } from '../hooks/useScrollDirection';
@@ -115,8 +116,9 @@ export function Layout({ children }: LayoutProps) {
         )}
         style={{ height: 'var(--header-height)' }}
       >
-        <div className="flex flex-col">
+        <div className="flex items-center gap-2">
           <h1 className="text-sm font-semibold text-ink tracking-tight">Assist</h1>
+          <FamilyToggle />
         </div>
 
         {/* Profile / Actions */}
@@ -131,7 +133,10 @@ export function Layout({ children }: LayoutProps) {
       <aside className="hidden sm:flex lg:hidden flex-col fixed left-0 top-0 h-full w-56 bg-white/70 backdrop-blur-xl border-r border-white/40 shadow-glass z-sticky animate-slide-in-left">
         {/* Brand Header */}
         <div className="px-5 py-5 border-b border-white/30">
-          <h1 className="text-lg font-bold text-ink tracking-tight">Assist</h1>
+          <div className="flex items-center justify-between">
+            <h1 className="text-lg font-bold text-ink tracking-tight">Assist</h1>
+            <FamilyToggle />
+          </div>
           <p className="text-xs text-slate mt-0.5">{t('app.subtitle', 'Fluxo de Caixa Pessoal')}</p>
         </div>
 
@@ -162,6 +167,9 @@ export function Layout({ children }: LayoutProps) {
               <nav className="flex items-center gap-1">
                 {navItems.map(renderTopNavItem)}
               </nav>
+
+              {/* Family Toggle */}
+              <FamilyToggle />
             </div>
 
             {/* Right Side: Voice Hero + User */}

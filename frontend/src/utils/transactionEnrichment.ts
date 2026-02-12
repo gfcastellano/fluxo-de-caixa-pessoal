@@ -33,10 +33,16 @@ export function enrichTransactions(
         // 2. Return enriched transaction
         return {
             ...transaction,
-            category: transaction.categoryId ? categoriesMap.get(transaction.categoryId) : undefined,
-            account: transaction.accountId ? accountsMap.get(transaction.accountId) : undefined,
-            toAccount: transaction.toAccountId ? accountsMap.get(transaction.toAccountId) : undefined,
-            creditCard: enrichedCreditCard,
+            category: transaction.categoryId
+                ? (categoriesMap.get(transaction.categoryId) || transaction.category)
+                : transaction.category,
+            account: transaction.accountId
+                ? (accountsMap.get(transaction.accountId) || transaction.account)
+                : transaction.account,
+            toAccount: transaction.toAccountId
+                ? (accountsMap.get(transaction.toAccountId) || transaction.toAccount)
+                : transaction.toAccount,
+            creditCard: enrichedCreditCard || transaction.creditCard,
         };
     });
 }

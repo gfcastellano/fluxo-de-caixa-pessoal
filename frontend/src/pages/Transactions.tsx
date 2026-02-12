@@ -20,7 +20,10 @@ import { getCreditCards } from '../services/creditCardService';
 import { getTranslatedCategoryName } from '../utils/categoryTranslations';
 import type { Transaction, Category, Account, CreditCard } from '../types';
 import { formatCurrency, formatDate } from '../utils/format';
-import { Plus, Edit2, Trash2, Search, ChevronLeft, ChevronRight, Repeat, Copy, Calendar, CalendarDays, List, ChevronDown, ChevronUp, FileText, Landmark, CreditCard as CreditCardIcon } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, ChevronLeft, ChevronRight, Repeat, Copy, Calendar, CalendarDays, List, ChevronDown, ChevronUp, FileText, Landmark, CreditCard as CreditCardIcon, Users } from 'lucide-react';
+import { useFamily } from '../context/FamilyContext';
+import { SharedDataBadge } from '../components/SharedDataBadge';
+import { getFamilyTransactions } from '../services/familyService';
 import { cn } from '../utils/cn';
 import { enrichTransactions } from '../utils/transactionEnrichment';
 import { CashCurrencyIcon } from '../components/CashCurrencyIcon';
@@ -42,6 +45,9 @@ interface RecurringGroup {
   account?: Account;
   creditCardId?: string;
   creditCard?: CreditCard;
+  ownerName?: string;
+  ownerUserId?: string;
+  isShared?: boolean;
 }
 
 // Filter mode type
@@ -154,6 +160,9 @@ export function Transactions() {
   // Voice context
   const { shouldOpenModal, shouldAutoRecord, clearModalRequest } = useVoice();
 
+  // Family context
+  const { viewMode, activeFamily, sharedData, getMemberPhoto } = useFamily();
+
   // URL params listener
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -214,14 +223,58 @@ export function Transactions() {
       // Generate recurring instances in background (don't block UI)
       generateMissingRecurringInstances(user.uid).catch(console.error);
 
-      const transactionsData = await getTransactions(user.uid, dateRange);
+      let allTransactions = await getTransactions(user.uid, dateRange);
+
+      // Fetch shared transactions if in family mode
+      if (viewMode === 'family' && activeFamily) {
+        try {
+          const familyResponse = await getFamilyTransactions(activeFamily.id, {
+            startDate: dateRange.startDate,
+            endDate: dateRange.endDate
+          });
+
+          if (familyResponse.success && familyResponse.data) {
+            // Merge shared transactions
+            allTransactions = [...allTransactions, ...familyResponse.data];
+          }
+        } catch (err) {
+          console.error('Failed to load family transactions', err);
+        }
+      }
 
       // Enrich transactions with category, account, credit card, and toAccount info
+      // Note: Shared transactions might have null category/account if those IDs don't exist locally
+      // Include shared accounts/cards in enrichment
+      const flatSharedAccounts = sharedData.flatMap(m => m.accounts || []).map(a => ({
+        id: a.id,
+        name: a.name,
+        color: a.color,
+        currency: a.currency,
+        type: a.type,
+        icon: a.icon || '',
+        balance: a.balance,
+        initialBalance: 0,
+        userId: a.ownerUserId || '',
+        ownerName: a.ownerName
+      } as any));
+
+      const flatSharedCards = sharedData.flatMap(m => m.creditCards || []).map(c => ({
+        id: c.id,
+        name: c.name,
+        color: c.color,
+        creditLimit: c.creditLimit,
+        closingDay: 1,
+        dueDay: 1,
+        userId: c.ownerUserId || '',
+        ownerName: c.ownerName,
+        linkedAccountId: (c as any).linkedAccountId
+      } as any));
+
       const enrichedTransactions = enrichTransactions(
-        transactionsData,
-        accounts,
+        allTransactions,
+        [...accounts, ...flatSharedAccounts],
         categories,
-        creditCards
+        [...creditCards, ...flatSharedCards]
       );
 
       // Sort transactions by date (most recent first)
@@ -236,7 +289,7 @@ export function Transactions() {
       setIsInitialLoading(false);
       setIsTableLoading(false);
     }
-  }, [user, dateRange, categories, accounts, creditCards]);
+  }, [user, dateRange, categories, accounts, creditCards, viewMode, activeFamily]);
 
   // Initial load - categories, accounts, and transactions
   useEffect(() => {
@@ -245,12 +298,12 @@ export function Transactions() {
     }
   }, [user, loadStaticData, categories.length]);
 
-  // Load transactions when filter changes or after static data loads
+  // Load transactions when filter changes or after static data loads or viewMode changes
   useEffect(() => {
     if (user && categories.length > 0 && accounts.length > 0) {
       loadTransactions(isInitialLoading);
     }
-  }, [user, dateRange, categories.length, accounts.length]);
+  }, [user, dateRange, categories.length, accounts.length, viewMode]);
 
   // Voice modal trigger
   useEffect(() => {
@@ -444,6 +497,9 @@ export function Transactions() {
             account: t.account,
             creditCardId: t.creditCardId,
             creditCard: t.creditCard,
+            ownerName: t.ownerName,
+            ownerUserId: t.ownerUserId,
+            isShared: t.isShared,
           });
         }
 
@@ -677,7 +733,7 @@ export function Transactions() {
                                 {group.occurrencesInPeriod} {group.occurrencesInPeriod === 1 ? 'ocorrência' : 'ocorrências'}
                               </span>
                               <span className="px-1 py-0.5 rounded bg-blue/10 text-blue text-[8px] font-medium">
-                                {group.recurrencePattern}
+                                {t(`common.${group.recurrencePattern}`)}
                               </span>
                               <span className={cn(
                                 "px-1 py-0.5 rounded text-[8px] font-medium",
@@ -834,7 +890,15 @@ export function Transactions() {
                               {transaction.description}
                               {installmentDisplay && <span className="text-blue ml-1">({installmentDisplay})</span>}
                             </p>
-                            <p className="text-[10px] text-slate mt-0.5">{formatDate(transaction.date)}</p>
+                            <div className="flex items-center gap-1 mt-0.5">
+                              <p className="text-[10px] text-slate">{formatDate(transaction.date)}</p>
+                              {transaction.isShared && (
+                                <span className="flex items-center gap-0.5 px-1 rounded bg-purple/10 text-purple text-[8px] font-medium border border-purple/20">
+                                  <Users size={8} />
+                                  {transaction.ownerName?.split(' ')[0]}
+                                </span>
+                              )}
+                            </div>
                           </div>
                           <div className={`text-right font-bold text-sm ${transaction.type === 'income' ? 'text-emerald' : transaction.type === 'transfer' ? 'text-blue' : 'text-rose'}`}>
                             {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount, transaction.account?.currency)}
@@ -926,7 +990,7 @@ export function Transactions() {
                                   ({group.occurrencesInPeriod} {group.occurrencesInPeriod === 1 ? 'ocorrência' : 'ocorrências'})
                                 </span>
                                 <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue/10 text-blue-hover border border-blue/20">
-                                  {group.recurrencePattern}
+                                  {t(`common.${group.recurrencePattern}`)}
                                 </span>
                                 <span className={cn(
                                   "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border",
@@ -950,6 +1014,15 @@ export function Transactions() {
                                     <CreditCardIcon size={14} className="text-slate flex-shrink-0" />
                                     <span style={{ color: group.creditCard.color }}>{group.creditCard.name}</span>
                                   </div>
+                                  {viewMode === 'family' && group.isShared && (
+                                    <div className="mt-1 ml-5">
+                                      <SharedDataBadge
+                                        ownerName={(group.ownerName || '').split(' ')[0]}
+                                        photoURL={group.ownerUserId ? getMemberPhoto(group.ownerUserId) : undefined}
+                                        className="scale-75 origin-left"
+                                      />
+                                    </div>
+                                  )}
                                   {group.creditCard.linkedAccount && (
                                     <div className="flex items-center gap-1 text-[10px] text-slate/50 ml-5">
                                       <span>via {group.creditCard.linkedAccount.name}</span>
@@ -957,13 +1030,24 @@ export function Transactions() {
                                   )}
                                 </div>
                               ) : (
-                                <div className="flex items-center gap-1.5">
-                                  {group.account?.isCash ? (
-                                    <CashCurrencyIcon currency={group.account.currency} className="w-3.5 h-3.5 text-slate flex-shrink-0" style={{ color: group.account.color }} />
-                                  ) : (
-                                    <Landmark size={14} className="text-slate flex-shrink-0" />
+                                <div className="flex flex-col">
+                                  <div className="flex items-center gap-1.5">
+                                    {group.account?.isCash ? (
+                                      <CashCurrencyIcon currency={group.account.currency} className="w-3.5 h-3.5 text-slate flex-shrink-0" style={{ color: group.account.color }} />
+                                    ) : (
+                                      <Landmark size={14} className="text-slate flex-shrink-0" />
+                                    )}
+                                    <span style={{ color: group.account?.color }}>{group.account?.name || '-'}</span>
+                                  </div>
+                                  {viewMode === 'family' && group.isShared && (
+                                    <div className="mt-1 ml-5">
+                                      <SharedDataBadge
+                                        ownerName={(group.ownerName || '').split(' ')[0]}
+                                        photoURL={group.ownerUserId ? getMemberPhoto(group.ownerUserId) : undefined}
+                                        className="scale-75 origin-left"
+                                      />
+                                    </div>
                                   )}
-                                  <span style={{ color: group.account?.color }}>{group.account?.name || '-'}</span>
                                 </div>
                               )}
                             </td>
@@ -1010,6 +1094,13 @@ export function Transactions() {
                                 <td className="py-2 px-4 text-sm text-slate">
                                   <div className="flex items-center gap-2 flex-wrap">
                                     {transaction.description}
+                                    {transaction.isShared && (
+                                      <SharedDataBadge
+                                        ownerName={(transaction.ownerName || '').split(' ')[0]}
+                                        photoURL={transaction.ownerUserId ? getMemberPhoto(transaction.ownerUserId) : undefined}
+                                        className="ml-1"
+                                      />
+                                    )}
                                     {installmentDisplay && (
                                       <span className="text-blue text-xs">{installmentDisplay}</span>
                                     )}
@@ -1074,7 +1165,7 @@ export function Transactions() {
                             )}
                             {(transaction.isRecurringInstance || transaction.parentTransactionId) && transaction.recurrencePattern && (
                               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue/10 text-blue-hover border border-blue/20">
-                                {transaction.recurrencePattern}
+                                {t(`common.${transaction.recurrencePattern}`)}
                               </span>
                             )}
                           </div>
@@ -1091,6 +1182,15 @@ export function Transactions() {
                                 <CreditCardIcon size={14} className="text-slate flex-shrink-0" />
                                 <span style={{ color: transaction.creditCard.color }}>{transaction.creditCard.name}</span>
                               </div>
+                              {viewMode === 'family' && transaction.isShared && (
+                                <div className="mt-1 ml-5">
+                                  <SharedDataBadge
+                                    ownerName={(transaction.ownerName || '').split(' ')[0]}
+                                    photoURL={transaction.ownerUserId ? getMemberPhoto(transaction.ownerUserId) : undefined}
+                                    className="scale-75 origin-left"
+                                  />
+                                </div>
+                              )}
                               {transaction.creditCard.linkedAccount && (
                                 <div className="flex items-center gap-1 text-[10px] text-slate/50 ml-5">
                                   <span>via {transaction.creditCard.linkedAccount.name}</span>
@@ -1098,13 +1198,24 @@ export function Transactions() {
                               )}
                             </div>
                           ) : (
-                            <div className="flex items-center gap-1.5">
-                              {transaction.account?.isCash ? (
-                                <CashCurrencyIcon currency={transaction.account.currency} className="w-3.5 h-3.5 text-slate flex-shrink-0" style={{ color: transaction.account.color }} />
-                              ) : (
-                                <Landmark size={14} className="text-slate flex-shrink-0" />
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-1.5">
+                                {transaction.account?.isCash ? (
+                                  <CashCurrencyIcon currency={transaction.account.currency} className="w-3.5 h-3.5 text-slate flex-shrink-0" style={{ color: transaction.account.color }} />
+                                ) : (
+                                  <Landmark size={14} className="text-slate flex-shrink-0" />
+                                )}
+                                <span style={{ color: transaction.account?.color }}>{transaction.account?.name || '-'}</span>
+                              </div>
+                              {viewMode === 'family' && transaction.isShared && (
+                                <div className="mt-1 ml-5">
+                                  <SharedDataBadge
+                                    ownerName={(transaction.ownerName || '').split(' ')[0]}
+                                    photoURL={transaction.ownerUserId ? getMemberPhoto(transaction.ownerUserId) : undefined}
+                                    className="scale-75 origin-left"
+                                  />
+                                </div>
                               )}
-                              <span style={{ color: transaction.account?.color }}>{transaction.account?.name || '-'}</span>
                             </div>
                           )}
                         </td>
@@ -1123,9 +1234,10 @@ export function Transactions() {
                 </table>
               </div>
             </>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+          )
+          }
+        </CardContent >
+      </Card >
+    </div >
   );
 }

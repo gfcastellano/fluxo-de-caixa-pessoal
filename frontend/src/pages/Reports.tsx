@@ -11,6 +11,7 @@ import {
 import { getAccounts } from '../services/accountService';
 import { getCreditCards } from '../services/creditCardService';
 import { getTransactions, getAllTransactionsWithRecurring } from '../services/transactionService';
+import { getFamilyTransactions } from '../services/familyService';
 import { getCategories } from '../services/categoryService';
 import type { MonthlySummary, CategoryBreakdown, Account, CreditCard, Transaction } from '../types';
 import { formatCurrency, formatMonthYear, getCurrentMonth } from '../utils/format';
@@ -33,11 +34,16 @@ import {
 } from 'recharts';
 import { Download, TrendingUp, TrendingDown, Calendar, PiggyBank, Calculator, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { PageDescription } from '../components/PageDescription';
+import { useFamily } from '../context/FamilyContext';
+import { Users } from 'lucide-react';
+import { cn } from '../utils/cn';
 
 export function Reports() {
   const { user } = useAuth();
   const { t } = useTranslation();
+  const { viewMode, sharedData, activeFamily } = useFamily();
   const [summary, setSummary] = useState<MonthlySummary | null>(null);
+  const [familySummary, setFamilySummary] = useState<MonthlySummary | null>(null);
   const [expenseBreakdown, setExpenseBreakdown] = useState<CategoryBreakdown[]>(
     []
   );
@@ -132,11 +138,14 @@ export function Reports() {
     return null;
   };
 
-  // Get unique currencies from accounts
+  // Get unique currencies from accounts and shared data
   const availableCurrencies = useMemo(() => {
     const currencies = new Set(accounts.map(account => account.currency));
+    sharedData.forEach(member => {
+      member.accounts?.forEach(acc => currencies.add(acc.currency));
+    });
     return Array.from(currencies).sort();
-  }, [accounts]);
+  }, [accounts, sharedData]);
 
   // Get filtered accounts based on selected currency
   const filteredAccounts = useMemo(() => {
@@ -222,7 +231,7 @@ export function Reports() {
       }
       loadData();
     }
-  }, [user, year, month, selectedAccountId, selectedCurrency, accounts]);
+  }, [user, year, month, selectedAccountId, selectedCurrency, accounts, viewMode, activeFamily?.id]);
 
   useEffect(() => {
     if (user && accounts.length > 0) {
@@ -246,7 +255,12 @@ export function Reports() {
         getCategories(user!.uid)
       ]);
       setAccounts(accountsData);
-      setCreditCards(creditCardsData);
+      // Wait for creditCardsData to be an array before setting state
+      if (Array.isArray(creditCardsData)) {
+        setCreditCards(creditCardsData);
+      } else {
+        setCreditCards([]);
+      }
       setCategoriesState(categoriesData);
     } catch (error) {
       console.error('Error loading accounts, credit cards and categories:', error);
@@ -270,18 +284,97 @@ export function Reports() {
       const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
       const endDate = `${year}-${String(month).padStart(2, '0')}-31`;
 
-      // Fetch all transactions for the period to show in the drill-down
-      const allPeriodTransactions = await getTransactions(user!.uid, {
+      let allPeriodTransactions = await getTransactions(user!.uid, {
         startDate,
         endDate,
         accountId: selectedAccountId || undefined,
       });
+
+      // Fetch shared transactions if in family mode
+      if (viewMode === 'family' && activeFamily) {
+        try {
+          const familyResponse = await getFamilyTransactions(activeFamily.id, {
+            startDate,
+            endDate
+          });
+
+          if (familyResponse.success && familyResponse.data) {
+            const familyTxs = familyResponse.data.map((tx: any) => ({
+              ...tx,
+              categoryId: tx.type === 'expense' ? 'shared-expense' : 'shared-income',
+              isShared: true,
+              ownerName: sharedData.find(m => m.ownerUserId === tx.ownerUserId)?.ownerDisplayName || 'Unknown'
+            }));
+
+            // 1. Merge for list view
+            allPeriodTransactions = [...allPeriodTransactions, ...familyTxs];
+
+            // 2. Update Summary
+            const sharedIncome = familyTxs.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+            const sharedExpense = familyTxs.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+
+            setFamilySummary({
+              income: sharedIncome,
+              expenses: sharedExpense,
+              balance: sharedIncome - sharedExpense,
+              month: `${year}-${String(month).padStart(2, '0')}`,
+              year: year,
+            });
+
+            if (summaryData) {
+              summaryData.income += sharedIncome;
+              summaryData.expenses += sharedExpense;
+              summaryData.balance = summaryData.income - summaryData.expenses;
+              setSummary(summaryData); // Update state with modified object
+            }
+
+            // 3. Update Breakdowns (Add "Shared" category)
+            if (sharedExpense > 0) {
+              expenseData.push({
+                categoryId: 'shared-expense',
+                categoryName: t('family.shared.label') || 'Compartilhado',
+                categoryColor: '#8b5cf6',
+                amount: sharedExpense,
+                percentage: 0
+              });
+              // Recalculate percentages
+              const totalExp = expenseData.reduce((s, c) => s + c.amount, 0);
+              expenseData.forEach(c => c.percentage = (c.amount / totalExp) * 100);
+            }
+
+            if (sharedIncome > 0) {
+              incomeData.push({
+                categoryId: 'shared-income',
+                categoryName: t('family.shared.label') || 'Compartilhado',
+                categoryColor: '#8b5cf6',
+                amount: sharedIncome,
+                percentage: 0
+              });
+              // Recalculate percentages
+              const totalInc = incomeData.reduce((s, c) => s + c.amount, 0);
+              incomeData.forEach(c => c.percentage = (c.amount / totalInc) * 100);
+            }
+          }
+        } catch (err) {
+          console.error('Failed to load family transactions for report', err);
+        }
+      }
 
       // Filter translations by currency if a currency is selected and no specific account
       if (selectedCurrency && !selectedAccountId) {
         // When currency is selected but no specific account, we need to filter transactions
         // for all accounts with that currency
         const accountIdsInCurrency = new Set(filteredAccounts.map(a => a.id));
+
+        // Add shared accounts that match the currency
+        sharedData.forEach(member => {
+          member.accounts?.forEach(acc => {
+            if (acc.currency === selectedCurrency) {
+              accountIdsInCurrency.add(acc.id);
+            }
+          });
+        });
+
         const creditCardIdsInCurrency = new Set(
           creditCards
             .filter(card => {
@@ -290,6 +383,23 @@ export function Reports() {
             })
             .map(card => card.id)
         );
+
+        // Add shared cards if their linked account matches the currency
+        sharedData.forEach(member => {
+          member.creditCards?.forEach(card => {
+            // Find linked account (local or shared)
+            const linkedLocal = accounts.find(a => a.id === (card as any).linkedAccountId);
+            if (linkedLocal && linkedLocal.currency === selectedCurrency) {
+              creditCardIdsInCurrency.add(card.id);
+            } else {
+              // Check shared accounts
+              const linkedShared = sharedData.flatMap(m => m.accounts || []).find(a => a.id === (card as any).linkedAccountId);
+              if (linkedShared && linkedShared.currency === selectedCurrency) {
+                creditCardIdsInCurrency.add(card.id);
+              }
+            }
+          });
+        });
 
         const filteredTxs = allPeriodTransactions.filter(t =>
           (t.accountId && accountIdsInCurrency.has(t.accountId)) ||
@@ -313,10 +423,11 @@ export function Reports() {
         const filteredExpenseBreakdown: CategoryBreakdown[] = Array.from(expenseCategoryTotals.entries())
           .map(([categoryId, amount]) => {
             const category = categoryMap.get(categoryId);
+            const firstTx = expenseTransactions.find(t => t.categoryId === categoryId);
             return {
               categoryId,
-              categoryName: category?.name || 'Unknown',
-              categoryColor: category?.color || '#999999',
+              categoryName: category?.name || firstTx?.category?.name || 'Unknown',
+              categoryColor: category?.color || firstTx?.category?.color || '#999999',
               amount,
               percentage: totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0,
             };
@@ -349,10 +460,11 @@ export function Reports() {
           .map(([categoryId, amount]) => {
             const category = categoryMap.get(categoryId);
             const isTransferCategory = categoryId === 'incoming-transfer';
+            const firstTx = incomeTransactions.find(t => t.categoryId === categoryId);
             return {
               categoryId,
-              categoryName: isTransferCategory ? 'Transferências Recebidas' : (category?.name || 'Unknown'),
-              categoryColor: isTransferCategory ? '#10B981' : (category?.color || '#999999'),
+              categoryName: isTransferCategory ? 'Transferências Recebidas' : (category?.name || firstTx?.category?.name || 'Unknown'),
+              categoryColor: isTransferCategory ? '#10B981' : (category?.color || firstTx?.category?.color || '#999999'),
               amount,
               percentage: totalIncome > 0 ? (amount / totalIncome) * 100 : 0,
             };
@@ -486,25 +598,84 @@ export function Reports() {
           // No accounts with selected currency, return empty trend
           trend = [];
         }
-      } else {
-        // Use the standard trend data fetch (either all accounts or specific account)
-        trend = await getTrendData(
-          user!.uid,
-          year,
-          1,
-          year,
-          12,
-          accountId
-        );
+      }
+
+      // Load base trend data if not already loaded (when no currency filter is active)
+      if (trend.length === 0) {
+        try {
+          trend = await getTrendData(
+            user!.uid,
+            year,
+            1,
+            year,
+            12,
+            selectedAccountId || undefined
+          );
+        } catch (error) {
+          console.error('Error loading base trend data:', error);
+        }
+      }
+
+      // Add family trend data if in family mode
+      if (viewMode === 'family' && activeFamily) {
+        try {
+          const startDate = `${year}-01-01`;
+          const endDate = `${year}-12-31`;
+          const familyRes = await getFamilyTransactions(activeFamily.id, { startDate, endDate });
+
+          if (familyRes.success && familyRes.data) {
+            const familyMonthlyData = new Map<string, { income: number; expenses: number }>();
+
+            familyRes.data.forEach((tx: any) => {
+              const txDate = new Date(tx.date);
+              const monthKey = `${txDate.getFullYear()}-${String(txDate.getMonth() + 1).padStart(2, '0')}`;
+              const existing = familyMonthlyData.get(monthKey) || { income: 0, expenses: 0 };
+
+              if (tx.type === 'income') {
+                familyMonthlyData.set(monthKey, { ...existing, income: existing.income + tx.amount });
+              } else if (tx.type === 'expense' || tx.type === 'transfer') {
+                familyMonthlyData.set(monthKey, { ...existing, expenses: existing.expenses + tx.amount });
+              }
+            });
+
+            // Merge with existing trend data
+            const trendMap = new Map(trend.map(d => [d.month, d]));
+            familyMonthlyData.forEach((data, monthKey) => {
+              const existing = trendMap.get(monthKey) || { month: monthKey, income: 0, expenses: 0 };
+              trendMap.set(monthKey, {
+                month: monthKey,
+                income: existing.income + data.income,
+                expenses: existing.expenses + data.expenses
+              });
+            });
+
+            // Ensure all months of the year are present if not already
+            for (let m = 1; m <= 12; m++) {
+              const monthKey = `${year}-${String(m).padStart(2, '0')}`;
+              if (!trendMap.has(monthKey)) {
+                trendMap.set(monthKey, { month: monthKey, income: 0, expenses: 0 });
+              }
+            }
+
+            trend = Array.from(trendMap.values()).sort((a, b) => a.month.localeCompare(b.month));
+          }
+        } catch (e) {
+          console.error("Failed to load family trend data", e);
+        }
       }
 
       // Calculate projected balance for each month
       // Get stored balance for the filtered accounts
-      let accountsToCalculate = accounts;
+      let accountsToCalculate = [...accounts] as any[];
+      if (viewMode === 'family') {
+        const sharedAccs = sharedData.flatMap(m => m.accounts || []);
+        accountsToCalculate = [...accountsToCalculate, ...sharedAccs];
+      }
+
       if (selectedAccountId) {
-        accountsToCalculate = accounts.filter(a => a.id === selectedAccountId);
+        accountsToCalculate = accountsToCalculate.filter(a => a.id === selectedAccountId);
       } else if (selectedCurrency) {
-        accountsToCalculate = accounts.filter(a => a.currency === selectedCurrency);
+        accountsToCalculate = accountsToCalculate.filter(a => a.currency === selectedCurrency);
       }
       const storedBalance = accountsToCalculate.reduce((sum, account) => sum + account.balance, 0);
 
@@ -532,11 +703,16 @@ export function Reports() {
 
     try {
       // Get accounts to calculate stored balance
-      let accountsToCalculate = accounts;
+      let accountsToCalculate = [...accounts] as any[];
+      if (viewMode === 'family') {
+        const sharedAccs = sharedData.flatMap(m => m.accounts || []);
+        accountsToCalculate = [...accountsToCalculate, ...sharedAccs];
+      }
+
       if (selectedAccountId) {
-        accountsToCalculate = accounts.filter(a => a.id === selectedAccountId);
+        accountsToCalculate = accountsToCalculate.filter(a => a.id === selectedAccountId);
       } else if (selectedCurrency) {
-        accountsToCalculate = accounts.filter(a => a.currency === selectedCurrency);
+        accountsToCalculate = accountsToCalculate.filter(a => a.currency === selectedCurrency);
       }
 
       // Calculate stored balance (sum of account balances)
@@ -591,9 +767,27 @@ export function Reports() {
       });
 
       const accountIdsSet = new Set(accountsToCalculate.map(a => a.id));
-      const incomingTransfers = allUserTransactions.filter(
+      let incomingTransfers = allUserTransactions.filter(
         t => t.type === 'transfer' && t.toAccountId && accountIdsSet.has(t.toAccountId)
       );
+
+      // Add shared transactions if in family mode
+      if (viewMode === 'family' && activeFamily) {
+        try {
+          const familyRes = await getFamilyTransactions(activeFamily.id, {
+            startDate: earliestBalanceDate,
+            endDate: currentMonthEndDate
+          });
+          if (familyRes.success && familyRes.data) {
+            filteredTransactions = [...filteredTransactions, ...familyRes.data];
+            // Identify incoming transfers in family data if any
+            const familyTransfers = familyRes.data.filter((t: any) => t.type === 'transfer' && t.toAccountId && accountIdsSet.has(t.toAccountId));
+            incomingTransfers = [...incomingTransfers, ...familyTransfers];
+          }
+        } catch (e) {
+          console.error("Failed to load historical family transactions for balance calculation", e);
+        }
+      }
 
       // Group transactions by month and calculate net balance for each month
       // Income includes: income transactions + incoming transfers
@@ -644,11 +838,16 @@ export function Reports() {
 
     try {
       // Get accounts to calculate based on filter
-      let accountsToCalculate = accounts;
+      let accountsToCalculate = [...accounts] as any[];
+      if (viewMode === 'family') {
+        const sharedAccs = sharedData.flatMap(m => m.accounts || []);
+        accountsToCalculate = [...accountsToCalculate, ...sharedAccs];
+      }
+
       if (selectedAccountId) {
-        accountsToCalculate = accounts.filter(a => a.id === selectedAccountId);
+        accountsToCalculate = accountsToCalculate.filter(a => a.id === selectedAccountId);
       } else if (selectedCurrency) {
-        accountsToCalculate = accounts.filter(a => a.currency === selectedCurrency);
+        accountsToCalculate = accountsToCalculate.filter(a => a.currency === selectedCurrency);
       }
 
       // Calculate stored balance (sum of account balances)
@@ -709,9 +908,27 @@ export function Reports() {
       });
 
       const accountIdsSet = new Set(accountsToCalculate.map(a => a.id));
-      const incomingTransfers = allUserTransactions.filter(
+      let incomingTransfers = allUserTransactions.filter(
         t => t.type === 'transfer' && t.toAccountId && accountIdsSet.has(t.toAccountId)
       );
+
+      // Add shared transactions if in family mode
+      if (viewMode === 'family' && activeFamily) {
+        try {
+          const familyRes = await getFamilyTransactions(activeFamily.id, {
+            startDate: earliestBalanceDate,
+            endDate: previousMonthEndDate
+          });
+          if (familyRes.success && familyRes.data) {
+            filteredTransactions = [...filteredTransactions, ...familyRes.data];
+            // Identify incoming transfers in family data if any
+            const familyTransfers = familyRes.data.filter((t: any) => t.type === 'transfer' && t.toAccountId && accountIdsSet.has(t.toAccountId));
+            incomingTransfers = [...incomingTransfers, ...familyTransfers];
+          }
+        } catch (e) {
+          console.error("Failed to load historical family transactions for total balance calculation", e);
+        }
+      }
 
       // Calculate total net balance from all transactions up to end of previous month
       // Income includes: income transactions + incoming transfers
@@ -886,6 +1103,24 @@ export function Reports() {
         </Button>
       </div>
 
+      {/* Family Summary Info Bar */}
+      {viewMode === 'family' && sharedData.length > 0 && (
+        <div className="flex items-center gap-3 p-3 rounded-xl bg-violet-50/60 border border-violet-200/40 backdrop-blur">
+          <Users size={16} className="text-violet-600 flex-shrink-0" />
+          <div className="text-xs text-violet-700">
+            <span className="font-medium">{t('family.toggle.family')}</span>
+            {' · '}
+            {sharedData.length} {sharedData.length === 1 ? 'member' : 'members'}
+            {sharedData.some(m => m.accounts && m.accounts.length > 0) && (
+              <span> · {sharedData.reduce((sum, m) => sum + (m.accounts?.length || 0), 0)} {t('family.shared.accounts').toLowerCase()}</span>
+            )}
+            {sharedData.some(m => m.creditCards && m.creditCards.length > 0) && (
+              <span> · {sharedData.reduce((sum, m) => sum + (m.creditCards?.length || 0), 0)} {t('family.shared.creditCards').toLowerCase()}</span>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Linha 1: Cards de Receita e Despesa com gráficos internos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
         {/* Card de Receita com Composição */}
@@ -894,7 +1129,7 @@ export function Reports() {
             <div className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="text-xs lg:text-sm font-medium text-slate">
-                  {t('common.income')}
+                  {t('common.income')} {viewMode === 'family' && '(Família)'}
                 </CardTitle>
                 <div className="text-lg lg:text-2xl font-bold text-emerald mt-1">
                   {formatCurrency(summary?.income || 0, selectedCurrency || 'BRL')}
@@ -944,7 +1179,7 @@ export function Reports() {
             <div className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="text-xs lg:text-sm font-medium text-slate">
-                  {t('common.expense')}
+                  {t('common.expense')} {viewMode === 'family' && '(Família)'}
                 </CardTitle>
                 <div className="text-lg lg:text-2xl font-bold text-rose mt-1">
                   {formatCurrency(summary?.expenses || 0, selectedCurrency || 'BRL')}
@@ -994,7 +1229,7 @@ export function Reports() {
         <Card hoverable className="bg-white/40 backdrop-blur-xl border-white/60" style={{ borderLeftWidth: '4px', borderLeftColor: monthlyBalance >= 0 ? `rgba(34, 197, 94, ${Math.min(Math.abs(monthlyBalance) / 10000 + 0.3, 1)})` : `rgba(255, 92, 138, ${Math.min(Math.abs(monthlyBalance) / 10000 + 0.3, 1)})` }}>
           <CardHeader className="flex flex-row items-center justify-between pb-1 lg:pb-2">
             <CardTitle className="text-xs lg:text-sm font-medium text-slate truncate">
-              {t('reports.monthlyBalance')}
+              {t('reports.monthlyBalance')} {viewMode === 'family' && '(Família)'}
             </CardTitle>
             <Calendar className={`h-3 w-3 lg:h-4 lg:w-4 flex-shrink-0 ${monthlyBalance >= 0 ? 'text-emerald' : 'text-rose'}`} />
           </CardHeader>
@@ -1011,7 +1246,7 @@ export function Reports() {
         <Card hoverable className="bg-white/40 backdrop-blur-xl border-white/60" style={{ borderLeftWidth: '4px', borderLeftColor: `rgba(141, 153, 174, ${Math.min(Math.abs(totalAccountBalance) / 20000 + 0.3, 1)})` }}>
           <CardHeader className="flex flex-row items-center justify-between pb-1 lg:pb-2">
             <CardTitle className="text-xs lg:text-sm font-medium text-slate truncate">
-              {t('reports.totalBalance')}
+              {t('reports.totalBalance')} {viewMode === 'family' && '(Família)'}
             </CardTitle>
             <PiggyBank className="h-3 w-3 lg:h-4 lg:w-4 text-slate flex-shrink-0" />
           </CardHeader>
@@ -1025,7 +1260,7 @@ export function Reports() {
         <Card hoverable className="bg-white/40 backdrop-blur-xl border-white/60" style={{ borderLeftWidth: '4px', borderLeftColor: `rgba(255, 190, 11, ${Math.min(Math.abs(calculatedBalance) / 20000 + 0.3, 1)})` }}>
           <CardHeader className="flex flex-row items-center justify-between pb-1 lg:pb-2">
             <CardTitle className="text-xs lg:text-sm font-medium text-slate truncate">
-              {t('reports.calculatedBalance')}
+              {t('reports.calculatedBalance')} {viewMode === 'family' && '(Família)'}
             </CardTitle>
             <Calculator className="h-3 w-3 lg:h-4 lg:w-4 text-amber flex-shrink-0" />
           </CardHeader>
