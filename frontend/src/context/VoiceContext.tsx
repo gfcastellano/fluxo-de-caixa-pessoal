@@ -9,18 +9,20 @@ import {
     sendVoiceTransactionUpdate,
     sendVoiceCategoryUpdate,
     sendVoiceAccountUpdate,
+    sendVoiceCreditCardUpdate,
     getVoiceConsent,
 } from '../services/voiceService';
 import { createTransaction, updateTransaction } from '../services/transactionService';
 import { createCategory, updateCategory } from '../services/categoryService';
 import { createAccount, updateAccount } from '../services/accountService';
-import type { Transaction, Category, Account } from '../types';
+import { createCreditCard, updateCreditCard } from '../services/creditCardService';
+import type { Transaction, Category, Account, CreditCard } from '../types';
 
 // Page types that support voice creation
-export type VoicePageType = 'transaction' | 'category' | 'account' | 'budget' | null;
+export type VoicePageType = 'transaction' | 'category' | 'account' | 'budget' | 'credit_card' | null;
 
 // Created item can be any of these types
-export type CreatedItem = Transaction | Category | Account | null;
+export type CreatedItem = Transaction | Category | Account | CreditCard | null;
 
 interface VoiceContextType {
     // Current page determines item type
@@ -77,6 +79,7 @@ const ROUTE_TO_PAGE_TYPE: Record<string, VoicePageType> = {
     '/categories': 'category',
     '/accounts': 'account',
     '/budgets': 'budget',
+    '/credit-cards': 'credit_card',
     '/reports': null, // No voice on reports
 };
 
@@ -328,6 +331,46 @@ export function VoiceProvider({ children, categories = [] }: VoiceProviderProps)
                         setCreatedItem(newAccount);
                         setIsEditing(true);
                         showFeedback('success', result.message || t('voice.accountCreated'));
+                    } else {
+                        showFeedback('error', result.error || t('voice.error'));
+                    }
+                }
+            } else if (currentPageType === 'credit_card') {
+                if (isEditing && createdItem && 'creditLimit' in createdItem) {
+                    // Update existing credit card
+                    const result = await sendVoiceCreditCardUpdate(
+                        blob,
+                        i18n.language,
+                        createdItem as CreditCard,
+                        true
+                    );
+
+                    if (result.success && result.data) {
+                        await updateCreditCard(createdItem.id, result.data);
+                        setCreatedItem({ ...createdItem, ...result.data } as CreditCard);
+                        showFeedback('success', result.message || t('voice.updateSuccess'));
+                    } else {
+                        showFeedback('error', result.error || t('voice.error'));
+                    }
+                } else {
+                    // Create new credit card
+                    const result = await sendVoiceCreditCardUpdate(blob, i18n.language, {}, false);
+
+                    if (result.success && result.data) {
+                        const cardData = {
+                            userId: user.uid,
+                            name: result.data.name || 'Novo Cartão',
+                            linkedAccountId: result.data.linkedAccountId || '', // This might need validation
+                            creditLimit: result.data.creditLimit || 0,
+                            closingDay: result.data.closingDay || 1,
+                            dueDay: result.data.dueDay || 10,
+                            color: result.data.color || '#4F46E5',
+                            isDefault: false,
+                        };
+                        const newCard = await createCreditCard(cardData);
+                        setCreatedItem(newCard);
+                        setIsEditing(true);
+                        showFeedback('success', result.message || t('voice.creditCardCreated'));
                     } else {
                         showFeedback('error', result.error || t('voice.error'));
                     }

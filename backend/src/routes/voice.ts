@@ -3,7 +3,7 @@ import type { Env, Variables } from '../types/context';
 import { FirebaseService } from '../services/firebase';
 import { OpenAIService } from '../services/openai';
 import { authMiddleware } from '../middleware/auth';
-import type { Transaction, Category, Budget } from '../types';
+import type { Transaction, Category, Budget, CreditCard } from '../types';
 import { getErrorTranslation, getSuccessTranslation, getDefaultTranslation } from '../i18n/voice-translations';
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
@@ -767,6 +767,146 @@ app.post('/accounts', async (c) => {
     }
     return c.json(
       { success: false, error: getErrorTranslation(errorLanguage, 'processingFailed') },
+      500
+    );
+  }
+});
+
+/**
+ * POST /api/voice/credit-cards
+ * Create or update a credit card from voice input
+ * Expects multipart/form-data with:
+ * - audio: audio file (webm/opus)
+ * - language: language code (e.g., 'pt', 'en', 'es')
+ * - isEditing: boolean indicating if this is an update
+ * - currentCard: JSON string of current card data (for updates)
+ */
+app.post('/credit-cards', async (c) => {
+  let language = 'en';
+
+  try {
+    const userId = c.get('userId');
+
+    // Parse multipart form data
+    const formData = await c.req.formData();
+    const audioFile = formData.get('audio') as File | null;
+    language = (formData.get('language') as string) || 'en';
+    const isEditing = formData.get('isEditing') === 'true';
+    const currentCardStr = formData.get('currentCard') as string;
+
+    if (!audioFile) {
+      return c.json(
+        { success: false, error: getErrorTranslation(language, 'noAudioFile') },
+        400
+      );
+    }
+
+    // Convert file to array buffer
+    const audioBuffer = await audioFile.arrayBuffer();
+
+    if (audioBuffer.byteLength === 0) {
+      return c.json(
+        { success: false, error: getErrorTranslation(language, 'emptyAudio') },
+        400
+      );
+    }
+
+    // Parse current card if editing
+    let currentCard: CreditCard | null = null;
+    if (isEditing && currentCardStr) {
+      currentCard = JSON.parse(currentCardStr) as CreditCard;
+    }
+
+    // Initialize services
+    const openai = new OpenAIService(c.env);
+    const firebase = new FirebaseService(c.env);
+
+    // Step 1: Transcribe audio
+    let transcription: string;
+    try {
+      transcription = await openai.transcribeAudio(audioBuffer, language);
+    } catch (error) {
+      console.error('Transcription error:', error);
+      return c.json(
+        { success: false, error: getErrorTranslation(language, 'transcriptionFailed') },
+        500
+      );
+    }
+
+    if (!transcription || transcription.trim().length === 0) {
+      return c.json(
+        { success: false, error: getErrorTranslation(language, 'noSpeechDetected') },
+        400
+      );
+    }
+
+    // Step 2: Get user's accounts for linking
+    let accounts: { id: string; name: string }[] = [];
+    try {
+      const accountsData = await firebase.getDocuments('accounts', userId);
+      accounts = (accountsData as { id: string; name: string }[]).map(acc => ({ id: acc.id, name: acc.name }));
+    } catch (error) {
+      // Continue without accounts
+    }
+
+    // Step 3: Parse transcription based on mode
+    let parsedData: Partial<CreditCard>;
+
+    if (isEditing && currentCard) {
+      // Update mode
+      try {
+        parsedData = await openai.parseCreditCardUpdate(
+          transcription,
+          currentCard,
+          language,
+          accounts
+        );
+      } catch (error) {
+        console.error('Parsing error:', error);
+        return c.json(
+          {
+            success: false,
+            error: getErrorTranslation(language, 'parsingFailed'),
+            transcription
+          },
+          400
+        );
+      }
+    } else {
+      // Create mode
+      try {
+        parsedData = await openai.parseCreditCard(
+          transcription,
+          language,
+          accounts
+        );
+      } catch (error) {
+        console.error('Parsing error:', error);
+        return c.json(
+          {
+            success: false,
+            error: getErrorTranslation(language, 'parsingFailed'),
+            transcription
+          },
+          400
+        );
+      }
+    }
+
+    // Step 4: Return parsed data
+    return c.json({
+      success: true,
+      data: parsedData,
+      transcription,
+      message: isEditing
+        ? getSuccessTranslation(language, 'creditCardUpdated') // We need to add this translation key or use a generic one
+        : getSuccessTranslation(language, 'creditCardCreated'), // We need to add this translation key or use a generic one
+    }, 200);
+
+  } catch (error) {
+    console.error('Voice credit card error:', error);
+    return c.json(
+      { success: false, error: getErrorTranslation(language, 'processingFailed') },
       500
     );
   }

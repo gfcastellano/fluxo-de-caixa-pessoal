@@ -4,6 +4,9 @@ import { BaseModal } from './BaseModal';
 import { Input } from './Input';
 import { ColorPicker } from './ColorPicker';
 import { cn } from '../utils/cn';
+import { useVoiceForm } from '../hooks/useVoiceForm';
+import { useVoice } from '../context/VoiceContext';
+import { sendVoiceCreditCardUpdate } from '../services/voiceService';
 import type { CreditCard, Account } from '../types';
 
 interface CreditCardModalProps {
@@ -31,8 +34,8 @@ export function CreditCardModal({
     name: '',
     linkedAccountId: '',
     creditLimit: 0,
-    closingDay: 1,
-    dueDay: 10,
+    closingDay: '1',
+    dueDay: '10',
     color: '#4F46E5',
     isDefault: false,
   });
@@ -46,8 +49,8 @@ export function CreditCardModal({
         name: creditCard.name || '',
         linkedAccountId: creditCard.linkedAccountId || '',
         creditLimit: creditCard.creditLimit || 0,
-        closingDay: creditCard.closingDay || 1,
-        dueDay: creditCard.dueDay || 10,
+        closingDay: creditCard.closingDay?.toString() || '1',
+        dueDay: creditCard.dueDay?.toString() || '10',
         color: creditCard.color || '#4F46E5',
         isDefault: creditCard.isDefault || false,
       });
@@ -56,8 +59,8 @@ export function CreditCardModal({
         name: '',
         linkedAccountId: accounts.find(a => a.isDefault)?.id || '',
         creditLimit: 0,
-        closingDay: 1,
-        dueDay: 10,
+        closingDay: '1',
+        dueDay: '10',
         color: '#4F46E5',
         isDefault: false,
       });
@@ -80,11 +83,13 @@ export function CreditCardModal({
       newErrors.creditLimit = t('creditCards.errors.limitPositive') || 'Limite deve ser maior que zero';
     }
 
-    if (formData.closingDay < 1 || formData.closingDay > 31) {
+    const docClosingDay = parseInt(formData.closingDay);
+    if (isNaN(docClosingDay) || docClosingDay < 1 || docClosingDay > 31) {
       newErrors.closingDay = t('creditCards.errors.closingDayInvalid') || 'Dia de fechamento deve ser entre 1 e 31';
     }
 
-    if (formData.dueDay < 1 || formData.dueDay > 31) {
+    const docDueDay = parseInt(formData.dueDay);
+    if (isNaN(docDueDay) || docDueDay < 1 || docDueDay > 31) {
       newErrors.dueDay = t('creditCards.errors.dueDayInvalid') || 'Dia de vencimento deve ser entre 1 e 31';
     }
 
@@ -92,16 +97,89 @@ export function CreditCardModal({
     return Object.keys(newErrors).length === 0;
   };
 
+  // Voice integration
+  const voice = useVoiceForm({ autoStartRecording: false });
+  const { i18n } = useTranslation();
+  const { setIsModalActive } = useVoice();
+
+  // Sync isModalActive with VoiceContext
+  useEffect(() => {
+    setIsModalActive(isOpen);
+    return () => {
+      if (isOpen) setIsModalActive(false);
+    };
+  }, [isOpen, setIsModalActive]);
+
+  // Voice feedback state
+  const [highlightedFields, setHighlightedFields] = useState<Set<string>>(new Set());
+
+  // Clear highlighted fields after 2 seconds
+  useEffect(() => {
+    if (highlightedFields.size > 0) {
+      const timer = setTimeout(() => {
+        setHighlightedFields(new Set());
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightedFields]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validate()) return;
 
     onSave({
       ...formData,
+      closingDay: parseInt(formData.closingDay),
+      dueDay: parseInt(formData.dueDay),
       userId,
     });
   };
+
+  async function handleVoiceConfirm() {
+    // 1. Stop recording and get the blob
+    const audioBlob = await voice.stopRecording();
+
+    if (audioBlob) {
+      voice.setProcessing(true);
+
+      try {
+        // Use update mode if editing OR if we already have voice data (second voice input)
+        // Need to convert string days to numbers for the service
+        const serviceData = {
+          ...formData,
+          closingDay: parseInt(formData.closingDay) || 1,
+          dueDay: parseInt(formData.dueDay) || 10
+        };
+
+        const result = await sendVoiceCreditCardUpdate(
+          audioBlob,
+          i18n.language,
+          serviceData,
+          isEditing || voice.hasVoiceData
+        );
+
+        if (result.success && result.data) {
+          setFormData(prev => ({
+            ...prev,
+            ...result.data,
+            closingDay: result.data?.closingDay?.toString() || prev.closingDay,
+            dueDay: result.data?.dueDay?.toString() || prev.dueDay,
+          }));
+          setHighlightedFields(new Set(Object.keys(result.data || {})));
+          voice.setVoiceDataReceived();
+          voice.showFeedback('success', result.message || t('voice.updateSuccess'));
+        } else {
+          voice.showFeedback('error', result.error || t('voice.error'));
+        }
+      } catch (error) {
+        console.error('Voice processing error:', error);
+        voice.showFeedback('error', t('voice.error'));
+      } finally {
+        voice.setProcessing(false);
+      }
+    }
+  }
 
   // Filter out cash accounts for linking (only regular accounts)
   const linkableAccounts = accounts.filter(a => !a.isCash);
@@ -112,8 +190,16 @@ export function CreditCardModal({
       onClose={onClose}
       onSubmit={handleSubmit}
       title={isEditing ? t('creditCards.editCard') || 'Editar Cartão' : t('creditCards.addNew') || 'Adicionar Cartão'}
-      submitLabel={isEditing ? t('common.update') || 'Atualizar' : t('common.create') || 'Criar'}
+      submitLabel={voice.hasVoiceData ? t('common.update') : (isEditing ? t('common.update') : t('common.create'))}
       cancelLabel={t('common.cancel') || 'Cancelar'}
+      isRecording={voice.voiceState === 'recording'}
+      onCancelRecording={voice.cancelRecording}
+      onVoiceClick={voice.voiceState === 'recording' ? voice.stopRecording : voice.startRecording}
+      onVoiceConfirm={handleVoiceConfirm}
+      onVoiceCancel={voice.cancelRecording}
+      getAudioLevel={voice.getAudioLevel}
+      isProcessingVoice={voice.isProcessingVoice}
+      hasVoiceData={voice.hasVoiceData}
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="sm:col-span-2">
@@ -124,6 +210,7 @@ export function CreditCardModal({
             error={errors.name}
             required
             placeholder={t('creditCards.form.namePlaceholder') || 'Ex: Nubank, Itaú, etc.'}
+            className={highlightedFields.has('name') ? 'animate-voice-highlight' : ''}
           />
         </div>
 
@@ -134,7 +221,10 @@ export function CreditCardModal({
           <select
             value={formData.linkedAccountId}
             onChange={(e) => setFormData({ ...formData, linkedAccountId: e.target.value })}
-            className="w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue transition-all"
+            className={cn(
+              "w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue transition-all",
+              highlightedFields.has('linkedAccountId') && "animate-voice-highlight"
+            )}
             required
           >
             <option value="">
@@ -161,6 +251,7 @@ export function CreditCardModal({
             onChange={(e) => setFormData({ ...formData, creditLimit: parseFloat(e.target.value) || 0 })}
             error={errors.creditLimit}
             required
+            className={highlightedFields.has('creditLimit') ? 'animate-voice-highlight' : ''}
           />
         </div>
 
@@ -177,13 +268,19 @@ export function CreditCardModal({
         <div>
           <Input
             label={t('creditCards.form.closingDay') || 'Dia do Fechamento'}
-            type="number"
-            min="1"
-            max="31"
+            type="text"
+            inputMode="numeric"
+            placeholder="1-31"
             value={formData.closingDay}
-            onChange={(e) => setFormData({ ...formData, closingDay: parseInt(e.target.value) || 1 })}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === '' || /^\d+$/.test(val)) {
+                setFormData({ ...formData, closingDay: val });
+              }
+            }}
             error={errors.closingDay}
             required
+            className={highlightedFields.has('closingDay') ? 'animate-voice-highlight' : ''}
           />
           <p className="mt-1 text-xs text-slate">
             {t('creditCards.form.closingDayHint') || 'Dia em que a fatura fecha (1-31)'}
@@ -193,13 +290,19 @@ export function CreditCardModal({
         <div>
           <Input
             label={t('creditCards.form.dueDay') || 'Dia do Vencimento'}
-            type="number"
-            min="1"
-            max="31"
+            type="text"
+            inputMode="numeric"
+            placeholder="1-31"
             value={formData.dueDay}
-            onChange={(e) => setFormData({ ...formData, dueDay: parseInt(e.target.value) || 1 })}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === '' || /^\d+$/.test(val)) {
+                setFormData({ ...formData, dueDay: val });
+              }
+            }}
             error={errors.dueDay}
             required
+            className={highlightedFields.has('dueDay') ? 'animate-voice-highlight' : ''}
           />
           <p className="mt-1 text-xs text-slate">
             {t('creditCards.form.dueDayHint') || 'Dia de vencimento da fatura (1-31)'}

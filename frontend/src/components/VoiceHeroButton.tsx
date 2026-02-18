@@ -1,5 +1,6 @@
+
 import { useTranslation } from 'react-i18next';
-import { Plus, Mic, Tag, Landmark, PiggyBank } from 'lucide-react';
+import { Plus, Mic, Tag, Landmark, PiggyBank, CreditCard } from 'lucide-react';
 import { VoiceConsentModal } from './VoiceConsentModal';
 import { VoiceRecordingPill } from './VoiceRecordingPill';
 import { useVoice, type VoicePageType } from '../context/VoiceContext';
@@ -69,6 +70,8 @@ export function VoiceHeroButton({
                 return (isEditing || isModalActive) ? <Mic size={28} /> : <Landmark size={24} />;
             case 'budget':
                 return (isEditing || isModalActive) ? <Mic size={28} /> : <PiggyBank size={24} />;
+            case 'credit_card':
+                return (isEditing || isModalActive) ? <Mic size={28} /> : <CreditCard size={24} />;
             default:
                 return <Plus size={28} />;
         }
@@ -88,6 +91,8 @@ export function VoiceHeroButton({
                 return t('voice.addAccount', 'Adicionar conta');
             case 'budget':
                 return t('voice.addBudget', 'Adicionar orçamento');
+            case 'credit_card':
+                return t('voice.addCreditCard', 'Adicionar cartão');
             default:
                 return t('voice.add', 'Adicionar');
         }
@@ -107,6 +112,8 @@ export function VoiceHeroButton({
                 return t('voice.account', 'Conta');
             case 'budget':
                 return t('voice.budget', 'Orçamento');
+            case 'credit_card':
+                return t('voice.creditCard', 'Cartão');
             default:
                 return '';
         }

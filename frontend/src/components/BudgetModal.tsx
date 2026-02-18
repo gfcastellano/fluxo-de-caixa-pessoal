@@ -7,6 +7,7 @@ import { useVoiceForm } from '../hooks/useVoiceForm';
 import { sendVoiceBudgetUpdate } from '../services/voiceService';
 import { getTranslatedCategoryName } from '../utils/categoryTranslations';
 import type { Budget, Category } from '../types';
+import { cn } from '../utils/cn';
 
 interface BudgetModalProps {
   isOpen: boolean;
@@ -77,6 +78,19 @@ export function BudgetModal({
     };
   }, [isOpen, setIsModalActive]);
 
+  // Voice feedback state
+  const [highlightedFields, setHighlightedFields] = useState<Set<string>>(new Set());
+
+  // Clear highlighted fields after 2 seconds
+  useEffect(() => {
+    if (highlightedFields.size > 0) {
+      const timer = setTimeout(() => {
+        setHighlightedFields(new Set());
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightedFields]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave({
@@ -113,6 +127,7 @@ export function BudgetModal({
             ...result.data,
             amount: result.data?.amount?.toString() || prev.amount,
           }));
+          setHighlightedFields(new Set(Object.keys(result.data)));
           voice.setVoiceDataReceived();
           voice.showFeedback('success', result.message || t('voice.updateSuccess'));
         } else {
@@ -153,7 +168,10 @@ export function BudgetModal({
           <select
             value={formData.categoryId}
             onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue"
+            className={cn(
+              "w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue",
+              highlightedFields.has('categoryId') && "animate-voice-highlight"
+            )}
             required
           >
             <option value="" className="text-neutral-900">{t('budgets.form.selectCategory')}</option>
@@ -172,6 +190,7 @@ export function BudgetModal({
           value={formData.amount}
           onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
           required
+          className={highlightedFields.has('amount') ? 'animate-voice-highlight' : ''}
         />
         <div>
           <label className="block text-sm font-medium text-ink mb-1">
@@ -183,7 +202,10 @@ export function BudgetModal({
               ...formData,
               period: e.target.value as 'monthly' | 'yearly',
             })}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue"
+            className={cn(
+              "w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue",
+              highlightedFields.has('period') && "animate-voice-highlight"
+            )}
           >
             <option value="monthly" className="text-neutral-900">{t('budgets.period.monthly')}</option>
             <option value="yearly" className="text-neutral-900">{t('budgets.period.yearly')}</option>
@@ -195,6 +217,7 @@ export function BudgetModal({
           value={formData.startDate}
           onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
           required
+          className={highlightedFields.has('startDate') ? 'animate-voice-highlight' : ''}
         />
       </div>
     </BaseModal>

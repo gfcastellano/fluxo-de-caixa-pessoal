@@ -69,6 +69,19 @@ export function CategoryModal({
     voice.resetVoice();
   }, [category, isOpen]);
 
+  // Voice feedback state
+  const [highlightedFields, setHighlightedFields] = useState<Set<string>>(new Set());
+
+  // Clear highlighted fields after 2 seconds
+  useEffect(() => {
+    if (highlightedFields.size > 0) {
+      const timer = setTimeout(() => {
+        setHighlightedFields(new Set());
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightedFields]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -123,6 +136,8 @@ export function CategoryModal({
             ...prev,
             ...normalizedData,
           }));
+
+          setHighlightedFields(new Set(Object.keys(normalizedData)));
           voice.setVoiceDataReceived();
           voice.showFeedback('success', result.message || t('voice.updateSuccess'));
         } else {
@@ -161,6 +176,7 @@ export function CategoryModal({
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
           required
+          className={highlightedFields.has('name') ? 'animate-voice-highlight' : ''}
         />
 
         <div>
@@ -173,7 +189,10 @@ export function CategoryModal({
               ...formData,
               type: e.target.value as 'income' | 'expense',
             })}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue"
+            className={cn(
+              "w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue",
+              highlightedFields.has('type') && "animate-voice-highlight"
+            )}
           >
             <option value="expense" className="text-neutral-900">{t('common.expense')}</option>
             <option value="income" className="text-neutral-900">{t('common.income')}</option>

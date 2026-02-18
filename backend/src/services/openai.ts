@@ -865,23 +865,261 @@ Response must be valid JSON only, no markdown, no explanation.`;
         throw new Error('Invalid or missing name');
       }
 
-      if (!parsed.currency || typeof parsed.currency !== 'string') {
-        parsed.currency = 'USD';
-      }
-
-      if (typeof parsed.balance !== 'number') {
+      if (parsed.balance === undefined || typeof parsed.balance !== 'number') {
+        // If balance isn't specified, assume 0
         parsed.balance = 0;
       }
 
       return {
         name: parsed.name,
-        currency: parsed.currency.toUpperCase(),
+        currency: parsed.currency || 'BRL', // Default currency
         balance: parsed.balance,
-        initialBalance: parsed.initialBalance ?? parsed.balance,
-        isDefault: parsed.isDefault ?? false,
+        initialBalance: parsed.balance, // Initial balance same as current balance for new accounts
+        isDefault: parsed.isDefault || false,
       };
     } catch (error) {
       throw new Error(`Failed to parse account: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Parse transcription into credit card data using GPT-4
+   */
+  async parseCreditCard(
+    transcription: string,
+    language: string = 'en',
+    accounts: { id: string; name: string }[] = []
+  ): Promise<{ name: string; creditLimit: number; closingDay: number; dueDay: number; linkedAccountId?: string; color: string }> {
+    const languageInstructions: Record<string, string> = {
+      en: 'Return the name in English',
+      pt: 'Return the name in Portuguese (Português)',
+      es: 'Return the name in Spanish (Español)',
+    };
+
+    const langInstruction = languageInstructions[language] || languageInstructions.en;
+
+    const accountList = accounts
+      .map(a => `"${a.name}" (ID: ${a.id})`)
+      .join('\n') || 'No accounts available';
+
+    const prompt = `Parse the following voice command into a credit card object.
+
+Available accounts (for linking the card):
+${accountList}
+
+Voice command: "${transcription}"
+
+Extract and return ONLY a JSON object with these exact fields:
+- name: string (the card name, ${langInstruction})
+- creditLimit: number (the credit limit, always positive. Default to 0 if not mentioned)
+- closingDay: number (1-31, the day the bill closes. Default to 1 if not mentioned)
+- dueDay: number (1-31, the day the bill is due. Default to 10 if not mentioned)
+- linkedAccountId: string (the ID of the account to link for payments, if mentioned. Match from available accounts. Empty string if not found)
+- color: string (a hex color code like "#FF5733", choose an appropriate color)
+
+Examples:
+- "Cartão Nubank limite 5000 vence dia 10 fecha dia 3" → {"name": "Cartão Nubank", "creditLimit": 5000, "closingDay": 3, "dueDay": 10, "linkedAccountId": "...", "color": "#820AD1"}
+- "XP Visa Infinite limit 20k closing 5th due 15th linked to XP account" → {"name": "XP Visa Infinite", "creditLimit": 20000, "closingDay": 5, "dueDay": 15, "linkedAccountId": "xp-account-id", "color": "#000000"}
+
+Response must be valid JSON only, no markdown, no explanation.`;
+
+    const response = await fetch(`${this.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a financial credit card parser. Extract credit card details from voice commands and return valid JSON only.',
+          },
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        temperature: 0.1,
+        max_tokens: 500,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Parsing failed: ${error}`);
+    }
+
+    const data = await response.json() as {
+      choices: Array<{
+        message: {
+          content: string;
+        };
+      }>;
+    };
+
+    const content = data.choices[0]?.message?.content || '';
+
+    const jsonMatch = content.match(/```json\s*([\s\S]*?)```/) ||
+      content.match(/```\s*([\s\S]*?)```/) ||
+      [null, content];
+
+    const jsonString = jsonMatch[1]?.trim() || content.trim();
+
+    try {
+      const parsed = JSON.parse(jsonString) as Partial<{ name: string; creditLimit: number; closingDay: number; dueDay: number; linkedAccountId: string; color: string }>;
+
+      // Validate required fields
+      if (!parsed.name || typeof parsed.name !== 'string') {
+        throw new Error('Invalid or missing name');
+      }
+
+      return {
+        name: parsed.name,
+        creditLimit: parsed.creditLimit || 0,
+        closingDay: parsed.closingDay || 1,
+        dueDay: parsed.dueDay || 10,
+        linkedAccountId: parsed.linkedAccountId,
+        color: parsed.color || '#4F46E5',
+      };
+    } catch (error) {
+      throw new Error(`Failed to parse credit card: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Parse transcription into credit card update data using GPT-4
+   */
+  async parseCreditCardUpdate(
+    transcription: string,
+    currentCard: { name: string; creditLimit: number; closingDay: number; dueDay: number; linkedAccountId?: string; color: string },
+    language: string = 'en',
+    accounts: { id: string; name: string }[] = []
+  ): Promise<Partial<{ name: string; creditLimit: number; closingDay: number; dueDay: number; linkedAccountId: string; color: string }>> {
+    const languageInstructions: Record<string, string> = {
+      en: 'Return the description in English',
+      pt: 'Return the description in Portuguese (Português)',
+      es: 'Return the description in Spanish (Español)',
+    };
+
+    const langInstruction = languageInstructions[language] || languageInstructions.en;
+
+    const accountList = accounts
+      .map(a => `"${a.name}" (ID: ${a.id})`)
+      .join('\n') || 'No accounts available';
+
+    const prompt = `You are helping update an existing credit card based on a voice command.
+
+CURRENT CREDIT CARD:
+- Name: ${currentCard.name}
+- Limit: ${currentCard.creditLimit}
+- Closing Day: ${currentCard.closingDay}
+- Due Day: ${currentCard.dueDay}
+- Linked Account ID: ${currentCard.linkedAccountId || 'Not set'}
+- Color: ${currentCard.color}
+
+Available accounts:
+${accountList}
+
+Voice command: "${transcription}"
+
+Analyze the voice command and determine what changes the user wants to make to the current credit card.
+Return ONLY a JSON object with the fields that should be updated. Include only fields that need to change.
+
+Possible fields to update:
+- name: string (if the user wants to change the name, ${langInstruction})
+- creditLimit: number (if the user mentions a new limit)
+- closingDay: number (if the user mentions a new closing day)
+- dueDay: number (if the user mentions a new due day)
+- linkedAccountId: string (if the user mentions a different linked account)
+- color: string (if the user wants to change the color)
+
+Examples:
+- "Change limit to 10000" → {"creditLimit": 10000}
+- "Change closing day to 5 and due day to 15" → {"closingDay": 5, "dueDay": 15}
+- "Link to Itaú account" → {"linkedAccountId": "itau-account-id"}
+- "Rename to Black Card" → {"name": "Black Card"}
+
+Response must be valid JSON only, no markdown, no explanation.`;
+
+    const response = await fetch(`${this.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a financial credit card update parser. Extract only the fields that need to be changed from voice commands and return valid JSON only.',
+          },
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        temperature: 0.1,
+        max_tokens: 500,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Parsing failed: ${error}`);
+    }
+
+    const data = await response.json() as {
+      choices: Array<{
+        message: {
+          content: string;
+        };
+      }>;
+    };
+
+    const content = data.choices[0]?.message?.content || '';
+
+    const jsonMatch = content.match(/```json\s*([\s\S]*?)```/) ||
+      content.match(/```\s*([\s\S]*?)```/) ||
+      [null, content];
+
+    const jsonString = jsonMatch[1]?.trim() || content.trim();
+
+    try {
+      const parsed = JSON.parse(jsonString) as Partial<{ name: string; creditLimit: number; closingDay: number; dueDay: number; linkedAccountId: string; color: string }>;
+
+      // Validate and clean up the updates
+      const updates: Partial<{ name: string; creditLimit: number; closingDay: number; dueDay: number; linkedAccountId: string; color: string }> = {};
+
+      if (parsed.name !== undefined && typeof parsed.name === 'string' && parsed.name.trim()) {
+        updates.name = parsed.name.trim();
+      }
+
+      if (parsed.creditLimit !== undefined && typeof parsed.creditLimit === 'number' && parsed.creditLimit >= 0) {
+        updates.creditLimit = parsed.creditLimit;
+      }
+
+      if (parsed.closingDay !== undefined && typeof parsed.closingDay === 'number' && parsed.closingDay >= 1 && parsed.closingDay <= 31) {
+        updates.closingDay = parsed.closingDay;
+      }
+
+      if (parsed.dueDay !== undefined && typeof parsed.dueDay === 'number' && parsed.dueDay >= 1 && parsed.dueDay <= 31) {
+        updates.dueDay = parsed.dueDay;
+      }
+
+      if (parsed.linkedAccountId !== undefined && typeof parsed.linkedAccountId === 'string') {
+        updates.linkedAccountId = parsed.linkedAccountId;
+      }
+
+      if (parsed.color !== undefined && typeof parsed.color === 'string') {
+        updates.color = parsed.color;
+      }
+
+      return updates;
+    } catch (error) {
+      throw new Error(`Failed to parse credit card updates: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 }

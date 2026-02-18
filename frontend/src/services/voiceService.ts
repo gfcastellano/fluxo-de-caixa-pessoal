@@ -1,5 +1,5 @@
 import { auth } from '../firebase/config';
-import type { Transaction, Category, Account, Budget } from '../types';
+import type { Transaction, Category, Account, Budget, CreditCard } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787';
 
@@ -38,6 +38,14 @@ export interface VoiceBudgetUpdateResponse {
 export interface VoiceCategoryUpdateResponse {
   success: boolean;
   data?: Partial<Category>;
+  transcription?: string;
+  message?: string;
+  error?: string;
+}
+
+export interface VoiceCreditCardUpdateResponse {
+  success: boolean;
+  data?: Partial<CreditCard>;
   transcription?: string;
   message?: string;
   error?: string;
@@ -345,6 +353,66 @@ export async function sendVoiceCategoryUpdate(
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to process voice category update',
+    };
+  }
+}
+
+/**
+ * Send voice recording to backend for updating credit card information
+ */
+export async function sendVoiceCreditCardUpdate(
+  audioBlob: Blob,
+  language: string,
+  currentCard: Partial<CreditCard>,
+  isEditing: boolean
+): Promise<VoiceCreditCardUpdateResponse> {
+  const user = auth.currentUser;
+
+  if (!user) {
+    return {
+      success: false,
+      error: 'User not authenticated',
+    };
+  }
+
+  try {
+    const token = await user.getIdToken(true);
+
+    const formData = new FormData();
+    formData.append('audio', audioBlob, 'recording.webm');
+    formData.append('language', language);
+    formData.append('currentCard', JSON.stringify(currentCard));
+    formData.append('isEditing', isEditing.toString());
+
+    // Add cardId when editing
+    if (isEditing && currentCard.id) {
+      formData.append('cardId', currentCard.id);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/voice/credit-cards`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: result.error || `HTTP error! status: ${response.status}`,
+        transcription: result.transcription,
+      };
+    }
+
+    return result as VoiceCreditCardUpdateResponse;
+  } catch (error) {
+    console.error('Voice credit card service error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to process voice credit card update',
     };
   }
 }

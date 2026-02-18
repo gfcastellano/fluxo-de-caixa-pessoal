@@ -21,6 +21,7 @@ import { cn } from '../utils/cn';
 import { PageDescription } from '../components/PageDescription';
 import { useFamily } from '../context/FamilyContext';
 import { SharedDataBadge } from '../components/SharedDataBadge';
+import { useVoice } from '../context/VoiceContext';
 
 interface CreditCardWithDetails extends CreditCard {
   currentBill?: CreditCardBill;
@@ -32,6 +33,10 @@ export function CreditCards() {
   const { user } = useAuth();
   const { t } = useTranslation();
   const { viewMode, sharedData, getMemberPhoto } = useFamily();
+
+  // Voice context
+  const { shouldOpenModal, shouldAutoRecord, clearModalRequest } = useVoice();
+
   const [creditCards, setCreditCards] = useState<CreditCardWithDetails[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,6 +78,14 @@ export function CreditCards() {
       loadData();
     }
   }, [user]);
+
+  // Voice modal trigger
+  useEffect(() => {
+    if (shouldOpenModal) {
+      modal.openCreate();
+      clearModalRequest();
+    }
+  }, [shouldOpenModal, clearModalRequest, modal]);
 
   const loadData = async () => {
     setLoading(true);
@@ -193,14 +206,7 @@ export function CreditCards() {
           <h1 className="text-lg sm:text-2xl font-bold text-ink">{t('creditCards.title') || 'Cartões de Crédito'}</h1>
           <PageDescription pageKey="creditCards" />
         </div>
-        <button
-          onClick={() => modal.openCreate()}
-          className="flex items-center gap-2 px-4 py-2 bg-blue text-white rounded-lg hover:bg-blue-hover transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          <span className="hidden sm:inline">{t('creditCards.addNew') || 'Adicionar Cartão'}</span>
-          <span className="sm:hidden">{t('common.add') || 'Adicionar'}</span>
-        </button>
+        {/* Add Button removed - handled by VoiceHeroButton */}
       </div>
 
       <CreditCardModal

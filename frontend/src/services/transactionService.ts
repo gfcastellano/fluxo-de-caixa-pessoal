@@ -5,6 +5,7 @@ import {
   deleteDoc,
   doc,
   getDocs,
+  getDoc,
   query,
   where,
   orderBy,
@@ -12,6 +13,7 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { ensureBillExists, updateBillTotal } from './creditCardBillService';
 import type { Transaction } from '../types';
 
 const COLLECTION_NAME = 'transactions';
@@ -194,8 +196,26 @@ export async function createTransaction(
   transaction: Omit<Transaction, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
 ): Promise<Transaction> {
   const now = serverTimestamp();
+
+  // If it's a credit card expense, ensure bill exists and correct billId is assigned
+  let finalTransactionData = { ...transaction };
+
+  if (transaction.type === 'expense' && transaction.creditCardId && !transaction.isRecurring) {
+    try {
+      const billId = await ensureBillExists(userId, transaction.creditCardId, transaction.date);
+      finalTransactionData.billId = billId;
+      finalTransactionData.isBillPayment = false; // Regular expense
+
+      // Update bill total
+      await updateBillTotal(billId, transaction.amount);
+    } catch (error) {
+      console.error('Error linking transaction to bill:', error);
+      // Continue creation even if bill linking fails, but log it
+    }
+  }
+
   const docRef = await addDoc(collection(db, COLLECTION_NAME), {
-    ...transaction,
+    ...finalTransactionData,
     userId,
     createdAt: now,
     updatedAt: now,
@@ -204,7 +224,7 @@ export async function createTransaction(
   const createdTransaction: Transaction = {
     id: docRef.id,
     userId,
-    ...transaction,
+    ...finalTransactionData,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -257,6 +277,38 @@ export async function updateTransaction(
     }
   }
 
+  // Handle bill total update if amount changed for a credit card transaction
+  if (updates.amount !== undefined) {
+    try {
+      const docRef = doc(db, COLLECTION_NAME, transactionId);
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        const currentData = docSnap.data() as Transaction;
+
+        // If it's a credit card transaction linked to a bill
+        if (currentData.billId) {
+          const diff = updates.amount - currentData.amount;
+          if (diff !== 0) {
+            await updateBillTotal(currentData.billId, diff);
+          }
+        } else if (currentData.creditCardId && currentData.type === 'expense' && !currentData.isRecurring) {
+          // If it should have a bill but doesn't (legacy data), try to link it now
+          const transactionDate = updates.date || currentData.date;
+          const billId = await ensureBillExists(currentData.userId, currentData.creditCardId, transactionDate);
+
+          // Update this transaction with billId
+          updates.billId = billId;
+
+          // Add to bill total (full amount since it wasn't there before)
+          await updateBillTotal(billId, updates.amount);
+        }
+      }
+    } catch (error) {
+      console.error('Error updating bill total during transaction update:', error);
+    }
+  }
+
   // Local Firestore update (fallback or simple update)
   const docRef = doc(db, COLLECTION_NAME, transactionId);
   await updateDoc(docRef, {
@@ -289,7 +341,7 @@ export async function generateRecurringInstancesAPI(
 ): Promise<{ success: boolean; generatedCount: number }> {
   // This would call the backend endpoint
   const API_URL = import.meta.env.VITE_API_URL || '';
-  
+
   if (API_URL) {
     const response = await fetch(`${API_URL}/api/transactions/${transactionId}/generate-recurring`, {
       method: 'POST',
@@ -361,9 +413,9 @@ export async function generateMissingRecurringInstances(
   try {
     // Get all recurring parent transactions
     const recurringParents = await getRecurringTransactions(userId);
-    
+
     let totalGenerated = 0;
-    
+
     // For each recurring transaction, call the backend to generate instances
     for (const parent of recurringParents) {
       try {
@@ -376,7 +428,7 @@ export async function generateMissingRecurringInstances(
         // Continue with other transactions even if one fails
       }
     }
-    
+
     return { success: true, totalGenerated };
   } catch (error) {
     console.error('Error in generateMissingRecurringInstances:', error);

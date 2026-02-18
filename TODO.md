@@ -62,6 +62,7 @@ Esta sessão focou inicialmente na **consolidação da entrada de voz**, seguida
 - [x] **Fix Loop Infinito no Processamento:** Corrigido problema crítico de requisições infinitas. | Created: 2026-02-17 | Modified: 2026-02-17
 - [x] **Fix Edição de Série:** Corrigido bug onde editar uma série mostrava o valor da parcela em vez do valor total. | Created: 2026-02-17 | Modified: 2026-02-17
 - [x] **Fix Expansão de Série:** Corrigido problema de propagação de eventos que impedia a expansão das transações recorrentes. | Created: 2026-02-17 | Modified: 2026-02-17
+- [x] **Feedback Visual nos Modais:** Adicionado efeito de destaque (glow) nos campos preenchidos automaticamente via voz em todos os modais (Transação, Categoria, Conta, Orçamento). | Created: 2026-02-17 | Modified: 2026-02-17
 
 ### 5. Feature: Família (Compartilhamento Granular) | Created: 2026-02-12 | Modified: 2026-02-12
 - [x] **Fase 1 — Fundação (Backend + Serviços)** — Concluído em 2026-02-12

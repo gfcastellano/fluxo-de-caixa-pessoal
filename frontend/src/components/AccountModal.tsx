@@ -80,6 +80,19 @@ export function AccountModal({
     };
   }, [isOpen, setIsModalActive]);
 
+  // Voice feedback state
+  const [highlightedFields, setHighlightedFields] = useState<Set<string>>(new Set());
+
+  // Clear highlighted fields after 2 seconds
+  useEffect(() => {
+    if (highlightedFields.size > 0) {
+      const timer = setTimeout(() => {
+        setHighlightedFields(new Set());
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightedFields]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave({
@@ -109,6 +122,7 @@ export function AccountModal({
             ...prev,
             ...result.data,
           }));
+          setHighlightedFields(new Set(Object.keys(result.data)));
           voice.setVoiceDataReceived();
           voice.showFeedback('success', result.message || t('voice.updateSuccess'));
         } else {
@@ -148,6 +162,7 @@ export function AccountModal({
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
           required
           disabled={account?.isCash}
+          className={highlightedFields.has('name') ? 'animate-voice-highlight' : ''}
         />
 
         <div>
@@ -160,7 +175,8 @@ export function AccountModal({
             disabled={account?.isCash}
             className={cn(
               "w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue",
-              account?.isCash && "opacity-50 cursor-not-allowed"
+              account?.isCash && "opacity-50 cursor-not-allowed",
+              highlightedFields.has('currency') && "animate-voice-highlight"
             )}
           >
             {CURRENCIES.map((currency) => (
@@ -179,6 +195,7 @@ export function AccountModal({
             value={formData.initialBalance}
             onChange={(e) => setFormData({ ...formData, initialBalance: parseFloat(e.target.value) || 0 })}
             required
+            className={highlightedFields.has('initialBalance') ? 'animate-voice-highlight' : ''}
           />
         )}
 
@@ -189,6 +206,7 @@ export function AccountModal({
             step="0.01"
             value={formData.balance}
             onChange={(e) => setFormData({ ...formData, balance: parseFloat(e.target.value) || 0 })}
+            className={highlightedFields.has('balance') ? 'animate-voice-highlight' : ''}
           />
         )}
 

@@ -20,6 +20,9 @@ export interface VoiceTranslations {
     budgetCreated: string;
     budgetUpdated: string;
     accountCreated: string;
+    accountUpdated: string;
+    creditCardCreated: string;
+    creditCardUpdated: string;
   };
   defaults: {
     description: string;
@@ -44,6 +47,9 @@ export const voiceTranslations: Record<string, VoiceTranslations> = {
       budgetCreated: 'Budget parsed successfully',
       budgetUpdated: 'Budget updated successfully',
       accountCreated: 'Account parsed successfully',
+      accountUpdated: 'Account details updated',
+      creditCardCreated: 'Credit card created successfully',
+      creditCardUpdated: 'Credit card details updated',
     },
     defaults: {
       description: 'Voice transaction',
@@ -66,6 +72,9 @@ export const voiceTranslations: Record<string, VoiceTranslations> = {
       budgetCreated: 'Orçamento processado com sucesso',
       budgetUpdated: 'Orçamento atualizado com sucesso',
       accountCreated: 'Conta processada com sucesso',
+      accountUpdated: 'Detalhes da conta atualizados',
+      creditCardCreated: 'Cartão de crédito criado com sucesso',
+      creditCardUpdated: 'Detalhes do cartão atualizados',
     },
     defaults: {
       description: 'Transação por voz',
@@ -88,6 +97,9 @@ export const voiceTranslations: Record<string, VoiceTranslations> = {
       budgetCreated: 'Presupuesto procesado exitosamente',
       budgetUpdated: 'Presupuesto actualizado exitosamente',
       accountCreated: 'Cuenta procesada exitosamente',
+      accountUpdated: 'Detalles de la cuenta actualizados', // Added based on the provided snippet
+      creditCardCreated: 'Tarjeta de crédito creada con éxito',
+      creditCardUpdated: 'Detalles de la tarjeta actualizados',
     },
     defaults: {
       description: 'Transacción por voz',

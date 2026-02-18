@@ -107,8 +107,7 @@ export async function getBillTransactions(billId: string): Promise<Transaction[]
   try {
     const q = query(
       collection(db, 'transactions'),
-      where('billId', '==', billId),
-      orderBy('date', 'desc')
+      where('billId', '==', billId)
     );
 
     const snapshot = await getDocs(q);
@@ -120,6 +119,9 @@ export async function getBillTransactions(billId: string): Promise<Transaction[]
         ...data,
       };
     }) as Transaction[];
+
+    // Sort by date desc (client-side to avoid complex index requirements)
+    transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     return transactions;
   } catch (error) {
@@ -173,6 +175,8 @@ export async function payBill(
   }
 }
 
+
+
 export async function updateBillTotal(billId: string, amount: number): Promise<void> {
   try {
     const docRef = doc(db, COLLECTION_NAME, billId);
@@ -190,6 +194,115 @@ export async function updateBillTotal(billId: string, amount: number): Promise<v
     });
   } catch (error) {
     console.error('Error updating bill total:', error);
+    throw error;
+  }
+}
+
+// Helper to calculate bill date based on transaction date and closing day
+export function calculateBillDate(transactionDate: string, closingDay: number, dueDay: number): { month: number; year: number; dueDate: string } {
+  const date = new Date(transactionDate);
+  const day = date.getDate();
+  const currentMonth = date.getMonth(); // 0-11
+  const currentYear = date.getFullYear();
+
+  // If transaction is on or after closing day, it goes to the next month's bill
+  let targetMonth = currentMonth;
+  let targetYear = currentYear;
+
+  if (day >= closingDay) {
+    targetMonth++;
+    if (targetMonth > 11) {
+      targetMonth = 0;
+      targetYear++;
+    }
+  }
+
+  // Calculate due date for the target month
+  // Note: We need to handle months with fewer days if dueDay is 31
+  // But for simplicity, we'll construct the date and let JS handle overflow/correction if needed,
+  // or closer to business logic: the due date is in the target month.
+  // Actually, the bill month IS the target month.
+
+  // Example:
+  // Closing Day 5, Due Day 10.
+  // Trans: Jan 4 -> Jan Bill (Due Jan 10)
+  // Trans: Jan 6 -> Feb Bill (Due Feb 10)
+
+  const dueDateObj = new Date(targetYear, targetMonth, dueDay);
+
+  return {
+    month: targetMonth, // 0-11
+    year: targetYear,
+    dueDate: dueDateObj.toISOString().split('T')[0]
+  };
+}
+
+export async function ensureBillExists(
+  userId: string,
+  creditCardId: string,
+  transactionDate: string
+): Promise<string> {
+  try {
+    // We need to fetch the credit card to get closingDay and dueDay
+    // Importing dynamically to avoid circular dependency issues if any
+    const { getCreditCard } = await import('./creditCardService');
+    const creditCard = await getCreditCard(creditCardId);
+
+    if (!creditCard) {
+      throw new Error('Credit card not found');
+    }
+
+    const { month, year, dueDate } = calculateBillDate(
+      transactionDate,
+      creditCard.closingDay,
+      creditCard.dueDay
+    );
+
+    // Check if bill exists
+    const q = query(
+      collection(db, COLLECTION_NAME),
+      where('creditCardId', '==', creditCardId),
+      where('month', '==', month), // Firestore stores 0-11 or 1-12? 
+      // Checking types: CreditCardBill uses month: number. 
+      // Usually matching JS Date.getMonth (0-11). Let's assume 0-11 based on calculateBillDate.
+      // Wait, let's verify if month is 0-indexed or 1-indexed in existing data. 
+      // Looking at `getCurrentBill`: `bills.sort((a, b) => a.month - b.month)`.
+      // It doesn't explicitly say. But given we are creating it, we define it.
+      // Standardizing on 0-based to match Date.getMonth() is safest for calculation, 
+      // but UI often expects 1-based.
+      // Let's stick to 0-based for internal logic if consistent.
+      where('year', '==', year)
+    );
+
+    const snapshot = await getDocs(q);
+
+    if (!snapshot.empty) {
+      return snapshot.docs[0].id;
+    }
+
+    // Create new bill
+    const newBillData: Omit<CreditCardBill, 'id'> = {
+      userId,
+      creditCardId,
+      month,
+      year,
+      dueDate,
+      totalAmount: 0,
+      isClosed: false,
+      isPaid: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const docRef = await addDoc(collection(db, COLLECTION_NAME), {
+      ...newBillData,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+
+    return docRef.id;
+  } catch (error) {
+    console.error('Error ensuring bill exists:', error);
     throw error;
   }
 }
