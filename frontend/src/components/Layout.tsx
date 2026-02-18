@@ -212,22 +212,8 @@ export function Layout({ children }: LayoutProps) {
         </div>
       </main>
 
-      {/* ============================================
-          MOBILE BOTTOM DOCK (sm-)
-          ============================================ */}
+      {/* MOBILE BOTTOM DOCK (sm-) */}
       <VoiceDock />
-
-      {/* ============================================
-          MOBILE FLOATING VOICE BUTTON (When Modal Active)
-          Ensures consistency with dock's location but sits above modal
-          ============================================ */}
-      {isVoiceEnabled && isModalActive && (
-        <div className="sm:hidden fixed bottom-1 left-1 right-1 z-[2000] pointer-events-none flex justify-center pb-safe">
-          <div className="mb-8 pointer-events-auto">
-            <VoiceHeroButton />
-          </div>
-        </div>
-      )}
     </div>
   );
 }
