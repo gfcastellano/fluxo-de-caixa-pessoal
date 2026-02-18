@@ -1,7 +1,7 @@
 import { auth } from '../firebase/config';
 import type { Transaction, Category, Account, Budget, CreditCard } from '../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 export interface VoiceTransactionResponse {
   success: boolean;

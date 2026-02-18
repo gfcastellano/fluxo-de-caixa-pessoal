@@ -8,7 +8,7 @@ import type {
 } from '../types/family';
 import type { Transaction } from '../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
     const user = auth.currentUser;
