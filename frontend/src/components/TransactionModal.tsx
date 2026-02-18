@@ -154,7 +154,7 @@ export function TransactionModal({
       let initialAmount = transaction.amount;
 
       // Calculate total amount if editing a series (all) and it's a credit card installment
-      if (initialEditMode === 'all' && transaction.creditCardId && transaction.paymentMethod === 'credit_card' && transaction.totalInstallments && transaction.totalInstallments > 1) {
+      if (initialEditMode === 'all' && transaction.creditCardId && transaction.totalInstallments && transaction.totalInstallments > 1) {
         initialAmount = transaction.amount * transaction.totalInstallments;
       }
 
