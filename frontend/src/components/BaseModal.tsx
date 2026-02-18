@@ -26,6 +26,14 @@ interface BaseModalProps {
     onCancelRecording?: () => void;
     /** Callback to trigger voice recording from floating button */
     onVoiceClick?: () => void;
+    /** Callback for voice confirm (check button) - used by VoiceRecordingPill */
+    onVoiceConfirm?: () => void | Promise<void>;
+    /** Callback for voice cancel (x button) - used by VoiceRecordingPill */
+    onVoiceCancel?: () => void;
+    /** Callback to get audio level */
+    getAudioLevel?: () => number;
+    /** Whether voice is processing */
+    isProcessingVoice?: boolean;
 }
 
 
@@ -47,6 +55,10 @@ export function BaseModal({
     isRecording = false,
     onCancelRecording,
     onVoiceClick,
+    onVoiceConfirm,
+    onVoiceCancel,
+    getAudioLevel,
+    isProcessingVoice,
 }: BaseModalProps) {
     if (!isOpen) return null;
 
@@ -92,9 +104,13 @@ export function BaseModal({
                                 {onVoiceClick && (
                                     <div className="flex justify-center py-2 animate-fade-in">
                                         <VoiceHeroButton
-                                            onClick={onVoiceClick}
+                                            onClick={isRecording ? undefined : onVoiceClick} // If recording, let Pill handle click via internal buttons
                                             isRecording={isRecording}
-                                            className="shadow-lg hover:shadow-xl scale-90"
+                                            className="scale-90"
+                                            onVoiceConfirm={onVoiceConfirm}
+                                            onVoiceCancel={onVoiceCancel}
+                                            getAudioLevel={getAudioLevel}
+                                            isProcessing={isProcessingVoice}
                                         />
                                     </div>
                                 )}

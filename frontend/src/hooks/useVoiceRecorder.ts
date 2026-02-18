@@ -48,8 +48,11 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
     const sum = dataArrayRef.current.reduce((acc, val) => acc + val, 0);
     const average = sum / dataArrayRef.current.length;
 
-    // Normalize to 0-100 scale
-    return Math.min(100, Math.round((average / 255) * 100 * 1.5)); // 1.5x boost for visibility
+    // Normalize to 0-100 scale with boost for lower volumes
+    // Using simple linear math wasn't sensitive enough.
+    // We use a root curve to boost low signals and a multiplier
+    const normalized = Math.min(100, Math.pow(average / 255, 0.8) * 100 * 2.5);
+    return Math.round(normalized);
   }, [state]);
 
   const startRecording = useCallback(async (): Promise<void> => {

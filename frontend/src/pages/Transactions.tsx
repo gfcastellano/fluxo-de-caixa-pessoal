@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -144,6 +144,7 @@ export function Transactions() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [autoRecordOnOpen, setAutoRecordOnOpen] = useState(false); // Captures shouldAutoRecord before clear
+  const [initialEditMode, setInitialEditMode] = useState<'single' | 'forward' | 'all' | undefined>(undefined);
 
   // Filter states - NEW: filterMode replaces filterYear/filterMonth
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
@@ -432,17 +433,20 @@ export function Transactions() {
 
   const handleOpenAddModal = () => {
     setEditingTransaction(null);
+    setInitialEditMode(undefined);
     setIsModalOpen(true);
   };
 
-  const handleOpenEditModal = (transaction: Transaction) => {
+  const handleOpenEditModal = (transaction: Transaction, mode?: 'single' | 'forward' | 'all') => {
     setEditingTransaction(transaction);
+    setInitialEditMode(mode);
     setIsModalOpen(true);
   };
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setAutoRecordOnOpen(false); // Reset auto-record flag
+    setInitialEditMode(undefined);
   };
 
   const handleVoiceUpdate = (updates: Partial<Transaction>) => {
@@ -777,7 +781,7 @@ export function Transactions() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleOpenEditModal(group.transactions[0]);
+                                handleOpenEditModal(group.transactions[0], 'all');
                               }}
                               className="p-1.5 text-slate hover:bg-slate/10 rounded-full touch-target"
                               title="Editar série"
@@ -966,17 +970,20 @@ export function Transactions() {
                     {filteredRecurringGroups.map((group) => {
                       const isExpanded = expandedRecurring.has(group.parentId);
                       return (
-                        <>
+                        <Fragment key={`group-${group.parentId}`}>
                           {/* Group Header Row */}
                           <tr
-                            key={`group-${group.parentId}`}
-                            className="bg-blue/5 hover:bg-blue/10 cursor-pointer transition-all"
+                            className="group hover:bg-slate/5 transition-colors cursor-pointer border-b border-gray-100 last:border-0"
+                            onClick={() => toggleRecurringExpand(group.parentId)}
                           >
                             <td className="py-3 px-4 text-sm">
                               <div className="flex items-center gap-2">
                                 <Repeat className="h-5 w-5 text-blue flex-shrink-0" />
                                 <button
-                                  onClick={() => toggleRecurringExpand(group.parentId)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleRecurringExpand(group.parentId);
+                                  }}
                                   className="text-blue hover:text-blue-hover font-medium flex items-center gap-1"
                                 >
                                   {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
@@ -1059,7 +1066,7 @@ export function Transactions() {
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleOpenEditModal(group.transactions[0]);
+                                    handleOpenEditModal(group.transactions[0], 'all');
                                   }}
                                   className="p-2 text-slate hover:bg-slate/10 rounded-full transition-colors"
                                   title="Editar série"
@@ -1138,7 +1145,7 @@ export function Transactions() {
                               </tr>
                             );
                           })}
-                        </>
+                        </Fragment>
                       );
                     })}
 

@@ -22,6 +22,7 @@ interface TransactionModalProps {
   onVoiceUpdate?: (updates: Partial<Transaction>) => void;
   userId: string;
   autoStartRecording?: boolean;
+  initialEditMode?: 'single' | 'forward' | 'all';
 }
 
 export function TransactionModal({
@@ -33,6 +34,7 @@ export function TransactionModal({
   onVoiceUpdate,
   userId,
   autoStartRecording = false,
+  initialEditMode,
 }: TransactionModalProps) {
   const { t, i18n } = useTranslation();
   const isEditing = !!transaction;
@@ -63,6 +65,19 @@ export function TransactionModal({
   // Installment states for credit card
   const [installments, setInstallments] = useState<number>(1);
   const [isInstallmentMode, setIsInstallmentMode] = useState(false);
+
+  // Voice feedback state
+  const [highlightedFields, setHighlightedFields] = useState<Set<string>>(new Set());
+
+  // Clear highlighted fields after 2 seconds
+  useEffect(() => {
+    if (highlightedFields.size > 0) {
+      const timer = setTimeout(() => {
+        setHighlightedFields(new Set());
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightedFields]);
 
   // Estados para edição em massa de transações recorrentes
   const [editMode, setEditMode] = useState<'single' | 'forward' | 'all'>('forward');
@@ -136,9 +151,16 @@ export function TransactionModal({
 
   useEffect(() => {
     if (transaction) {
+      let initialAmount = transaction.amount;
+
+      // Calculate total amount if editing a series (all) and it's a credit card installment
+      if (initialEditMode === 'all' && transaction.creditCardId && transaction.paymentMethod === 'credit_card' && transaction.totalInstallments && transaction.totalInstallments > 1) {
+        initialAmount = transaction.amount * transaction.totalInstallments;
+      }
+
       setFormData({
         description: transaction.description || '',
-        amount: transaction.amount?.toString() || '',
+        amount: initialAmount?.toString() || '',
         type: transaction.type || 'expense',
         categoryId: transaction.categoryId || '',
         date: transaction.date || new Date().toISOString().split('T')[0],
@@ -188,8 +210,10 @@ export function TransactionModal({
               : instances;
             setSeriesTransactions(allSeries);
 
-            // Set default edit mode to 'single' for child instances
-            if (transaction.parentTransactionId || transaction.isRecurringInstance) {
+            // Set default edit mode to 'single' for child instances, or use initial (if provided)
+            if (initialEditMode) {
+              setEditMode(initialEditMode);
+            } else if (transaction.parentTransactionId || transaction.isRecurringInstance) {
               setEditMode('single');
             } else {
               setEditMode('forward');
@@ -203,7 +227,11 @@ export function TransactionModal({
         }
       } else {
         setSeriesTransactions([]);
-        setEditMode('forward');
+        if (initialEditMode) {
+          setEditMode(initialEditMode);
+        } else {
+          setEditMode('forward');
+        }
         setAffectedCount(0);
       }
     };
@@ -247,7 +275,12 @@ export function TransactionModal({
     const totalAmount = parseFloat(formData.amount.toString().replace(',', '.'));
 
     // Calculate installment amount if in installment mode
-    const installmentAmount = isInstallmentMode && installments > 1
+    // Divide if creating new, OR if editing all/forward (updating the series total)
+    // Don't divide if editing single instance (updating just that one payment)
+    const shouldDivideAmount = isInstallmentMode && installments > 1 &&
+      (!isEditing || (isEditing && (editMode === 'all' || editMode === 'forward')));
+
+    const installmentAmount = shouldDivideAmount
       ? totalAmount / installments
       : totalAmount;
 
@@ -419,118 +452,117 @@ export function TransactionModal({
     }
   };
 
-  // Handle voice commands from the centralized VoiceHeroButton
-  useEffect(() => {
-    const processVoiceCommand = async () => {
-      if (voice.voiceState === 'preview' && voice.audioBlob) {
-        voice.setProcessing(true);
-        const audioBlob = voice.audioBlob;
+  const handleVoiceConfirm = async () => {
+    // 1. Stop recording and get the blob
+    const audioBlob = await voice.stopRecording();
 
-        try {
-          if (voice.hasVoiceData || isEditing) {
-            // Update mode - uses the current form data as context or the existing transaction
-            const currentContext: Transaction = transaction || {
-              id: '',
-              userId: userId,
-              description: formData.description,
-              amount: parseFloat(formData.amount.toString().replace(',', '.')) || 0,
-              type: formData.type,
-              categoryId: formData.categoryId,
-              date: formData.date,
-              accountId: selectedAccountId || '',
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            };
+    if (audioBlob) {
+      voice.setProcessing(true);
 
-            const result = await sendVoiceTransactionUpdate(
-              audioBlob,
-              i18n.language,
-              currentContext,
-              categories,
-              true
-            );
+      try {
+        if (voice.hasVoiceData || isEditing) {
+          // Update mode - uses the current form data as context or the existing transaction
+          const currentContext: Transaction = transaction || {
+            id: '',
+            userId: userId,
+            description: formData.description,
+            amount: parseFloat(formData.amount.toString().replace(',', '.')) || 0,
+            type: formData.type,
+            categoryId: formData.categoryId,
+            date: formData.date,
+            accountId: selectedAccountId || '',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
 
-            if (result.success && result.data) {
-              const updates = result.data;
+          const result = await sendVoiceTransactionUpdate(
+            audioBlob,
+            i18n.language,
+            currentContext,
+            categories,
+            true
+          );
 
-              // Apply updates to form
-              setFormData(prev => ({
-                ...prev,
-                description: updates.description || prev.description,
-                amount: updates.amount?.toString() || prev.amount,
-                type: updates.type || prev.type,
-                categoryId: updates.categoryId || prev.categoryId,
-                date: updates.date || prev.date,
-              }));
+          if (result.success && result.data) {
+            const updates = result.data;
 
-              if (updates.accountId) {
-                setSelectedAccountId(updates.accountId);
-                setPaymentMethod('account');
-                setSelectedCreditCardId('');
-              }
-              if (updates.toAccountId) setSelectedToAccountId(updates.toAccountId);
-              if (updates.creditCardId) {
-                setSelectedCreditCardId(updates.creditCardId);
-                setPaymentMethod('credit_card');
-                setSelectedAccountId('');
-              }
-              if (updates.installments !== undefined) {
-                setInstallments(updates.installments);
-                setIsInstallmentMode(updates.installments > 1);
-              }
+            // Apply updates to form
+            setFormData(prev => ({
+              ...prev,
+              description: updates.description || prev.description,
+              amount: updates.amount?.toString() || prev.amount,
+              type: updates.type || prev.type,
+              categoryId: updates.categoryId || prev.categoryId,
+              date: updates.date || prev.date,
+            }));
 
-              voice.showFeedback('success', result.message || t('voice.updateSuccess'));
-              if (onVoiceUpdate) onVoiceUpdate(updates);
-            } else {
-              voice.showFeedback('error', result.error || t('voice.error'));
+            if (updates.accountId) {
+              setSelectedAccountId(updates.accountId);
+              setPaymentMethod('account');
+              setSelectedCreditCardId('');
             }
+            if (updates.toAccountId) setSelectedToAccountId(updates.toAccountId);
+            if (updates.creditCardId) {
+              setSelectedCreditCardId(updates.creditCardId);
+              setPaymentMethod('credit_card');
+              setSelectedAccountId('');
+            }
+            if (updates.installments !== undefined) {
+              setInstallments(updates.installments);
+              setIsInstallmentMode(updates.installments > 1);
+            }
+
+            voice.showFeedback('success', result.message || t('voice.updateSuccess'));
+            setHighlightedFields(new Set(Object.keys(updates)));
+            if (onVoiceUpdate) onVoiceUpdate(updates);
           } else {
-            // Creation mode
-            const result = await sendVoiceTransaction(audioBlob, i18n.language);
-
-            if (result.success && result.data) {
-              const parsedTransaction = result.data;
-
-              // Map parsed data to form
-              setFormData({
-                description: parsedTransaction.description || '',
-                amount: parsedTransaction.amount?.toString() || '',
-                type: parsedTransaction.type || 'expense',
-                categoryId: parsedTransaction.categoryId || '',
-                date: parsedTransaction.date || new Date().toISOString().split('T')[0],
-              });
-
-              if (parsedTransaction.accountId) {
-                setSelectedAccountId(parsedTransaction.accountId);
-                setPaymentMethod('account');
-              }
-              if (parsedTransaction.creditCardId) {
-                setSelectedCreditCardId(parsedTransaction.creditCardId);
-                setPaymentMethod('credit_card');
-                setSelectedAccountId('');
-              }
-              if (parsedTransaction.installments) {
-                setInstallments(parsedTransaction.installments);
-                setIsInstallmentMode(parsedTransaction.installments > 1);
-              }
-
-              voice.setVoiceDataReceived();
-              voice.showFeedback('success', result.message || t('voice.transactionCreated'));
-            } else {
-              voice.showFeedback('error', result.error || t('voice.error'));
-            }
+            voice.showFeedback('error', result.error || t('voice.error'));
           }
-        } catch (error) {
-          console.error('Voice processing error:', error);
-          voice.showFeedback('error', t('voice.error'));
-        } finally {
-          voice.setProcessing(false);
-        }
-      }
-    };
+        } else {
+          // Creation mode
+          const result = await sendVoiceTransaction(audioBlob, i18n.language);
 
-    processVoiceCommand();
-  }, [voice.voiceState, voice.audioBlob, voice.hasVoiceData, isEditing, i18n.language, transaction, categories, t, onVoiceUpdate, formData, userId, selectedAccountId]);
+          if (result.success && result.data) {
+            const parsedTransaction = result.data;
+
+            // Map parsed data to form
+            setFormData({
+              description: parsedTransaction.description || '',
+              amount: parsedTransaction.amount?.toString() || '',
+              type: parsedTransaction.type || 'expense',
+              categoryId: parsedTransaction.categoryId || '',
+              date: parsedTransaction.date || new Date().toISOString().split('T')[0],
+            });
+
+            if (parsedTransaction.accountId) {
+              setSelectedAccountId(parsedTransaction.accountId);
+              setPaymentMethod('account');
+            }
+            if (parsedTransaction.creditCardId) {
+              setSelectedCreditCardId(parsedTransaction.creditCardId);
+              setPaymentMethod('credit_card');
+              setSelectedAccountId('');
+            }
+            if (parsedTransaction.installments) {
+              setInstallments(parsedTransaction.installments);
+              setIsInstallmentMode(parsedTransaction.installments > 1);
+            }
+
+            voice.setVoiceDataReceived();
+            voice.showFeedback('success', result.message || t('voice.transactionCreated'));
+            setHighlightedFields(new Set(Object.keys(parsedTransaction)));
+          } else {
+            voice.showFeedback('error', result.error || t('voice.error'));
+          }
+        }
+      } catch (error) {
+        console.error('Voice processing error:', error);
+        voice.showFeedback('error', t('voice.error'));
+      } finally {
+        voice.setProcessing(false);
+      }
+    }
+  };
 
   // Auto-select destination cash account only for withdrawal transfers
   useEffect(() => {
@@ -571,6 +603,10 @@ export function TransactionModal({
       isRecording={voice.voiceState === 'recording'}
       onCancelRecording={voice.cancelRecording}
       onVoiceClick={voice.voiceState === 'recording' ? voice.stopRecording : voice.startRecording}
+      onVoiceConfirm={handleVoiceConfirm}
+      onVoiceCancel={voice.cancelRecording}
+      getAudioLevel={voice.getAudioLevel}
+      isProcessingVoice={voice.isProcessingVoice}
       isSubmitDisabled={voice.voiceState === 'processing'}
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
@@ -579,6 +615,7 @@ export function TransactionModal({
           value={formData.description}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
           required
+          className={highlightedFields.has('description') ? 'animate-voice-highlight' : ''}
         />
         <Input
           label={t('transactions.form.amount')}
@@ -588,6 +625,7 @@ export function TransactionModal({
           value={formData.amount}
           onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
           required
+          className={highlightedFields.has('amount') ? 'animate-voice-highlight' : ''}
         />
         <div className="col-span-1 sm:col-span-2">
           <div className="grid grid-cols-[2fr_3fr] gap-3">
@@ -596,7 +634,10 @@ export function TransactionModal({
               <select
                 value={formData.type}
                 onChange={(e) => setFormData({ ...formData, type: e.target.value as 'income' | 'expense' | 'transfer', categoryId: '' })}
-                className="w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue transition-all"
+                className={cn(
+                  "w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue transition-all",
+                  highlightedFields.has('type') && "animate-voice-highlight"
+                )}
               >
                 <option value="expense">{t('common.expense')}</option>
                 <option value="income">{t('common.income')}</option>
@@ -608,7 +649,10 @@ export function TransactionModal({
               <select
                 value={formData.categoryId}
                 onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-                className="w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue transition-all"
+                className={cn(
+                  "w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue transition-all",
+                  highlightedFields.has('categoryId') && "animate-voice-highlight"
+                )}
                 required
               >
                 <option value="">{t('transactions.form.selectCategory')}</option>
@@ -765,7 +809,10 @@ export function TransactionModal({
                 <select
                   value={selectedAccountId}
                   onChange={(e) => setSelectedAccountId(e.target.value)}
-                  className="w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue transition-all"
+                  className={cn(
+                    "w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue transition-all",
+                    highlightedFields.has('accountId') && "animate-voice-highlight"
+                  )}
                 >
                   <option value="">{t('transactions.form.selectAccount')}</option>
                   {accounts.map((account) => (
@@ -784,7 +831,10 @@ export function TransactionModal({
                 <select
                   value={selectedCreditCardId}
                   onChange={(e) => setSelectedCreditCardId(e.target.value)}
-                  className="w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue transition-all"
+                  className={cn(
+                    "w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue transition-all",
+                    highlightedFields.has('creditCardId') && "animate-voice-highlight"
+                  )}
                   required={paymentMethod === 'credit_card'}
                 >
                   <option value="">{t('creditCardPayment.form.selectCreditCard') || 'Selecione um cartão'}</option>

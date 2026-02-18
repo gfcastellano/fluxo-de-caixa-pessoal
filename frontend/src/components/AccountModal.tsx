@@ -88,43 +88,40 @@ export function AccountModal({
     });
   };
 
-  // Handle voice commands from the centralized VoiceHeroButton
-  useEffect(() => {
-    const processVoiceCommand = async () => {
-      if (voice.voiceState === 'preview' && voice.audioBlob) {
-        voice.setProcessing(true);
-        const audioBlob = voice.audioBlob;
+  const handleVoiceConfirm = async () => {
+    // 1. Stop recording and get the blob
+    const audioBlob = await voice.stopRecording();
 
-        try {
-          // Use update mode if editing OR if we already have voice data (second voice input)
-          const result = await sendVoiceAccountUpdate(
-            audioBlob,
-            i18n.language,
-            formData,
-            isEditing || voice.hasVoiceData  // Second audio = update mode
-          );
+    if (audioBlob) {
+      voice.setProcessing(true);
 
-          if (result.success && result.data) {
-            setFormData(prev => ({
-              ...prev,
-              ...result.data,
-            }));
-            voice.setVoiceDataReceived();
-            voice.showFeedback('success', result.message || t('voice.updateSuccess'));
-          } else {
-            voice.showFeedback('error', result.error || t('voice.error'));
-          }
-        } catch (error) {
-          console.error('Voice processing error:', error);
-          voice.showFeedback('error', t('voice.error'));
-        } finally {
-          voice.setProcessing(false);
+      try {
+        // Use update mode if editing OR if we already have voice data (second voice input)
+        const result = await sendVoiceAccountUpdate(
+          audioBlob,
+          i18n.language,
+          formData,
+          isEditing || voice.hasVoiceData  // Second audio = update mode
+        );
+
+        if (result.success && result.data) {
+          setFormData(prev => ({
+            ...prev,
+            ...result.data,
+          }));
+          voice.setVoiceDataReceived();
+          voice.showFeedback('success', result.message || t('voice.updateSuccess'));
+        } else {
+          voice.showFeedback('error', result.error || t('voice.error'));
         }
+      } catch (error) {
+        console.error('Voice processing error:', error);
+        voice.showFeedback('error', t('voice.error'));
+      } finally {
+        voice.setProcessing(false);
       }
-    };
-
-    processVoiceCommand();
-  }, [voice.voiceState, voice.audioBlob, voice.hasVoiceData, isEditing, i18n.language, formData, t]);
+    }
+  };
 
   return (
     <BaseModal
@@ -139,6 +136,10 @@ export function AccountModal({
       isRecording={voice.voiceState === 'recording'}
       onCancelRecording={voice.cancelRecording}
       onVoiceClick={voice.voiceState === 'recording' ? voice.stopRecording : voice.startRecording}
+      onVoiceConfirm={handleVoiceConfirm}
+      onVoiceCancel={voice.cancelRecording}
+      getAudioLevel={voice.getAudioLevel}
+      isProcessingVoice={voice.isProcessingVoice}
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <Input

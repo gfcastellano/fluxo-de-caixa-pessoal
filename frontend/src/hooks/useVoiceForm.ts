@@ -27,6 +27,7 @@ export interface UseVoiceFormReturn {
     showFeedback: (type: 'success' | 'error', message: string) => void;
     clearFeedback: () => void;
     audioBlob: Blob | null;
+    getAudioLevel: () => number;
 }
 
 // Sound effect for starting recording
@@ -186,5 +187,6 @@ export function useVoiceForm(options: UseVoiceFormOptions = {}): UseVoiceFormRet
         showFeedback,
         clearFeedback,
         audioBlob: recorder.audioBlob,
+        getAudioLevel: recorder.getAudioLevel,
     };
 }

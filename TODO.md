@@ -54,6 +54,14 @@ Esta sessão focou inicialmente na **consolidação da entrada de voz**, seguida
 - [x] Suporte a criação e edição de transações via voz.
 - [x] Suporte a categorias, contas e orçamentos via voz.
 - [x] Centralização da interface de voz no `VoiceHeroButton`.
+- [x] **Redesenho Botão de Voz:** Implementado "Pill UI" com confirmação/cancelamento, animação de onda da direita para esquerda e tema claro. | Created: 2026-02-17 | Modified: 2026-02-17
+- [x] **Fix Botão Voz nos Modais:** Corrigido problema onde a nova UI "Pill" não aparecia dentro dos modais e removido label duplicado. | Created: 2026-02-17 | Modified: 2026-02-17
+- [x] **Ajuste Sensibilidade Microfone:** Melhorada a visualização da onda de som (boost 1.8x) e histórico de 10s. | Created: 2026-02-17 | Modified: 2026-02-17
+- [x] **Fix Envio de Formulário:** Corrigido bug onde clicar em confirmar o áudio tentava enviar o formulário. | Created: 2026-02-17 | Modified: 2026-02-17
+- [x] **Fix Feedback Visual:** Corrigido bug visual e removido sombra quadrada ("squared shadow") do botão. | Created: 2026-02-17 | Modified: 2026-02-17
+- [x] **Fix Loop Infinito no Processamento:** Corrigido problema crítico de requisições infinitas. | Created: 2026-02-17 | Modified: 2026-02-17
+- [x] **Fix Edição de Série:** Corrigido bug onde editar uma série mostrava o valor da parcela em vez do valor total. | Created: 2026-02-17 | Modified: 2026-02-17
+- [x] **Fix Expansão de Série:** Corrigido problema de propagação de eventos que impedia a expansão das transações recorrentes. | Created: 2026-02-17 | Modified: 2026-02-17
 
 ### 5. Feature: Família (Compartilhamento Granular) | Created: 2026-02-12 | Modified: 2026-02-12
 - [x] **Fase 1 — Fundação (Backend + Serviços)** — Concluído em 2026-02-12
