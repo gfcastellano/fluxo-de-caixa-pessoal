@@ -107,22 +107,22 @@ Opção B (um pouco melhor):
 **Mensagem sugerida:** `feat(home): implement minimal Home layout using HomeSummary`
 
 ### Tarefas
-- [ ] Reorganizar `Dashboard.tsx` para:
-  - seção “Este mês” (3 números)
-  - seção “Mantendo este ritmo…” (projeção mensal)
-  - seção “Até dezembro…” (impacto anual)
-  - lista “Últimas transações” (3–5)
-  - CTA principal “Adicionar” (voz em destaque)
-- [ ] Remover (da Home) componentes densos / múltiplas tabelas / breakdowns longos
-- [ ] Garantir que qualquer informação removida tenha caminho:
-  - botão “Ver detalhes” → leva para Reports / Transactions / Accounts (o que já existir)
-- [ ] Manter family mode funcionando (mas fora do “centro”):
-  - ex.: um ícone discreto / link “Família” ou manter no menu existente
+- [x] Reorganizar `Dashboard.tsx` para:
+  - seção "Este mês" (3 números)
+  - seção "Mantendo este ritmo…" (projeção mensal)
+  - seção "Até dezembro…" (impacto anual)
+  - lista "Últimas transações" (3–5)
+  - CTA principal "Adicionar" (voz em destaque)
+- [x] Remover (da Home) componentes densos / múltiplas tabelas / breakdowns longos
+- [x] Garantir que qualquer informação removida tenha caminho:
+  - botão "Ver detalhes" → leva para Reports / Transactions / Accounts (o que já existir)
+- [x] Manter family mode funcionando (mas fora do "centro"):
+  - ex.: um ícone discreto / link "Família" ou manter no menu existente
 
 ### Done
-- [ ] Home abre e em 10s o usuário entende tudo
-- [ ] Sem regressão de navegação
-- [ ] Sem perdas de funcionalidades (só mudança de “onde aparece”)
+- [x] Home abre e em 10s o usuário entende tudo
+- [x] Sem regressão de navegação
+- [x] Sem perdas de funcionalidades (só mudança de "onde aparece")
 
 ---
 
