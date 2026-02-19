@@ -21,17 +21,17 @@ Tudo que for “complexidade” (por moeda, por conta, categorias, metas, family
 **Mensagem sugerida:** `refactor(dashboard): extract data loading into hook without UI changes`
 
 ### Tarefas
-- [ ] Criar `frontend/src/hooks/useDashboardData.ts` (ou pasta equivalente)  
-- [ ] Mover toda lógica de fetch/transform do `Dashboard.tsx` para o hook:
+- [x] Criar `frontend/src/hooks/useDashboardData.ts` (ou pasta equivalente)
+- [x] Mover toda lógica de fetch/transform do `Dashboard.tsx` para o hook:
   - carregamento de contas/cartões/transações/resumos
   - cálculos intermediários (sem alterar resultados)
-- [ ] `Dashboard.tsx` vira principalmente “render + estados” consumindo o hook
-- [ ] Manter UI exatamente igual (sem mudanças visuais)
+- [x] `Dashboard.tsx` vira principalmente "render + estados" consumindo o hook
+- [x] Manter UI exatamente igual (sem mudanças visuais)
 
 ### Done
-- [ ] App compila e o dashboard mostra os mesmos números/listas
-- [ ] Sem mudanças em rotas/links
-- [ ] Sem mudanças de comportamento
+- [x] App compila e o dashboard mostra os mesmos números/listas
+- [x] Sem mudanças em rotas/links
+- [x] Sem mudanças de comportamento
 
 ---
 
