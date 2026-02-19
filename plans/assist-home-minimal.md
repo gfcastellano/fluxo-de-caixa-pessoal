@@ -39,16 +39,16 @@ Tudo que for “complexidade” (por moeda, por conta, categorias, metas, family
 **Mensagem sugerida:** `refactor(dashboard): introduce HomeSummary view-model`
 
 ### Tarefas
-- [ ] Criar um tipo `HomeSummary` com campos necessários para Home minimalista:
+- [x] Criar um tipo `HomeSummary` com campos necessários para Home minimalista:
   - `monthIncome`, `monthExpense`, `monthNet`
   - `latestTransactions` (já ordenadas/limitadas)
   - placeholders para projeções: `monthProjectionNet?`, `yearEndProjection?`
-- [ ] No hook, gerar `homeSummary` **além** do que já existe (sem usar na UI)
-- [ ] Garantir que valores já usados hoje ainda saiam iguais (backward compatible)
+- [x] No hook, gerar `homeSummary` **além** do que já existe (sem usar na UI)
+- [x] Garantir que valores já usados hoje ainda saiam iguais (backward compatible)
 
 ### Done
-- [ ] Sem mudanças visuais
-- [ ] `homeSummary` logável/inspecionável e consistente
+- [x] Sem mudanças visuais
+- [x] `homeSummary` logável/inspecionável e consistente
 
 ---
 

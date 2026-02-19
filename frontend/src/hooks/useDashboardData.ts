@@ -17,6 +17,21 @@ export interface CurrencySummary {
   balance: number;
 }
 
+export interface ProjectionResult {
+  value: number;
+  explanation: string;
+}
+
+export interface HomeSummary {
+  monthIncome: number;
+  monthExpense: number;
+  monthNet: number;
+  byCurrency: Record<string, { income: number; expense: number; net: number }>;
+  latestTransactions: Transaction[];
+  monthProjectionNet?: ProjectionResult;
+  yearEndProjection?: ProjectionResult;
+}
+
 export interface DashboardData {
   currencySummaries: Record<string, CurrencySummary>;
   familyCurrencySummaries: Record<string, CurrencySummary>;
@@ -27,6 +42,7 @@ export interface DashboardData {
   accountBalances: Record<string, number>;
   accountCurrencyMap: Record<string, string>;
   loading: boolean;
+  homeSummary: HomeSummary;
 }
 
 export function useDashboardData(): DashboardData {
@@ -42,6 +58,13 @@ export function useDashboardData(): DashboardData {
   const [accountBalances, setAccountBalances] = useState<Record<string, number>>({});
   const [accountCurrencyMap, setAccountCurrencyMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  const [homeSummary, setHomeSummary] = useState<HomeSummary>({
+    monthIncome: 0,
+    monthExpense: 0,
+    monthNet: 0,
+    byCurrency: {},
+    latestTransactions: [],
+  });
 
   useEffect(() => {
     if (user) {
@@ -254,9 +277,30 @@ export function useDashboardData(): DashboardData {
         [...creditCardsData, ...flatSharedCards]
       );
 
-      setRecentTransactions(enrichedTransactions.slice(0, 10));
+      const top10 = enrichedTransactions.slice(0, 10);
+      setRecentTransactions(top10);
       setAccounts(accountsData);
       setAccountCurrencyMap(acctCurrencyMap);
+
+      // Build HomeSummary view-model (not used in UI yet)
+      const activeSummaries = viewMode === 'family' ? fSummaries : summaries;
+      const byCurrency: Record<string, { income: number; expense: number; net: number }> = {};
+      let totalIncome = 0;
+      let totalExpense = 0;
+
+      Object.entries(activeSummaries).forEach(([currency, s]) => {
+        byCurrency[currency] = { income: s.income, expense: s.expenses, net: s.balance };
+        totalIncome += s.income;
+        totalExpense += s.expenses;
+      });
+
+      setHomeSummary({
+        monthIncome: totalIncome,
+        monthExpense: totalExpense,
+        monthNet: totalIncome - totalExpense,
+        byCurrency,
+        latestTransactions: enrichedTransactions.slice(0, 5),
+      });
 
       const balances: Record<string, number> = {};
       for (const account of accountsData) {
@@ -283,5 +327,6 @@ export function useDashboardData(): DashboardData {
     accountBalances,
     accountCurrencyMap,
     loading,
+    homeSummary,
   };
 }
