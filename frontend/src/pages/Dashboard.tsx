@@ -61,7 +61,7 @@ export function Dashboard() {
       {/* ── Header ── */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-ink capitalize">{monthLabel}</h1>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-ink capitalize">{monthLabel}</h1>
           {viewMode === 'family' && (
             <span className="text-xs text-violet-600 font-medium flex items-center gap-1 mt-0.5">
               <Users size={12} /> Visão família
@@ -78,19 +78,19 @@ export function Dashboard() {
 
       {/* ── Este mês: 3 números ── */}
       <Card className="bg-white/50 backdrop-blur-xl border-white/60">
-        <CardContent className="py-4 px-4 sm:px-6">
-          <div className="grid grid-cols-3 gap-3 text-center">
+        <CardContent className="py-4 lg:py-6 px-4 sm:px-6">
+          <div className="grid grid-cols-3 gap-3 lg:gap-6 text-center">
             {/* Income */}
             <div>
               <div className="flex items-center justify-center gap-1 mb-1">
                 <TrendingUp size={14} className="text-emerald" />
-                <span className="text-[11px] text-slate font-medium">Receita</span>
+                <span className="text-[11px] lg:text-sm text-slate font-medium">Receita</span>
               </div>
               {Object.keys(homeSummary.byCurrency).length === 0 ? (
-                <p className="text-sm sm:text-base font-bold text-emerald tabular-nums">{formatCurrency(0)}</p>
+                <p className="text-sm sm:text-base lg:text-xl font-bold text-emerald tabular-nums">{formatCurrency(0)}</p>
               ) : (
                 Object.entries(homeSummary.byCurrency).map(([cur, s]) => (
-                  <p key={cur} className="text-sm sm:text-base font-bold text-emerald tabular-nums">{formatCurrency(s.income, cur)}</p>
+                  <p key={cur} className="text-sm sm:text-base lg:text-xl font-bold text-emerald tabular-nums">{formatCurrency(s.income, cur)}</p>
                 ))
               )}
             </div>
@@ -99,13 +99,13 @@ export function Dashboard() {
             <div>
               <div className="flex items-center justify-center gap-1 mb-1">
                 <TrendingDown size={14} className="text-rose" />
-                <span className="text-[11px] text-slate font-medium">Despesa</span>
+                <span className="text-[11px] lg:text-sm text-slate font-medium">Despesa</span>
               </div>
               {Object.keys(homeSummary.byCurrency).length === 0 ? (
-                <p className="text-sm sm:text-base font-bold text-rose tabular-nums">{formatCurrency(0)}</p>
+                <p className="text-sm sm:text-base lg:text-xl font-bold text-rose tabular-nums">{formatCurrency(0)}</p>
               ) : (
                 Object.entries(homeSummary.byCurrency).map(([cur, s]) => (
-                  <p key={cur} className="text-sm sm:text-base font-bold text-rose tabular-nums">{formatCurrency(s.expense, cur)}</p>
+                  <p key={cur} className="text-sm sm:text-base lg:text-xl font-bold text-rose tabular-nums">{formatCurrency(s.expense, cur)}</p>
                 ))
               )}
             </div>
@@ -114,13 +114,13 @@ export function Dashboard() {
             <div>
               <div className="flex items-center justify-center gap-1 mb-1">
                 <Wallet size={14} className={homeSummary.monthNet >= 0 ? 'text-emerald' : 'text-rose'} />
-                <span className="text-[11px] text-slate font-medium">Resultado</span>
+                <span className="text-[11px] lg:text-sm text-slate font-medium">Resultado</span>
               </div>
               {Object.keys(homeSummary.byCurrency).length === 0 ? (
-                <p className="text-sm sm:text-base font-bold text-emerald tabular-nums">{formatCurrency(0)}</p>
+                <p className="text-sm sm:text-base lg:text-xl font-bold text-emerald tabular-nums">{formatCurrency(0)}</p>
               ) : (
                 Object.entries(homeSummary.byCurrency).map(([cur, s]) => (
-                  <p key={cur} className={`text-sm sm:text-base font-bold tabular-nums ${s.net >= 0 ? 'text-emerald' : 'text-rose'}`}>
+                  <p key={cur} className={`text-sm sm:text-base lg:text-xl font-bold tabular-nums ${s.net >= 0 ? 'text-emerald' : 'text-rose'}`}>
                     {formatCurrency(s.net, cur)}
                   </p>
                 ))
@@ -164,7 +164,7 @@ export function Dashboard() {
       {/* ── Últimas transações (3–5) ── */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <h2 className="text-sm font-semibold text-ink">{t('dashboard.recentTransactions')}</h2>
+          <h2 className="text-sm lg:text-base font-semibold text-ink">{t('dashboard.recentTransactions')}</h2>
           <Link to="/transactions">
             <Button variant="ghost" size="sm" className="text-slate text-xs h-auto py-1">
               {t('dashboard.viewAll')}
@@ -185,10 +185,10 @@ export function Dashboard() {
             {homeSummary.latestTransactions.map((transaction) => (
               <div
                 key={transaction.id}
-                className="flex items-center justify-between p-2.5 sm:p-3 rounded-xl bg-white/40 backdrop-blur border-white/60 gap-3"
+                className="flex items-center justify-between p-2.5 sm:p-3 lg:p-4 rounded-xl bg-white/40 backdrop-blur border-white/60 gap-3"
               >
                 <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                  <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                  <div className={`w-8 h-8 sm:w-9 sm:h-9 lg:w-10 lg:h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
                     transaction.type === 'income'
                       ? 'bg-emerald/10 text-emerald'
                       : transaction.type === 'transfer'
@@ -204,10 +204,10 @@ export function Dashboard() {
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-ink text-sm leading-tight truncate">
+                    <p className="font-medium text-ink text-sm lg:text-base leading-tight truncate">
                       {transaction.description}
                     </p>
-                    <div className="flex items-center gap-1.5 text-[11px] mt-0.5 text-slate">
+                    <div className="flex items-center gap-1.5 text-[11px] lg:text-xs mt-0.5 text-slate">
                       <span>{transaction.category ? t(getTranslatedCategoryName(transaction.category.name)) : ''}</span>
                       {transaction.creditCard && (
                         <>
@@ -245,7 +245,7 @@ export function Dashboard() {
                   </div>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <p className={`font-bold tabular-nums text-sm whitespace-nowrap ${
+                  <p className={`font-bold tabular-nums text-sm lg:text-base whitespace-nowrap ${
                     transaction.type === 'income'
                       ? 'text-emerald'
                       : transaction.type === 'transfer'
@@ -255,7 +255,7 @@ export function Dashboard() {
                     {transaction.type === 'income' ? '+' : transaction.type === 'transfer' ? '' : '-'}
                     {formatCurrency(transaction.amount, accountCurrencyMap[transaction.accountId || ''] || 'BRL')}
                   </p>
-                  <p className="text-[10px] text-slate/60 mt-0.5">
+                  <p className="text-[10px] lg:text-xs text-slate/60 mt-0.5">
                     {new Date(transaction.date).toLocaleDateString('pt-BR')}
                   </p>
                 </div>
@@ -266,18 +266,21 @@ export function Dashboard() {
       </div>
 
       {/* ── Quick links (informação que saiu da Home) ── */}
-      <div className="grid grid-cols-3 gap-2 pt-1">
-        <Link to="/accounts" className="flex flex-col items-center gap-1 p-3 rounded-xl bg-white/30 hover:bg-white/50 transition-colors">
-          <Landmark size={18} className="text-slate" />
-          <span className="text-[11px] text-slate font-medium">{t('nav.accounts')}</span>
+      <div className="grid grid-cols-3 gap-2 lg:gap-3 pt-1">
+        <Link to="/accounts" className="flex flex-col items-center gap-1 p-3 lg:p-4 rounded-xl bg-white/30 hover:bg-white/50 transition-colors">
+          <Landmark size={18} className="text-slate lg:hidden" />
+          <Landmark size={22} className="text-slate hidden lg:block" />
+          <span className="text-[11px] lg:text-sm text-slate font-medium">{t('nav.accounts')}</span>
         </Link>
-        <Link to="/credit-cards" className="flex flex-col items-center gap-1 p-3 rounded-xl bg-white/30 hover:bg-white/50 transition-colors">
-          <CreditCardIcon size={18} className="text-slate" />
-          <span className="text-[11px] text-slate font-medium">{t('nav.creditCards')}</span>
+        <Link to="/credit-cards" className="flex flex-col items-center gap-1 p-3 lg:p-4 rounded-xl bg-white/30 hover:bg-white/50 transition-colors">
+          <CreditCardIcon size={18} className="text-slate lg:hidden" />
+          <CreditCardIcon size={22} className="text-slate hidden lg:block" />
+          <span className="text-[11px] lg:text-sm text-slate font-medium">{t('nav.creditCards')}</span>
         </Link>
-        <Link to="/budgets" className="flex flex-col items-center gap-1 p-3 rounded-xl bg-white/30 hover:bg-white/50 transition-colors">
-          <TrendingUp size={18} className="text-slate" />
-          <span className="text-[11px] text-slate font-medium">{t('nav.budgets')}</span>
+        <Link to="/budgets" className="flex flex-col items-center gap-1 p-3 lg:p-4 rounded-xl bg-white/30 hover:bg-white/50 transition-colors">
+          <TrendingUp size={18} className="text-slate lg:hidden" />
+          <TrendingUp size={22} className="text-slate hidden lg:block" />
+          <span className="text-[11px] lg:text-sm text-slate font-medium">{t('nav.budgets')}</span>
         </Link>
       </div>
 
