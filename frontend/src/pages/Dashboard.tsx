@@ -16,8 +16,6 @@ import {
   Wallet,
   CreditCard as CreditCardIcon,
   Landmark,
-  Mic,
-  Plus,
   ChevronRight,
   Users,
 } from 'lucide-react';
@@ -58,7 +56,7 @@ export function Dashboard() {
   const monthLabel = formatMonthYear(year, month);
 
   return (
-    <div className="flex flex-col gap-4 sm:gap-5 p-4 sm:p-6 overflow-x-hidden max-w-2xl mx-auto w-full">
+    <div className="flex flex-col sm:gap-6 gap-4 sm:p-6 p-4 overflow-x-hidden">
 
       {/* ── Header ── */}
       <div className="flex items-center justify-between">
@@ -134,16 +132,16 @@ export function Dashboard() {
 
       {/* ── Projeções ── */}
       {(homeSummary.monthProjectionNet || homeSummary.yearEndProjection) && (
-        <div className="space-y-2">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4">
           {/* Monthly projection */}
           {homeSummary.monthProjectionNet && (
             <Card className="bg-gradient-to-r from-blue-50/60 to-indigo-50/60 backdrop-blur-xl border-blue-100/50">
-              <CardContent className="py-3 px-4 sm:px-6">
-                <p className="text-[11px] text-blue-600/70 font-medium mb-0.5">Mantendo este ritmo...</p>
-                <p className={`text-lg sm:text-xl font-bold tabular-nums ${homeSummary.monthProjectionNet.value >= 0 ? 'text-blue-700' : 'text-rose'}`}>
+              <CardContent className="py-3 lg:py-4 px-4 sm:px-6">
+                <p className="text-[11px] lg:text-xs text-blue-600/70 font-medium mb-1">Mantendo este ritmo, você terminará o mês com</p>
+                <p className={`text-lg lg:text-2xl font-bold tabular-nums ${homeSummary.monthProjectionNet.value >= 0 ? 'text-blue-700' : 'text-rose'}`}>
                   {formatCurrency(homeSummary.monthProjectionNet.value)}
                 </p>
-                <p className="text-[10px] text-slate/60 mt-0.5">{homeSummary.monthProjectionNet.explanation}</p>
+                <p className="text-[10px] lg:text-[11px] text-slate/60 mt-1">{homeSummary.monthProjectionNet.explanation}</p>
               </CardContent>
             </Card>
           )}
@@ -151,35 +149,17 @@ export function Dashboard() {
           {/* Year-end projection */}
           {homeSummary.yearEndProjection && homeSummary.yearEndProjection.value !== 0 && (
             <Card className="bg-gradient-to-r from-violet-50/60 to-purple-50/60 backdrop-blur-xl border-violet-100/50">
-              <CardContent className="py-3 px-4 sm:px-6">
-                <p className="text-[11px] text-violet-600/70 font-medium mb-0.5">Até dezembro...</p>
-                <p className={`text-lg sm:text-xl font-bold tabular-nums ${homeSummary.yearEndProjection.value >= 0 ? 'text-violet-700' : 'text-rose'}`}>
+              <CardContent className="py-3 lg:py-4 px-4 sm:px-6">
+                <p className="text-[11px] lg:text-xs text-violet-600/70 font-medium mb-1">Se mantiver um ritmo parecido, o impacto acumulado até dezembro será de</p>
+                <p className={`text-lg lg:text-2xl font-bold tabular-nums ${homeSummary.yearEndProjection.value >= 0 ? 'text-violet-700' : 'text-rose'}`}>
                   {formatCurrency(homeSummary.yearEndProjection.value)}
                 </p>
-                <p className="text-[10px] text-slate/60 mt-0.5">{homeSummary.yearEndProjection.explanation}</p>
+                <p className="text-[10px] lg:text-[11px] text-slate/60 mt-1">{homeSummary.yearEndProjection.explanation}</p>
               </CardContent>
             </Card>
           )}
         </div>
       )}
-
-      {/* ── CTA principal ── */}
-      <div className="flex gap-2">
-        <Button
-          onClick={() => navigate('/transactions?action=add&voice=1')}
-          className="flex-1 bg-blue hover:bg-blue/90 text-white rounded-2xl py-3 text-sm font-semibold shadow-lg shadow-blue/20"
-        >
-          <Mic size={18} className="mr-2" />
-          Adicionar por voz
-        </Button>
-        <Button
-          onClick={() => navigate('/transactions?action=add')}
-          variant="outline"
-          className="rounded-2xl py-3 px-4 border-slate/20"
-        >
-          <Plus size={18} />
-        </Button>
-      </div>
 
       {/* ── Últimas transações (3–5) ── */}
       <div>
