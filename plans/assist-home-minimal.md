@@ -62,16 +62,16 @@ Tudo que for “complexidade” (por moeda, por conta, categorias, metas, family
 - Explicação: “Baseado na média dos últimos N dias”.
 
 ### Tarefas
-- [ ] Criar `frontend/src/domain/projections.ts` com função pura:
+- [x] Criar `frontend/src/domain/projections.ts` com função pura:
   - `projectMonthNet({ currentNet, lastNDaysNet, remainingDays, windowDays }): { value, explanation }`
-- [ ] Implementar testes (onde você já testa hoje; se não existir infra, criar `vitest` mínimo no frontend):
+- [x] Implementar testes (onde você já testa hoje; se não existir infra, criar `vitest` mínimo no frontend):
   - casos: remainingDays=0, N=7, N=14, valores negativos, etc.
-- [ ] No hook, calcular `monthProjection` e preencher em `homeSummary`
+- [x] No hook, calcular `monthProjection` e preencher em `homeSummary`
 
 ### Done
-- [ ] Testes verdes
-- [ ] Projeção consistente e “explicável” em texto curto
-- [ ] Ainda sem mudar UI
+- [x] Testes verdes
+- [x] Projeção consistente e "explicável" em texto curto
+- [x] Ainda sem mudar UI
 
 ---
 

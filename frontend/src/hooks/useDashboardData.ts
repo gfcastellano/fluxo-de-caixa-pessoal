@@ -9,6 +9,7 @@ import { getCategories } from '../services/categoryService';
 import { getCreditCards } from '../services/creditCardService';
 import { getCreditCardBills } from '../services/creditCardBillService';
 import { enrichTransactions } from '../utils/transactionEnrichment';
+import { projectMonthNet } from '../domain/projections';
 import type { Transaction, Account, CreditCard, CreditCardBill } from '../types';
 
 export interface CurrencySummary {
@@ -294,12 +295,41 @@ export function useDashboardData(): DashboardData {
         totalExpense += s.expenses;
       });
 
+      const currentNet = totalIncome - totalExpense;
+
+      // Calculate monthly projection
+      const today = new Date();
+      const daysInMonth = lastDay;
+      const currentDay = today.getDate();
+      const remainingDays = daysInMonth - currentDay;
+      const windowDays = Math.min(7, currentDay); // Use up to 7 days, or however many days have passed
+
+      // Compute net from the last N days of transactions
+      const windowStart = new Date(year, month - 1, currentDay - windowDays + 1);
+      const activePool = viewMode === 'family' ? allTransactions : transactions;
+      let lastNDaysNet = 0;
+      activePool.forEach(tx => {
+        const txDate = new Date(tx.date);
+        if (txDate >= windowStart && txDate <= today) {
+          if (tx.type === 'income') lastNDaysNet += tx.amount;
+          else if (tx.type === 'expense') lastNDaysNet -= tx.amount;
+        }
+      });
+
+      const monthProjectionNet = projectMonthNet({
+        currentNet,
+        lastNDaysNet,
+        remainingDays,
+        windowDays,
+      });
+
       setHomeSummary({
         monthIncome: totalIncome,
         monthExpense: totalExpense,
-        monthNet: totalIncome - totalExpense,
+        monthNet: currentNet,
         byCurrency,
         latestTransactions: enrichedTransactions.slice(0, 5),
+        monthProjectionNet,
       });
 
       const balances: Record<string, number> = {};
