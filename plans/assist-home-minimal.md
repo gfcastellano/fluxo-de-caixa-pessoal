@@ -90,16 +90,16 @@ Opção B (um pouco melhor):
 - Usar o menor valor entre (média 3 meses) e (projeção do mês atual) para ser conservador
 
 ### Tarefas
-- [ ] Criar função pura `projectYearEndImpact(...)` com retorno `{ value, explanation }`
-- [ ] Testes para:
+- [x] Criar função pura `projectYearEndImpact(...)` com retorno `{ value, explanation }`
+- [x] Testes para:
   - falta de histórico
   - meses restantes = 0
   - comportamento conservador
-- [ ] No hook, preencher `homeSummary.yearEndProjection`
+- [x] No hook, preencher `homeSummary.yearEndProjection`
 
 ### Done
-- [ ] Testes verdes
-- [ ] Explicação curta pronta para UI
+- [x] Testes verdes
+- [x] Explicação curta pronta para UI
 
 ---
 

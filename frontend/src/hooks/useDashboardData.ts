@@ -9,7 +9,7 @@ import { getCategories } from '../services/categoryService';
 import { getCreditCards } from '../services/creditCardService';
 import { getCreditCardBills } from '../services/creditCardBillService';
 import { enrichTransactions } from '../utils/transactionEnrichment';
-import { projectMonthNet } from '../domain/projections';
+import { projectMonthNet, projectYearEndImpact } from '../domain/projections';
 import type { Transaction, Account, CreditCard, CreditCardBill } from '../types';
 
 export interface CurrencySummary {
@@ -323,6 +323,15 @@ export function useDashboardData(): DashboardData {
         windowDays,
       });
 
+      // Calculate year-end projection (conservative)
+      const currentMonth = month; // 1-based
+      const monthsRemaining = 12 - currentMonth; // full months after current
+      const yearEndProjection = projectYearEndImpact({
+        projectedMonthNet: monthProjectionNet.value,
+        monthsRemaining,
+        // No historical data yet — will be enhanced when we have multi-month fetching
+      });
+
       setHomeSummary({
         monthIncome: totalIncome,
         monthExpense: totalExpense,
@@ -330,6 +339,7 @@ export function useDashboardData(): DashboardData {
         byCurrency,
         latestTransactions: enrichedTransactions.slice(0, 5),
         monthProjectionNet,
+        yearEndProjection,
       });
 
       const balances: Record<string, number> = {};

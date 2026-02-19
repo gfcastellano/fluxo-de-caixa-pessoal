@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { projectMonthNet } from './projections';
+import { projectMonthNet, projectYearEndImpact } from './projections';
 
 describe('projectMonthNet', () => {
   it('returns currentNet when remainingDays is 0 (month ended)', () => {
@@ -110,5 +110,106 @@ describe('projectMonthNet', () => {
       windowDays: 7,
     });
     expect(result.value).toBe(800);
+  });
+});
+
+describe('projectYearEndImpact', () => {
+  it('returns 0 when monthsRemaining is 0 (year ended)', () => {
+    const result = projectYearEndImpact({
+      projectedMonthNet: 1000,
+      monthsRemaining: 0,
+    });
+    expect(result.value).toBe(0);
+    expect(result.explanation).toContain('encerrado');
+  });
+
+  it('returns 0 when monthsRemaining is negative', () => {
+    const result = projectYearEndImpact({
+      projectedMonthNet: 500,
+      monthsRemaining: -2,
+    });
+    expect(result.value).toBe(0);
+  });
+
+  it('uses projectedMonthNet when no history available', () => {
+    // 500 * 6 months = 3000
+    const result = projectYearEndImpact({
+      projectedMonthNet: 500,
+      monthsRemaining: 6,
+    });
+    expect(result.value).toBe(3000);
+    expect(result.explanation).toContain('sem histórico');
+  });
+
+  it('uses conservative rate (min of projection and historical avg)', () => {
+    // projected = 1000, historical avg = (600+800+700)/3 = 700
+    // conservative = min(1000, 700) = 700
+    // 700 * 4 = 2800
+    const result = projectYearEndImpact({
+      projectedMonthNet: 1000,
+      monthsRemaining: 4,
+      historicalMonthlyNets: [600, 800, 700],
+    });
+    expect(result.value).toBe(2800);
+    expect(result.explanation).toContain('conservadora');
+  });
+
+  it('uses projected when it is lower than historical avg', () => {
+    // projected = 300, historical avg = (600+800)/2 = 700
+    // conservative = min(300, 700) = 300
+    // 300 * 5 = 1500
+    const result = projectYearEndImpact({
+      projectedMonthNet: 300,
+      monthsRemaining: 5,
+      historicalMonthlyNets: [600, 800],
+    });
+    expect(result.value).toBe(1500);
+  });
+
+  it('handles negative projections (spending more than earning)', () => {
+    // projected = -200, historical avg = (-100+-300)/2 = -200
+    // conservative = min(-200, -200) = -200
+    // -200 * 3 = -600
+    const result = projectYearEndImpact({
+      projectedMonthNet: -200,
+      monthsRemaining: 3,
+      historicalMonthlyNets: [-100, -300],
+    });
+    expect(result.value).toBe(-600);
+  });
+
+  it('is conservative with negative values (picks worse scenario)', () => {
+    // projected = -500, historical avg = (-100+-200)/2 = -150
+    // conservative = min(-500, -150) = -500 (more negative = worse)
+    // -500 * 4 = -2000
+    const result = projectYearEndImpact({
+      projectedMonthNet: -500,
+      monthsRemaining: 4,
+      historicalMonthlyNets: [-100, -200],
+    });
+    expect(result.value).toBe(-2000);
+  });
+
+  it('handles single month of history', () => {
+    // projected = 800, historical avg = 600/1 = 600
+    // conservative = min(800, 600) = 600
+    // 600 * 10 = 6000
+    const result = projectYearEndImpact({
+      projectedMonthNet: 800,
+      monthsRemaining: 10,
+      historicalMonthlyNets: [600],
+    });
+    expect(result.value).toBe(6000);
+    expect(result.explanation).toContain('1 meses');
+  });
+
+  it('handles empty history array same as no history', () => {
+    const result = projectYearEndImpact({
+      projectedMonthNet: 400,
+      monthsRemaining: 3,
+      historicalMonthlyNets: [],
+    });
+    expect(result.value).toBe(1200);
+    expect(result.explanation).toContain('sem histórico');
   });
 });
