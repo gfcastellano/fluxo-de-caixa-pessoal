@@ -1160,7 +1160,7 @@ export function Reports() {
                   interval={0}
                 />
                 <Tooltip
-                  allowEscapeViewBox={{ x: true, y: false }}
+                  allowEscapeViewBox={{ x: false, y: false }}
                   position={{ y: 10 }}
                   content={<CategoryTooltip transactions={periodTransactions} currency={selectedCurrency || 'BRL'} t={t} />}
                 />
@@ -1210,7 +1210,7 @@ export function Reports() {
                   interval={0}
                 />
                 <Tooltip
-                  allowEscapeViewBox={{ x: true, y: false }}
+                  allowEscapeViewBox={{ x: false, y: false }}
                   position={{ y: 10 }}
                   content={<CategoryTooltip transactions={periodTransactions} currency={selectedCurrency || 'BRL'} t={t} />}
                 />
