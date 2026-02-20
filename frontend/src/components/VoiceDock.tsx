@@ -48,8 +48,7 @@ export function VoiceDock() {
                 key={item.href}
                 to={item.href}
                 className={cn(
-                    "relative flex flex-col items-center justify-center p-1 sm:p-2 rounded-2xl transition-all duration-200 group flex-1",
-                    // Removed min-w-[44px] to allow shrinking on tiny screens
+                    "relative flex flex-col items-center justify-center p-1 sm:p-2 rounded-2xl transition-all duration-200 group flex-1 min-h-[44px]",
                     isActive
                         ? "bg-blue/10 text-blue"
                         : "text-slate hover:bg-white/50 hover:text-ink"
