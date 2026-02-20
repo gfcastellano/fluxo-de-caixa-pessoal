@@ -7,11 +7,55 @@
    ============================================ */
 @layer base {
   :root {
-    /* 
-      FLUID SPACING & TYPOGRAPHY SYSTEM
-      Uses clamp(min, preferred, max) to interpolate values smoothly 
-      between viewport widths of 320px (small mobile) and 1024px (desktop).
-    */
+    /* ============================================
+       COLOR TOKENS
+       ============================================ */
+
+    /* Backgrounds */
+    --color-bg: #F0F4F8;
+    --color-surface: rgba(255, 255, 255, 0.65);
+    --color-surface-hover: rgba(255, 255, 255, 0.80);
+
+    /* Text */
+    --color-text: #0B1220;
+    --color-text-muted: #5B667A;
+    --color-text-subtle: #8D99AE;
+
+    /* Primary / Brand */
+    --color-primary: #3A86FF;
+    --color-primary-hover: #2563EB;
+    --color-primary-light: #E6F0FF;
+
+    /* Semantic */
+    --color-income: #22C55E;
+    --color-expense: #FF5C8A;
+    --color-warning: #FFBE0B;
+
+    /* Borders */
+    --color-border: rgba(91, 102, 122, 0.15);
+    --color-border-strong: rgba(91, 102, 122, 0.30);
+
+    /* ============================================
+       RADIUS TOKENS
+       ============================================ */
+    --radius-sm: 0.5rem;    /* 8px */
+    --radius-md: 0.75rem;   /* 12px */
+    --radius-lg: 1rem;      /* 16px */
+    --radius-xl: 1.5rem;    /* 24px */
+    --radius-full: 9999px;
+
+    /* ============================================
+       SHADOW TOKENS
+       ============================================ */
+    --shadow-1: 0 4px 24px -1px rgba(0, 0, 0, 0.04), 0 0 1px 0 rgba(0, 0, 0, 0.06);
+    --shadow-2: 0 8px 32px -2px rgba(0, 0, 0, 0.08), 0 0 1px 0 rgba(0, 0, 0, 0.08);
+    --shadow-primary: 0 12px 36px -4px rgba(58, 134, 255, 0.35);
+
+    /* ============================================
+       FLUID SPACING & TYPOGRAPHY SYSTEM
+       Uses clamp(min, preferred, max) to interpolate values smoothly
+       between viewport widths of 320px (small mobile) and 1024px (desktop).
+       ============================================ */
 
     /* Spacing scale - Fluid */
     --space-xs: clamp(0.125rem, 0.5vw, 0.25rem);
@@ -235,6 +279,15 @@
   /* Touch-friendly targets for mobile */
   .touch-target {
     @apply min-h-[44px] min-w-[44px];
+  }
+
+  /* iOS safe-area bottom padding (home indicator) */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .mb-safe {
+    margin-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   /* Responsive text utilities */
