@@ -44,6 +44,7 @@ export function VoiceHeroButton({
         currentPageType,
         isEditing,
         isRecording: ctxIsRecording,
+        isPermissionDenied,
         isModalActive,
         requestOpenModal,
         startRecording,
@@ -101,6 +102,7 @@ export function VoiceHeroButton({
     // Get context label
     const getContextLabel = () => {
         if (isRecording) return ''; // Label hidden when recording (Pill handles UI)
+        if (isPermissionDenied) return t('voice.allowMic', 'Permitir mic');
         if (isEditing) return t('voice.edit', 'Editar');
 
         switch (effectivePageType) {

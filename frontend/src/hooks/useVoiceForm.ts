@@ -10,7 +10,7 @@ export interface UseVoiceFormOptions {
 
 export interface UseVoiceFormReturn {
     // Voice state
-    voiceState: 'idle' | 'recording' | 'preview' | 'processing' | 'success' | 'error';
+    voiceState: 'idle' | 'recording' | 'preview' | 'processing' | 'success' | 'error' | 'permission_denied';
     isProcessingVoice: boolean;
     hasVoiceData: boolean;
     voiceFeedback: { type: 'success' | 'error'; message: string } | null;
