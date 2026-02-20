@@ -142,7 +142,7 @@ npm run preview
 
 | Variable | Value |
 |----------|-------|
-| `VITE_FIREBASE_API_KEY` | `AIzaSyDEY0U9xweOtx6CDw_AKxjl7oegEQebLcQ` |
+| `VITE_FIREBASE_API_KEY` | `your_firebase_api_key` |
 | `VITE_FIREBASE_AUTH_DOMAIN` | `fluxo-de-caixa-pessoal-d6d3f.firebaseapp.com` |
 | `VITE_FIREBASE_PROJECT_ID` | `fluxo-de-caixa-pessoal-d6d3f` |
 | `VITE_FIREBASE_STORAGE_BUCKET` | `fluxo-de-caixa-pessoal-d6d3f.appspot.com` |
@@ -157,7 +157,7 @@ wrangler pages project create fluxo-de-caixa-frontend
 
 # Set environment variables
 wrangler pages secret put VITE_FIREBASE_API_KEY --project=fluxo-de-caixa-frontend
-# Enter: AIzaSyDEY0U9xweOtx6CDw_AKxjl7oegEQebLcQ
+# Enter: your_firebase_api_key
 
 # Repeat for other secrets...
 ```
