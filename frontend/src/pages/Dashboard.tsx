@@ -296,6 +296,30 @@ export function Dashboard() {
         </div>
       )}
 
+      {/* ── Diagnóstico calmo ── */}
+      {homeSummary.diagnosis && homeSummary.diagnosis.length > 0 && (
+        <Card className="bg-white/40 backdrop-blur-xl border-white/60">
+          <CardContent className="py-3 lg:py-4 px-4 sm:px-6">
+            <div className="space-y-1.5">
+              {homeSummary.diagnosis.map((insight, i) => (
+                <div key={i} className="flex items-start gap-2 text-[11px] lg:text-xs">
+                  <span className={cn(
+                    'mt-0.5 text-[8px] leading-none',
+                    insight.tone === 'positive' ? 'text-emerald' :
+                    insight.tone === 'caution' ? 'text-amber-500' :
+                    'text-blue-500'
+                  )}>●</span>
+                  <span className="text-slate/80">{insight.text}</span>
+                </div>
+              ))}
+            </div>
+            <Link to="/reports" className="inline-block mt-2 text-[10px] lg:text-[11px] text-blue-500/70 hover:text-blue-600 transition-colors">
+              Ver detalhes →
+            </Link>
+          </CardContent>
+        </Card>
+      )}
+
       {/* ── Últimas transações (3–5) ── */}
       <div>
         <div className="flex items-center justify-between mb-2">

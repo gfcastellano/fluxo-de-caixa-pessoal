@@ -10,7 +10,10 @@ import { getCreditCards } from '../services/creditCardService';
 import { getCreditCardBills } from '../services/creditCardBillService';
 import { enrichTransactions } from '../utils/transactionEnrichment';
 import { projectMonthNet, projectYearEndImpact } from '../domain/projections';
+import { generateDiagnosis } from '../domain/diagnosis';
+import type { DiagnosisInsight } from '../domain/diagnosis';
 import type { ProjectionResult } from '../domain/projections';
+import { getBudgets } from '../services/budgetService';
 import type { Transaction, Account, CreditCard, CreditCardBill } from '../types';
 
 export type { ProjectionResult };
@@ -58,6 +61,7 @@ export interface HomeSummary {
   monthProjectionInputs?: MonthProjectionInputs;
   yearEndProjection?: ProjectionResult;
   yearProjectionInputs?: YearProjectionInputs;
+  diagnosis?: DiagnosisInsight[];
 }
 
 export interface DashboardData {
@@ -108,12 +112,13 @@ export function useDashboardData(): DashboardData {
       const lastDay = new Date(year, month, 0).getDate();
       const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
 
-      const [transactions, accountsData, categoriesData, creditCardsData, billsData] = await Promise.all([
+      const [transactions, accountsData, categoriesData, creditCardsData, billsData, budgetsData] = await Promise.all([
         getTransactions(user!.uid, { startDate, endDate }),
         getAccounts(user!.uid),
         getCategories(user!.uid),
         getCreditCards(user!.uid),
         getCreditCardBills(user!.uid),
+        getBudgets(user!.uid),
       ]);
 
       let allTransactions = transactions;
@@ -415,6 +420,27 @@ export function useDashboardData(): DashboardData {
         hasHistory: false,
       };
 
+      // Compute budget summary from existing transactions (no extra Firestore calls)
+      const budgetSummary = budgetsData.length > 0 ? (() => {
+        let onTrack = 0;
+        for (const b of budgetsData) {
+          const spent = activePool
+            .filter(tx => tx.categoryId === b.categoryId && tx.type === 'expense')
+            .reduce((sum, tx) => sum + tx.amount, 0);
+          if (spent <= b.amount) onTrack++;
+        }
+        return { total: budgetsData.length, onTrack, overBudget: budgetsData.length - onTrack };
+      })() : undefined;
+
+      // Generate calm diagnosis insights
+      const diagnosis = generateDiagnosis({
+        monthNet: currentNet,
+        monthIncome: totalIncome,
+        projectedMonthNet: monthProjectionNet.value,
+        remainingDays,
+        budgetSummary,
+      });
+
       setHomeSummary({
         monthIncome: totalIncome,
         monthExpense: totalExpense,
@@ -425,6 +451,7 @@ export function useDashboardData(): DashboardData {
         monthProjectionInputs,
         yearEndProjection,
         yearProjectionInputs,
+        diagnosis,
       });
 
       const balances: Record<string, number> = {};
