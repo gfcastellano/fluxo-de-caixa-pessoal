@@ -201,25 +201,25 @@ Opção B (um pouco melhor):
 **Mensagem sugerida:** `chore(home): cleanup, perf, and navigation consistency`
 
 ### Tarefas
-- [ ] Remover código morto do Dashboard antigo (mas só após confirmar que nada usa)
-- [ ] Otimizar queries/fetch para evitar carregar dados desnecessários na Home
-- [ ] Garantir loading state elegante (calmo)
-- [ ] Revisar i18n (PT-BR principalmente) em todo texto novo
-- [ ] Checar responsividade mobile (Home tem que ser ótima no celular)
+- [x] Remover código morto do Dashboard antigo (mas só após confirmar que nada usa)
+- [x] Otimizar queries/fetch para evitar carregar dados desnecessários na Home
+- [x] Garantir loading state elegante (calmo)
+- [x] Revisar i18n (PT-BR principalmente) em todo texto novo
+- [x] Checar responsividade mobile (Home tem que ser ótima no celular)
 
 ### Done
-- [ ] Home rápida e clara
-- [ ] Nenhum feature quebrado
-- [ ] Navegação consistente
+- [x] Home rápida e clara
+- [x] Nenhum feature quebrado
+- [x] Navegação consistente
 
 ---
 
 # Critérios de aceite (final)
-- [ ] Home segue a regra dos 10 segundos
-- [ ] Projeções existem e são explicáveis (“ver por quê”)
-- [ ] Diagnóstico aparece de forma discreta e útil
-- [ ] Voz é a ação principal
-- [ ] Nada “sumiu”: apenas foi movido para drill-down/telas existentes
-- [ ] Testes cobrem o essencial do dinheiro
+- [x] Home segue a regra dos 10 segundos
+- [x] Projeções existem e são explicáveis ("ver por quê")
+- [x] Diagnóstico aparece de forma discreta e útil
+- [x] Voz é a ação principal
+- [x] Nada "sumiu": apenas foi movido para drill-down/telas existentes
+- [x] Testes cobrem o essencial do dinheiro
 
 ---

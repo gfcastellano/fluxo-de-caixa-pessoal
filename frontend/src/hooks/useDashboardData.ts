@@ -4,7 +4,7 @@ import { useFamily } from '../context/FamilyContext';
 import { getCurrentMonth } from '../utils/format';
 import { getTransactions } from '../services/transactionService';
 import { getFamilyTransactions, repairSharing } from '../services/familyService';
-import { getAccounts, calculateAccountBalance } from '../services/accountService';
+import { getAccounts } from '../services/accountService';
 import { getCategories } from '../services/categoryService';
 import { getCreditCards } from '../services/creditCardService';
 import { getCreditCardBills } from '../services/creditCardBillService';
@@ -14,7 +14,7 @@ import { generateDiagnosis } from '../domain/diagnosis';
 import type { DiagnosisInsight } from '../domain/diagnosis';
 import type { ProjectionResult } from '../domain/projections';
 import { getBudgets } from '../services/budgetService';
-import type { Transaction, Account, CreditCard, CreditCardBill } from '../types';
+import type { Transaction } from '../types';
 
 export type { ProjectionResult };
 
@@ -65,13 +65,6 @@ export interface HomeSummary {
 }
 
 export interface DashboardData {
-  currencySummaries: Record<string, CurrencySummary>;
-  familyCurrencySummaries: Record<string, CurrencySummary>;
-  recentTransactions: Transaction[];
-  accounts: Account[];
-  creditCards: CreditCard[];
-  creditCardBills: CreditCardBill[];
-  accountBalances: Record<string, number>;
   accountCurrencyMap: Record<string, string>;
   loading: boolean;
   homeSummary: HomeSummary;
@@ -81,13 +74,6 @@ export function useDashboardData(): DashboardData {
   const { user } = useAuth();
   const { viewMode, sharedData, activeFamily } = useFamily();
 
-  const [currencySummaries, setCurrencySummaries] = useState<Record<string, CurrencySummary>>({});
-  const [familyCurrencySummaries, setFamilyCurrencySummaries] = useState<Record<string, CurrencySummary>>({});
-  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
-  const [creditCardBills, setCreditCardBills] = useState<CreditCardBill[]>([]);
-  const [accountBalances, setAccountBalances] = useState<Record<string, number>>({});
   const [accountCurrencyMap, setAccountCurrencyMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [homeSummary, setHomeSummary] = useState<HomeSummary>({
@@ -112,7 +98,7 @@ export function useDashboardData(): DashboardData {
       const lastDay = new Date(year, month, 0).getDate();
       const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
 
-      const [transactions, accountsData, categoriesData, creditCardsData, billsData, budgetsData] = await Promise.all([
+      const [transactions, accountsData, categoriesData, creditCardsData, , budgetsData] = await Promise.all([
         getTransactions(user!.uid, { startDate, endDate }),
         getAccounts(user!.uid),
         getCategories(user!.uid),
@@ -122,7 +108,6 @@ export function useDashboardData(): DashboardData {
       ]);
 
       let allTransactions = transactions;
-      let sharedTransactions: Transaction[] = [];
 
       // Fetch shared transactions if in family mode
       if (viewMode === 'family' && activeFamily) {
@@ -140,7 +125,6 @@ export function useDashboardData(): DashboardData {
           }
 
           if (familyResponse.success && familyResponse.data) {
-            console.log(`[Dashboard] Fetched ${familyResponse.data.length} shared transactions`);
             const flatSharedAccounts = sharedData.flatMap(m => m.accounts || []);
             const flatSharedCards = sharedData.flatMap(m => m.creditCards || []);
 
@@ -182,9 +166,7 @@ export function useDashboardData(): DashboardData {
               return { ...tx, account, creditCard, isShared: true };
             });
 
-            sharedTransactions = enrichedFamilyData;
             allTransactions = [...allTransactions, ...enrichedFamilyData];
-            console.log(`[Dashboard] Combined pool: ${allTransactions.length} transactions`);
           }
         } catch (err) {
           console.error('Failed to load family transactions', err);
@@ -232,50 +214,41 @@ export function useDashboardData(): DashboardData {
         return 'BRL';
       };
 
+      // Compute currency summaries (used for HomeSummary)
       const summaries: Record<string, CurrencySummary> = {};
       transactions.forEach((transaction) => {
         const currency = getTransactionCurrency(transaction);
-
         if (!summaries[currency]) {
           summaries[currency] = { income: 0, expenses: 0, balance: 0 };
         }
-
         if (transaction.type === 'income') {
           summaries[currency].income += transaction.amount;
         } else if (transaction.type === 'expense') {
           summaries[currency].expenses += transaction.amount;
         }
       });
-
       Object.keys(summaries).forEach((currency) => {
         summaries[currency].balance = summaries[currency].income - summaries[currency].expenses;
       });
 
-      setCurrencySummaries(summaries);
-
-      // Calculate family summaries (Combined: Me + Shared)
+      // Family summaries (combined pool)
       const fSummaries: Record<string, CurrencySummary> = {};
-      const familyPool = viewMode === 'family' ? allTransactions : transactions;
-
-      familyPool.forEach((transaction) => {
-        const currency = getTransactionCurrency(transaction);
-
-        if (!fSummaries[currency]) {
-          fSummaries[currency] = { income: 0, expenses: 0, balance: 0 };
-        }
-
-        if (transaction.type === 'income') {
-          fSummaries[currency].income += transaction.amount;
-        } else if (transaction.type === 'expense') {
-          fSummaries[currency].expenses += transaction.amount;
-        }
-      });
-
-      Object.keys(fSummaries).forEach((currency) => {
-        fSummaries[currency].balance = fSummaries[currency].income - fSummaries[currency].expenses;
-      });
-
-      setFamilyCurrencySummaries(fSummaries);
+      if (viewMode === 'family') {
+        allTransactions.forEach((transaction) => {
+          const currency = getTransactionCurrency(transaction);
+          if (!fSummaries[currency]) {
+            fSummaries[currency] = { income: 0, expenses: 0, balance: 0 };
+          }
+          if (transaction.type === 'income') {
+            fSummaries[currency].income += transaction.amount;
+          } else if (transaction.type === 'expense') {
+            fSummaries[currency].expenses += transaction.amount;
+          }
+        });
+        Object.keys(fSummaries).forEach((currency) => {
+          fSummaries[currency].balance = fSummaries[currency].income - fSummaries[currency].expenses;
+        });
+      }
 
       // Enrich transactions with account and category data for display
       const flatSharedAccounts = sharedData.flatMap(m => m.accounts || []).map(a => ({
@@ -310,12 +283,9 @@ export function useDashboardData(): DashboardData {
         [...creditCardsData, ...flatSharedCards]
       );
 
-      const top10 = enrichedTransactions.slice(0, 10);
-      setRecentTransactions(top10);
-      setAccounts(accountsData);
       setAccountCurrencyMap(acctCurrencyMap);
 
-      // Build HomeSummary view-model (not used in UI yet)
+      // Build HomeSummary view-model
       const activeSummaries = viewMode === 'family' ? fSummaries : summaries;
       const byCurrency: Record<string, { income: number; expense: number; net: number }> = {};
       let totalIncome = 0;
@@ -335,7 +305,7 @@ export function useDashboardData(): DashboardData {
       const daysInMonth = lastDay;
       const currentDay = today.getDate();
       const remainingDays = daysInMonth - currentDay;
-      const windowDays = Math.min(7, currentDay); // Use up to 7 days, or however many days have passed
+      const windowDays = Math.min(7, currentDay);
 
       const activePool = viewMode === 'family' ? allTransactions : transactions;
 
@@ -381,8 +351,9 @@ export function useDashboardData(): DashboardData {
       });
 
       const discretionaryDailyAvg = windowDays > 0 ? lastNDaysDiscretionaryNet / windowDays : 0;
+
       // Build enriched future transactions list for display
-      const futureTransactions: FutureTransactionItem[] = futureTxs.map(tx => {
+      const futureTransactionItems: FutureTransactionItem[] = futureTxs.map(tx => {
         const enriched = enrichedTransactions.find(et => et.id === tx.id);
         return {
           description: enriched?.description || tx.description,
@@ -398,7 +369,7 @@ export function useDashboardData(): DashboardData {
         pastExpense,
         futureScheduledNet,
         futureScheduledCount: futureTxs.length,
-        futureTransactions,
+        futureTransactions: futureTransactionItems,
         discretionaryDailyAvg,
         windowDays,
         remainingDays,
@@ -406,8 +377,7 @@ export function useDashboardData(): DashboardData {
 
       // Calculate year-end projection (conservative)
       const currentMonth = month; // 1-based
-      const monthsRemaining = 12 - currentMonth; // full months after current
-      // No historical data yet — will be enhanced when we have multi-month fetching
+      const monthsRemaining = 12 - currentMonth;
       const yearEndProjection = projectYearEndImpact({
         projectedMonthNet: monthProjectionNet.value,
         monthsRemaining,
@@ -453,15 +423,6 @@ export function useDashboardData(): DashboardData {
         yearProjectionInputs,
         diagnosis,
       });
-
-      const balances: Record<string, number> = {};
-      for (const account of accountsData) {
-        const calculatedBalance = await calculateAccountBalance(account.id, user!.uid);
-        balances[account.id] = calculatedBalance;
-      }
-      setAccountBalances(balances);
-      setCreditCards(creditCardsData);
-      setCreditCardBills(billsData);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
@@ -470,13 +431,6 @@ export function useDashboardData(): DashboardData {
   };
 
   return {
-    currencySummaries,
-    familyCurrencySummaries,
-    recentTransactions,
-    accounts,
-    creditCards,
-    creditCardBills,
-    accountBalances,
     accountCurrencyMap,
     loading,
     homeSummary,
