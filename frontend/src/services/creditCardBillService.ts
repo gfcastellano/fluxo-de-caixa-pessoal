@@ -13,6 +13,7 @@ import {
 } from 'firebase/firestore';
 import { db, auth } from '../firebase/config';
 import type { CreditCardBill, Transaction } from '../types';
+import { calculateBillDate } from '../domain/billing';
 
 const COLLECTION_NAME = 'creditCardBills';
 
@@ -198,44 +199,8 @@ export async function updateBillTotal(billId: string, amount: number): Promise<v
   }
 }
 
-// Helper to calculate bill date based on transaction date and closing day
-export function calculateBillDate(transactionDate: string, closingDay: number, dueDay: number): { month: number; year: number; dueDate: string } {
-  const date = new Date(transactionDate);
-  const day = date.getDate();
-  const currentMonth = date.getMonth(); // 0-11
-  const currentYear = date.getFullYear();
-
-  // If transaction is on or after closing day, it goes to the next month's bill
-  let targetMonth = currentMonth;
-  let targetYear = currentYear;
-
-  if (day >= closingDay) {
-    targetMonth++;
-    if (targetMonth > 11) {
-      targetMonth = 0;
-      targetYear++;
-    }
-  }
-
-  // Calculate due date for the target month
-  // Note: We need to handle months with fewer days if dueDay is 31
-  // But for simplicity, we'll construct the date and let JS handle overflow/correction if needed,
-  // or closer to business logic: the due date is in the target month.
-  // Actually, the bill month IS the target month.
-
-  // Example:
-  // Closing Day 5, Due Day 10.
-  // Trans: Jan 4 -> Jan Bill (Due Jan 10)
-  // Trans: Jan 6 -> Feb Bill (Due Feb 10)
-
-  const dueDateObj = new Date(targetYear, targetMonth, dueDay);
-
-  return {
-    month: targetMonth, // 0-11
-    year: targetYear,
-    dueDate: dueDateObj.toISOString().split('T')[0]
-  };
-}
+// Re-export from domain layer (pure function, tested in domain/billing.test.ts)
+export { calculateBillDate };
 
 export async function ensureBillExists(
   userId: string,

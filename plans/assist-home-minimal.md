@@ -130,17 +130,17 @@ Opção B (um pouco melhor):
 **Mensagem sugerida:** `feat(home): add drill-down evidence for projections and diagnosis`
 
 ### Tarefas
-- [ ] Para projeções: adicionar link “Ver por quê” abrindo:
+- [x] Para projeções: adicionar link "Ver por quê" abrindo:
   - mini modal/drawer OU navegação para página de detalhes
   - mostrando:
     - média usada (N dias)
     - dias restantes
     - tabela simples / mini gráfico (se já existir infra de gráficos)
-- [ ] Garantir que explicação bate com método da função pura
+- [x] Garantir que explicação bate com método da função pura
 
 ### Done
-- [ ] Usuário consegue justificar projeção sem encher a Home
-- [ ] Nenhum gráfico obrigatório na Home
+- [x] Usuário consegue justificar projeção sem encher a Home
+- [x] Nenhum gráfico obrigatório na Home
 
 ---
 
@@ -148,18 +148,18 @@ Opção B (um pouco melhor):
 **Mensagem sugerida:** `feat(diagnosis): add calm weekly/monthly diagnosis summary`
 
 ### Tarefas
-- [ ] Criar `frontend/src/domain/diagnosis.ts` com funções puras para gerar:
+- [x] Criar `frontend/src/domain/diagnosis.ts` com funções puras para gerar:
   - 1–3 insights curtos (calmos, sem julgamento)
   - baseados em:
     - % categorias dentro do orçamento (se houver orçamento)
     - progresso nas metas
     - tendência do net
-- [ ] Mostrar na Home um card compacto “Resumo” (máx 3 linhas)
-- [ ] Link “Ver detalhes” → Reports
+- [x] Mostrar na Home um card compacto "Resumo" (máx 3 linhas)
+- [x] Link "Ver detalhes" → Reports
 
 ### Done
-- [ ] Linguagem no tom correto (“Seu ritmo projeta…”, “Se quiser…”)
-- [ ] Sem coach, sem culpa
+- [x] Linguagem no tom correto ("Seu ritmo projeta…", "Se quiser…")
+- [x] Sem coach, sem culpa
 
 ---
 
@@ -167,16 +167,16 @@ Opção B (um pouco melhor):
 **Mensagem sugerida:** `feat(home): make Add Transaction CTA prominent (voice-first)`
 
 ### Tarefas
-- [ ] Botão principal abre fluxo de voz (se já existe)
-- [ ] Fallback manual acessível (ex.: botão secundário ou dentro do mesmo modal)
-- [ ] Garantir que o fluxo respeita:
+- [x] Botão principal abre fluxo de voz (se já existe)
+- [x] Fallback manual acessível (ex.: botão secundário ou dentro do mesmo modal)
+- [x] Garantir que o fluxo respeita:
   - default account/card
   - override por voz (Santander)
-- [ ] Adicionar 2–3 exemplos na UI (placeholder/hint) sem poluir
+- [x] Adicionar 2–3 exemplos na UI (placeholder/hint) sem poluir
 
 ### Done
-- [ ] Input por voz é a ação mais óbvia da Home
-- [ ] Manual não some
+- [x] Input por voz é a ação mais óbvia da Home
+- [x] Manual não some
 
 ---
 
@@ -184,16 +184,16 @@ Opção B (um pouco melhor):
 **Mensagem sugerida:** `test(finance): add regression tests for installments, bills, month rollover`
 
 ### Tarefas
-- [ ] Criar/expandir testes para:
+- [x] Criar/expandir testes para:
   - parcelamento (distribuição por mês)
   - fatura do cartão (débito no vencimento)
   - virada de mês (resumo e projeção não quebram)
   - default vs override (simulado no parser pós-processamento, se existir)
-- [ ] Se parte estiver no backend, adicionar testes equivalentes lá também
+- [x] Se parte estiver no backend, adicionar testes equivalentes lá também
 
 ### Done
-- [ ] Cobertura mínima para evitar “saldo errado”
-- [ ] CI local passa (lint + typecheck + tests)
+- [x] Cobertura mínima para evitar "saldo errado"
+- [x] CI local passa (lint + typecheck + tests)
 
 ---
 
