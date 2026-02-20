@@ -97,8 +97,8 @@ export function Reports() {
         .slice(0, 10);
 
       return (
-        <div className="bg-white/95 backdrop-blur-xl p-4 rounded-2xl border border-white/60 shadow-[0_20px_50px_rgba(0,0,0,0.1)] min-w-[280px] animate-in fade-in zoom-in duration-200">
-          <div className="flex items-center justify-between mb-3 border-b border-slate/10 pb-2">
+        <div className="bg-white/95 backdrop-blur-xl p-3 rounded-2xl border border-white/60 shadow-[0_20px_50px_rgba(0,0,0,0.1)] w-[min(240px,calc(100vw-2.5rem))] animate-in fade-in zoom-in duration-200">
+          <div className="flex items-center justify-between mb-2 border-b border-slate/10 pb-1.5">
             <div className="flex flex-col">
               <span className="font-bold text-ink text-sm tracking-tight">{translateCategory(data.categoryName)}</span>
               <span className="text-[10px] text-slate font-medium uppercase tracking-wider">{t('reports.composition')}</span>
@@ -449,11 +449,11 @@ export function Reports() {
           t => t.type === 'transfer' && t.toAccountId && accountIdsInCurrency.has(t.toAccountId)
         );
 
-        // Add incoming transfers to income breakdown
+        // Add incoming transfers to income breakdown (use amountTo for cross-currency transfers)
         incomingTransfersToTheseAccounts.forEach(t => {
           const transferCategoryId = 'incoming-transfer';
           const current = incomeCategoryTotals.get(transferCategoryId) || 0;
-          incomeCategoryTotals.set(transferCategoryId, current + t.amount);
+          incomeCategoryTotals.set(transferCategoryId, current + (t.amountTo ?? t.amount));
         });
 
         const totalIncome = Array.from(incomeCategoryTotals.values()).reduce((sum, amount) => sum + amount, 0);
@@ -477,7 +477,7 @@ export function Reports() {
 
         // Calculate summary from filtered transactions for the selected currency
         const filteredIncome = incomeTransactions.reduce((sum, t) => sum + t.amount, 0)
-          + incomingTransfersToTheseAccounts.reduce((sum, t) => sum + t.amount, 0);
+          + incomingTransfersToTheseAccounts.reduce((sum, t) => sum + (t.amountTo ?? t.amount), 0);
         const filteredExpenses = expenseTransactions.reduce((sum, t) => sum + t.amount, 0);
 
         const filteredSummary: MonthlySummary = {
@@ -1160,6 +1160,8 @@ export function Reports() {
                   interval={0}
                 />
                 <Tooltip
+                  allowEscapeViewBox={{ x: true, y: false }}
+                  position={{ y: 10 }}
                   content={<CategoryTooltip transactions={periodTransactions} currency={selectedCurrency || 'BRL'} t={t} />}
                 />
                 <Bar dataKey="amount" radius={[0, 4, 4, 0]}>
@@ -1208,6 +1210,8 @@ export function Reports() {
                   interval={0}
                 />
                 <Tooltip
+                  allowEscapeViewBox={{ x: true, y: false }}
+                  position={{ y: 10 }}
                   content={<CategoryTooltip transactions={periodTransactions} currency={selectedCurrency || 'BRL'} t={t} />}
                 />
                 <Bar dataKey="amount" radius={[0, 4, 4, 0]}>
