@@ -58,6 +58,7 @@ export function TransactionModal({
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
   const [selectedToAccountId, setSelectedToAccountId] = useState<string>('');
+  const [amountTo, setAmountTo] = useState('');
 
   // Credit card states
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
@@ -173,6 +174,7 @@ export function TransactionModal({
       setRecurrenceEndDate(transaction.recurrenceEndDate || '');
       setRecurringCount(transaction.recurringCount?.toString() || '');
       setRecurringMode(transaction.recurringCount ? 'count' : 'date');
+      setAmountTo(transaction.amountTo?.toString() || '');
     } else {
       setFormData({
         description: '',
@@ -190,6 +192,7 @@ export function TransactionModal({
       setSelectedToAccountId('');
       setSelectedCreditCardId('');
       setPaymentMethod('account');
+      setAmountTo('');
     }
     voice.resetVoice();
   }, [transaction, isOpen]);
@@ -348,6 +351,16 @@ export function TransactionModal({
       transactionData.accountId = selectedAccountId || undefined;
       if (validType === 'transfer') {
         transactionData.toAccountId = selectedToAccountId || undefined;
+        // FX: persist amountTo + impliedRate for cross-currency transfers
+        const fromAcc = accounts.find(a => a.id === selectedAccountId);
+        const toAcc = accounts.find(a => a.id === selectedToAccountId);
+        if (fromAcc && toAcc && fromAcc.currency !== toAcc.currency && amountTo) {
+          const parsedTo = parseMoneyInput(amountTo);
+          if (parsedTo && parsedTo > 0) {
+            transactionData.amountTo = parsedTo;
+            transactionData.impliedRate = parsedAmount / parsedTo;
+          }
+        }
       }
     }
 
@@ -903,21 +916,49 @@ export function TransactionModal({
               </div>
             )}
             {formData.type === 'transfer' && (
-              <div>
-                <label className="block text-sm font-medium text-ink mb-1.5">{t('transactions.form.destinationAccount')}</label>
-                <select
-                  value={selectedToAccountId}
-                  onChange={(e) => setSelectedToAccountId(e.target.value)}
-                  className="w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue transition-all"
-                  required
-                >
-                  <option value="">{t('transactions.form.selectDestinationAccount')}</option>
-                  {accounts
-                    .filter(acc => acc.id !== selectedAccountId)
-                    .map((account) => (
-                      <option key={account.id} value={account.id}>{account.name} {account.isCash ? `(${t('accounts.cashBadge')})` : ''}</option>
-                    ))}
-                </select>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-ink mb-1.5">{t('transactions.form.destinationAccount')}</label>
+                  <select
+                    value={selectedToAccountId}
+                    onChange={(e) => setSelectedToAccountId(e.target.value)}
+                    className="w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue transition-all"
+                    required
+                  >
+                    <option value="">{t('transactions.form.selectDestinationAccount')}</option>
+                    {accounts
+                      .filter(acc => acc.id !== selectedAccountId)
+                      .map((account) => (
+                        <option key={account.id} value={account.id}>{account.name} {account.isCash ? `(${t('accounts.cashBadge')})` : ''}</option>
+                      ))}
+                  </select>
+                </div>
+                {/* FX rate — only for cross-currency transfers */}
+                {(() => {
+                  const fromAcc = accounts.find(a => a.id === selectedAccountId);
+                  const toAcc = accounts.find(a => a.id === selectedToAccountId);
+                  if (!fromAcc || !toAcc || fromAcc.currency === toAcc.currency) return null;
+                  const parsedFrom = parseMoneyInput(formData.amount) ?? 0;
+                  const parsedTo = parseMoneyInput(amountTo) ?? 0;
+                  const rate = parsedTo > 0 && parsedFrom > 0 ? parsedFrom / parsedTo : null;
+                  return (
+                    <div className="space-y-1.5">
+                      <Input
+                        label={`Valor em ${toAcc.currency}`}
+                        type="text"
+                        inputMode="decimal"
+                        value={amountTo}
+                        onChange={(e) => setAmountTo(e.target.value)}
+                        placeholder="0,00"
+                      />
+                      {rate !== null && (
+                        <p className="text-xs text-slate/60 pl-1">
+                          Taxa implícita: 1 {toAcc.currency} = {rate.toFixed(4)} {fromAcc.currency}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             )}
             <Input

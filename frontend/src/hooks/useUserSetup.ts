@@ -46,7 +46,10 @@ export function useUserSetup(initialBalance: number = 0) {
         
         if (!userDoc.exists()) {
           console.log('Creating new user profile and default data...');
-          
+
+          const locale = navigator.language || 'pt-BR';
+          const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Sao_Paulo';
+
           // Create user profile
           await setDoc(userRef, {
             uid: user.uid,
@@ -55,6 +58,18 @@ export function useUserSetup(initialBalance: number = 0) {
             photoURL: user.photoURL,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
+            lastActiveAt: serverTimestamp(),
+            onboardingVersion: 1,
+            locale,
+            timezone,
+            defaultCurrency: 'BRL',
+            enabledCurrencies: ['BRL'],
+            privacyMode: false,
+            notificationPrefs: {
+              weeklyReview: true,
+              monthlyDigest: true,
+              budgetAlerts: true,
+            },
             settings: {
               currency: 'BRL',
               language: 'pt-BR',
@@ -87,6 +102,18 @@ export function useUserSetup(initialBalance: number = 0) {
           
           console.log('✅ User setup complete: Profile created with 14 default categories and 1 default account');
         } else {
+          // Existing user: upsert missing metadata fields without overwriting existing values
+          const existingData = userDoc.data();
+          const metadataUpdates: Record<string, unknown> = { lastActiveAt: serverTimestamp() };
+          if (!existingData.locale) metadataUpdates.locale = navigator.language || 'pt-BR';
+          if (!existingData.timezone) metadataUpdates.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Sao_Paulo';
+          if (!existingData.defaultCurrency) metadataUpdates.defaultCurrency = 'BRL';
+          if (!existingData.enabledCurrencies) metadataUpdates.enabledCurrencies = ['BRL'];
+          if (existingData.privacyMode === undefined) metadataUpdates.privacyMode = false;
+          if (!existingData.notificationPrefs) metadataUpdates.notificationPrefs = { weeklyReview: true, monthlyDigest: true, budgetAlerts: true };
+          if (!existingData.onboardingVersion) metadataUpdates.onboardingVersion = 1;
+          await setDoc(userRef, metadataUpdates, { merge: true });
+
           // Existing user: ensure transfer categories exist (migration for pre-transfer users)
           const existingCategories = await getCategories(user.uid);
           const hasTransferCategories = existingCategories.some(c => c.type === 'transfer');

@@ -33,6 +33,7 @@ import {
   ReferenceLine,
 } from 'recharts';
 import { Download, TrendingUp, TrendingDown, Calendar, PiggyBank, Calculator, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react';
+import { ChartFrame } from '../components/ChartFrame';
 import { PageDescription } from '../components/PageDescription';
 import { useFamily } from '../context/FamilyContext';
 import { Users } from 'lucide-react';
@@ -96,8 +97,8 @@ export function Reports() {
         .slice(0, 10);
 
       return (
-        <div className="bg-white/95 backdrop-blur-xl p-4 rounded-2xl border border-white/60 shadow-[0_20px_50px_rgba(0,0,0,0.1)] min-w-[280px] animate-in fade-in zoom-in duration-200">
-          <div className="flex items-center justify-between mb-3 border-b border-slate/10 pb-2">
+        <div className="bg-white/95 backdrop-blur-xl p-3 rounded-2xl border border-white/60 shadow-[0_20px_50px_rgba(0,0,0,0.1)] w-[min(240px,calc(100vw-2.5rem))] animate-in fade-in zoom-in duration-200">
+          <div className="flex items-center justify-between mb-2 border-b border-slate/10 pb-1.5">
             <div className="flex flex-col">
               <span className="font-bold text-ink text-sm tracking-tight">{translateCategory(data.categoryName)}</span>
               <span className="text-[10px] text-slate font-medium uppercase tracking-wider">{t('reports.composition')}</span>
@@ -119,7 +120,7 @@ export function Reports() {
                   </div>
                 </div>
                 <span className={`font-bold whitespace-nowrap tabular-nums ${tx.type === 'income' ? 'text-emerald' : tx.type === 'expense' ? 'text-rose' : 'text-blue'}`}>
-                  {formatCurrency(tx.amount, currency)}
+                  {formatCurrency(isIncomingTransfer ? (tx.amountTo ?? tx.amount) : tx.amount, currency)}
                 </span>
               </div>
             ))}
@@ -448,11 +449,11 @@ export function Reports() {
           t => t.type === 'transfer' && t.toAccountId && accountIdsInCurrency.has(t.toAccountId)
         );
 
-        // Add incoming transfers to income breakdown
+        // Add incoming transfers to income breakdown (use amountTo for cross-currency transfers)
         incomingTransfersToTheseAccounts.forEach(t => {
           const transferCategoryId = 'incoming-transfer';
           const current = incomeCategoryTotals.get(transferCategoryId) || 0;
-          incomeCategoryTotals.set(transferCategoryId, current + t.amount);
+          incomeCategoryTotals.set(transferCategoryId, current + (t.amountTo ?? t.amount));
         });
 
         const totalIncome = Array.from(incomeCategoryTotals.values()).reduce((sum, amount) => sum + amount, 0);
@@ -476,7 +477,7 @@ export function Reports() {
 
         // Calculate summary from filtered transactions for the selected currency
         const filteredIncome = incomeTransactions.reduce((sum, t) => sum + t.amount, 0)
-          + incomingTransfersToTheseAccounts.reduce((sum, t) => sum + t.amount, 0);
+          + incomingTransfersToTheseAccounts.reduce((sum, t) => sum + (t.amountTo ?? t.amount), 0);
         const filteredExpenses = expenseTransactions.reduce((sum, t) => sum + t.amount, 0);
 
         const filteredSummary: MonthlySummary = {
@@ -1139,37 +1140,37 @@ export function Reports() {
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="border-t border-white/30 pt-4 mt-2">
-              <h4 className="text-xs lg:text-sm font-medium text-ink mb-3">{t('reports.incomeComposition')}</h4>
-              {incomeBreakdown.length === 0 ? (
-                <p className="text-slate text-center py-4 lg:py-6 text-xs lg:text-sm">{t('reports.noData')}</p>
-              ) : (
-                <ResponsiveContainer width="100%" height={180}>
-                  <BarChart data={incomeBreakdown.slice(0, 5)} layout="vertical" margin={{ left: -20, right: 20, top: 5, bottom: 5 }} barSize={24}>
-                    <XAxis type="number" hide />
-                    <YAxis
-                      type="category"
-                      dataKey="categoryName"
-                      width={90}
-                      tick={{ fontSize: 10 }}
-                      tickFormatter={(value) => {
-                        const translated = t(getTranslatedCategoryName(value));
-                        return translated.length > 14 ? translated.slice(0, 14) + '...' : translated;
-                      }}
-                      interval={0}
-                    />
-                    <Tooltip
-                      content={<CategoryTooltip transactions={periodTransactions} currency={selectedCurrency || 'BRL'} t={t} />}
-                    />
-                    <Bar dataKey="amount" radius={[0, 4, 4, 0]}>
-                      {incomeBreakdown.slice(0, 5).map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.categoryColor} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </div>
+            <ChartFrame
+              title={t('reports.incomeComposition')}
+              height={180}
+              isEmpty={incomeBreakdown.length === 0}
+              emptyMessage={t('reports.noData')}
+            >
+              <BarChart data={incomeBreakdown.slice(0, 5)} layout="vertical" margin={{ left: -20, right: 20, top: 5, bottom: 5 }} barSize={24}>
+                <XAxis type="number" hide />
+                <YAxis
+                  type="category"
+                  dataKey="categoryName"
+                  width={90}
+                  tick={{ fontSize: 10 }}
+                  tickFormatter={(value) => {
+                    const translated = t(getTranslatedCategoryName(value));
+                    return translated.length > 14 ? translated.slice(0, 14) + '...' : translated;
+                  }}
+                  interval={0}
+                />
+                <Tooltip
+                  allowEscapeViewBox={{ x: false, y: false }}
+                  position={{ y: 10 }}
+                  content={<CategoryTooltip transactions={periodTransactions} currency={selectedCurrency || 'BRL'} t={t} />}
+                />
+                <Bar dataKey="amount" radius={[0, 4, 4, 0]}>
+                  {incomeBreakdown.slice(0, 5).map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.categoryColor} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ChartFrame>
           </CardContent>
         </Card>
 
@@ -1189,37 +1190,37 @@ export function Reports() {
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="border-t border-white/30 pt-4 mt-2">
-              <h4 className="text-xs lg:text-sm font-medium text-ink mb-3">{t('reports.expensesByCategory')}</h4>
-              {expenseBreakdown.length === 0 ? (
-                <p className="text-slate text-center py-4 lg:py-6 text-xs lg:text-sm">{t('reports.noData')}</p>
-              ) : (
-                <ResponsiveContainer width="100%" height={180}>
-                  <BarChart data={expenseBreakdown.slice(0, 5)} layout="vertical" margin={{ left: -20, right: 20, top: 5, bottom: 5 }} barSize={24}>
-                    <XAxis type="number" hide />
-                    <YAxis
-                      type="category"
-                      dataKey="categoryName"
-                      width={90}
-                      tick={{ fontSize: 10 }}
-                      tickFormatter={(value) => {
-                        const translated = t(getTranslatedCategoryName(value));
-                        return translated.length > 14 ? translated.slice(0, 14) + '...' : translated;
-                      }}
-                      interval={0}
-                    />
-                    <Tooltip
-                      content={<CategoryTooltip transactions={periodTransactions} currency={selectedCurrency || 'BRL'} t={t} />}
-                    />
-                    <Bar dataKey="amount" radius={[0, 4, 4, 0]}>
-                      {expenseBreakdown.slice(0, 5).map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.categoryColor} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </div>
+            <ChartFrame
+              title={t('reports.expensesByCategory')}
+              height={180}
+              isEmpty={expenseBreakdown.length === 0}
+              emptyMessage={t('reports.noData')}
+            >
+              <BarChart data={expenseBreakdown.slice(0, 5)} layout="vertical" margin={{ left: -20, right: 20, top: 5, bottom: 5 }} barSize={24}>
+                <XAxis type="number" hide />
+                <YAxis
+                  type="category"
+                  dataKey="categoryName"
+                  width={90}
+                  tick={{ fontSize: 10 }}
+                  tickFormatter={(value) => {
+                    const translated = t(getTranslatedCategoryName(value));
+                    return translated.length > 14 ? translated.slice(0, 14) + '...' : translated;
+                  }}
+                  interval={0}
+                />
+                <Tooltip
+                  allowEscapeViewBox={{ x: false, y: false }}
+                  position={{ y: 10 }}
+                  content={<CategoryTooltip transactions={periodTransactions} currency={selectedCurrency || 'BRL'} t={t} />}
+                />
+                <Bar dataKey="amount" radius={[0, 4, 4, 0]}>
+                  {expenseBreakdown.slice(0, 5).map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.categoryColor} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ChartFrame>
           </CardContent>
         </Card>
       </div>

@@ -1,6 +1,13 @@
-import { useState, useRef, useCallback } from 'react';
+import { useReducer, useRef, useCallback } from 'react';
 
-export type RecordingState = 'idle' | 'recording' | 'preview' | 'processing' | 'success' | 'error';
+export type RecordingState =
+  | 'idle'
+  | 'recording'
+  | 'preview'
+  | 'processing'
+  | 'success'
+  | 'error'
+  | 'permission_denied';
 
 export interface UseVoiceRecorderReturn {
   state: RecordingState;
@@ -9,20 +16,73 @@ export interface UseVoiceRecorderReturn {
   stopRecording: () => Promise<Blob | null>;
   reset: () => void;
   isSupported: boolean;
-  // New: Audio level for waveform visualization (0-100)
   getAudioLevel: () => number;
-  // New: Recorded audio blob for preview
   audioBlob: Blob | null;
-  // New: Clear recorded audio (discard)
   clearAudio: () => void;
-  // New: Confirm audio and move to processing
   confirmAudio: () => Blob | null;
 }
 
+// ─── State & Actions ────────────────────────────────────────────────────────
+
+interface RecorderState {
+  status: RecordingState;
+  error: string | null;
+  audioBlob: Blob | null;
+}
+
+type RecorderAction =
+  | { type: 'START' }
+  | { type: 'STOP'; blob: Blob }
+  | { type: 'NO_AUDIO' }
+  | { type: 'UPLOAD_START' }
+  | { type: 'UPLOAD_OK' }
+  | { type: 'UPLOAD_ERR'; error: string }
+  | { type: 'PERMISSION_DENIED' }
+  | { type: 'DEVICE_ERROR'; error: string }
+  | { type: 'RECORDER_ERROR'; error: string }
+  | { type: 'RESET' };
+
+const initialState: RecorderState = {
+  status: 'idle',
+  error: null,
+  audioBlob: null,
+};
+
+function recorderReducer(state: RecorderState, action: RecorderAction): RecorderState {
+  switch (action.type) {
+    case 'START':
+      return { status: 'recording', error: null, audioBlob: null };
+    case 'STOP':
+      return { ...state, status: 'preview', audioBlob: action.blob };
+    case 'NO_AUDIO':
+      return { status: 'error', error: 'Nenhum áudio gravado', audioBlob: null };
+    case 'UPLOAD_START':
+      return { ...state, status: 'processing' };
+    case 'UPLOAD_OK':
+      return { ...state, status: 'success' };
+    case 'UPLOAD_ERR':
+      return { status: 'error', error: action.error, audioBlob: null };
+    case 'PERMISSION_DENIED':
+      return {
+        status: 'permission_denied',
+        error: 'Permissão do microfone negada. Abra as configurações do navegador para permitir o acesso.',
+        audioBlob: null,
+      };
+    case 'DEVICE_ERROR':
+      return { status: 'error', error: action.error, audioBlob: null };
+    case 'RECORDER_ERROR':
+      return { status: 'error', error: action.error, audioBlob: null };
+    case 'RESET':
+      return initialState;
+    default:
+      return state;
+  }
+}
+
+// ─── Hook ────────────────────────────────────────────────────────────────────
+
 export function useVoiceRecorder(): UseVoiceRecorderReturn {
-  const [state, setState] = useState<RecordingState>('idle');
-  const [error, setError] = useState<string | null>(null);
-  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [recState, dispatch] = useReducer(recorderReducer, initialState);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -31,53 +91,42 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
   const dataArrayRef = useRef<Uint8Array<ArrayBuffer> | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  // Check if browser supports MediaRecorder
-  const isSupported = typeof window !== 'undefined' &&
+  const isSupported =
+    typeof window !== 'undefined' &&
     !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) &&
     typeof MediaRecorder !== 'undefined';
 
-  // Get current audio level (0-100) for waveform visualization
   const getAudioLevel = useCallback((): number => {
-    if (!analyserRef.current || !dataArrayRef.current || state !== 'recording') {
+    if (!analyserRef.current || !dataArrayRef.current || recState.status !== 'recording') {
       return 0;
     }
-
     analyserRef.current.getByteFrequencyData(dataArrayRef.current);
-
-    // Calculate average volume from frequency data
     const sum = dataArrayRef.current.reduce((acc, val) => acc + val, 0);
     const average = sum / dataArrayRef.current.length;
-
-    // Normalize to 0-100 scale with boost for lower volumes
-    // Using simple linear math wasn't sensitive enough.
-    // We use a root curve to boost low signals and a multiplier
-    const normalized = Math.min(100, Math.pow(average / 255, 0.8) * 100 * 2.5);
-    return Math.round(normalized);
-  }, [state]);
+    return Math.round(Math.min(100, Math.pow(average / 255, 0.8) * 100 * 2.5));
+  }, [recState.status]);
 
   const startRecording = useCallback(async (): Promise<void> => {
+    // Guard: only allow starting from idle — prevents double-submit
+    if (recState.status !== 'idle') return;
+
     if (!isSupported) {
-      setError('Voice recording is not supported in this browser');
-      setState('error');
+      dispatch({ type: 'DEVICE_ERROR', error: 'Gravação de voz não é suportada neste navegador' });
       return;
     }
 
     try {
-      setError(null);
-      setAudioBlob(null);
       audioChunksRef.current = [];
 
-      // Request microphone access
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
-        }
+        },
       });
       streamRef.current = stream;
 
-      // Setup AudioContext and AnalyserNode for waveform visualization
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       audioContextRef.current = audioContext;
 
@@ -91,7 +140,6 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
       const bufferLength = analyser.frequencyBinCount;
       dataArrayRef.current = new Uint8Array(bufferLength);
 
-      // Create MediaRecorder with webm/opus format
       const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
         ? 'audio/webm;codecs=opus'
         : MediaRecorder.isTypeSupported('audio/webm')
@@ -108,45 +156,37 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
       };
 
       mediaRecorder.onerror = () => {
-        setError('Recording error occurred');
-        setState('error');
-        stream.getTracks().forEach(track => track.stop());
+        dispatch({ type: 'RECORDER_ERROR', error: 'Erro durante a gravação' });
+        stream.getTracks().forEach((track) => track.stop());
       };
 
-      // Start recording
-      mediaRecorder.start(100); // Collect data every 100ms
-      setState('recording');
-
+      mediaRecorder.start(100);
+      dispatch({ type: 'START' });
     } catch (err) {
-      console.error('Error starting recording:', err);
-
       if (err instanceof DOMException) {
         if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-          setError('Microphone permission denied. Please allow microphone access.');
+          dispatch({ type: 'PERMISSION_DENIED' });
         } else if (err.name === 'NotFoundError') {
-          setError('No microphone found. Please connect a microphone.');
+          dispatch({ type: 'DEVICE_ERROR', error: 'Nenhum microfone encontrado. Conecte um microfone e tente novamente.' });
         } else {
-          setError(`Microphone error: ${err.message}`);
+          dispatch({ type: 'DEVICE_ERROR', error: `Erro no microfone: ${err.message}` });
         }
       } else {
-        setError('Failed to start recording');
+        dispatch({ type: 'DEVICE_ERROR', error: 'Falha ao iniciar a gravação' });
       }
-
-      setState('error');
     }
-  }, [isSupported]);
+  }, [isSupported, recState.status]);
 
   const stopRecording = useCallback(async (): Promise<Blob | null> => {
     return new Promise((resolve) => {
       const mediaRecorder = mediaRecorderRef.current;
 
-      if (!mediaRecorder || state !== 'recording') {
+      if (!mediaRecorder || recState.status !== 'recording') {
         resolve(null);
         return;
       }
 
       mediaRecorder.onstop = () => {
-        // Stop audio context but keep stream alive for potential re-recording
         if (audioContextRef.current) {
           audioContextRef.current.close();
           audioContextRef.current = null;
@@ -154,67 +194,53 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
         analyserRef.current = null;
         dataArrayRef.current = null;
 
-        // Stop all tracks
         if (streamRef.current) {
-          streamRef.current.getTracks().forEach(track => track.stop());
+          streamRef.current.getTracks().forEach((track) => track.stop());
           streamRef.current = null;
         }
 
-        // Combine all chunks into a single blob
         const blob = new Blob(audioChunksRef.current, {
-          type: mediaRecorder.mimeType
+          type: mediaRecorder.mimeType,
         });
 
-        // Clear chunks
         audioChunksRef.current = [];
         mediaRecorderRef.current = null;
 
         if (blob.size === 0) {
-          setError('No audio recorded');
-          setState('error');
+          dispatch({ type: 'NO_AUDIO' });
           resolve(null);
         } else {
-          // Store blob for preview and move to preview state
-          setAudioBlob(blob);
-          setState('preview');
+          dispatch({ type: 'STOP', blob });
           resolve(blob);
         }
       };
 
       mediaRecorder.stop();
     });
-  }, [state]);
+  }, [recState.status]);
 
-  // Clear recorded audio (user cancelled)
   const clearAudio = useCallback(() => {
-    setAudioBlob(null);
     audioChunksRef.current = [];
-    setState('idle');
-    setError(null);
+    dispatch({ type: 'RESET' });
   }, []);
 
-  // Confirm audio for processing (user approved)
   const confirmAudio = useCallback((): Blob | null => {
-    if (!audioBlob) return null;
-    setState('processing');
-    return audioBlob;
-  }, [audioBlob]);
+    // Guard: only allow confirming from preview — prevents double-submit
+    if (!recState.audioBlob || recState.status !== 'preview') return null;
+    dispatch({ type: 'UPLOAD_START' });
+    return recState.audioBlob;
+  }, [recState.audioBlob, recState.status]);
 
   const reset = useCallback(() => {
-    // Stop any ongoing recording
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
     }
-
-    // Clean up audio context
     if (audioContextRef.current) {
       audioContextRef.current.close();
       audioContextRef.current = null;
     }
-
-    // Stop stream
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
 
@@ -223,20 +249,18 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
     analyserRef.current = null;
     dataArrayRef.current = null;
 
-    setAudioBlob(null);
-    setState('idle');
-    setError(null);
+    dispatch({ type: 'RESET' });
   }, []);
 
   return {
-    state,
-    error,
+    state: recState.status,
+    error: recState.error,
     startRecording,
     stopRecording,
     reset,
     isSupported,
     getAudioLevel,
-    audioBlob,
+    audioBlob: recState.audioBlob,
     clearAudio,
     confirmAudio,
   };

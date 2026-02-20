@@ -87,7 +87,7 @@ export function Layout({ children }: LayoutProps) {
         key={item.href}
         to={item.href}
         className={cn(
-          "relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200",
+          "relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 min-h-[44px]",
           isActive
             ? "bg-blue/10 text-blue"
             : "text-slate hover:bg-white/50 hover:text-ink"

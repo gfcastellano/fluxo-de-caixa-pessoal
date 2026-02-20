@@ -36,6 +36,7 @@ interface VoiceContextType {
     isRecording: boolean;
     isPreview: boolean;
     isProcessing: boolean;
+    isPermissionDenied: boolean;
     audioBlob: Blob | null;
 
     // Audio visualization
@@ -178,6 +179,7 @@ export function VoiceProvider({ children, categories = [] }: VoiceProviderProps)
     const isRecording = voiceRecorder.state === 'recording';
     const isPreview = voiceRecorder.state === 'preview';
     const isProcessing = voiceRecorder.state === 'processing';
+    const isPermissionDenied = voiceRecorder.state === 'permission_denied';
 
     // Clear feedback after timeout
     const showFeedback = useCallback((type: 'success' | 'error', message: string) => {
@@ -201,6 +203,13 @@ export function VoiceProvider({ children, categories = [] }: VoiceProviderProps)
     useEffect(() => {
         setShouldOpenModal(false);
     }, [location.pathname]);
+
+    // Show calm feedback when microphone permission is denied
+    useEffect(() => {
+        if (isPermissionDenied) {
+            showFeedback('error', voiceRecorder.error ?? 'Permissão do microfone negada. Abra as configurações do navegador para permitir o acesso.');
+        }
+    }, [isPermissionDenied]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Start recording
     const startRecording = useCallback(async () => {
@@ -400,6 +409,7 @@ export function VoiceProvider({ children, categories = [] }: VoiceProviderProps)
         isRecording,
         isPreview,
         isProcessing,
+        isPermissionDenied,
         audioBlob: voiceRecorder.audioBlob,
         getAudioLevel: voiceRecorder.getAudioLevel,
         startRecording,

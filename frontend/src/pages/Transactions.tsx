@@ -823,8 +823,13 @@ export function Transactions() {
                                   <span>{formatDate(transaction.date)}</span>
                                 </div>
                               </div>
-                              <div className={`text-right font-bold text-sm ${transaction.type === 'income' ? 'text-emerald' : transaction.type === 'transfer' ? 'text-blue' : 'text-rose'}`}>
-                                {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount, transaction.account?.currency)}
+                              <div className="text-right">
+                                <div className={`font-bold text-sm ${transaction.type === 'income' ? 'text-emerald' : transaction.type === 'transfer' ? 'text-blue' : 'text-rose'}`}>
+                                  {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount, transaction.account?.currency)}
+                                </div>
+                                {transaction.type === 'transfer' && transaction.amountTo && transaction.toAccount && transaction.toAccount.currency !== transaction.account?.currency && (
+                                  <div className="text-[9px] text-blue/60 tabular-nums">→ {formatCurrency(transaction.amountTo, transaction.toAccount.currency)}</div>
+                                )}
                               </div>
                             </div>
                             <div className="flex items-center justify-between pt-1.5 border-t border-slate/10">
@@ -904,8 +909,13 @@ export function Transactions() {
                               )}
                             </div>
                           </div>
-                          <div className={`text-right font-bold text-sm ${transaction.type === 'income' ? 'text-emerald' : transaction.type === 'transfer' ? 'text-blue' : 'text-rose'}`}>
-                            {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount, transaction.account?.currency)}
+                          <div className="text-right">
+                            <div className={`font-bold text-sm ${transaction.type === 'income' ? 'text-emerald' : transaction.type === 'transfer' ? 'text-blue' : 'text-rose'}`}>
+                              {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount, transaction.account?.currency)}
+                            </div>
+                            {transaction.type === 'transfer' && transaction.amountTo && transaction.toAccount && transaction.toAccount.currency !== transaction.account?.currency && (
+                              <div className="text-[9px] text-blue/60 tabular-nums">→ {formatCurrency(transaction.amountTo, transaction.toAccount.currency)}</div>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center justify-between pt-1.5 border-t border-slate/10">
@@ -1122,7 +1132,10 @@ export function Transactions() {
                                   {transaction.account?.name || transaction.creditCard?.name}
                                 </td>
                                 <td className={`py-2 px-4 text-right text-sm ${transaction.type === 'income' ? 'text-emerald' : transaction.type === 'transfer' ? 'text-blue' : 'text-rose'}`}>
-                                  {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount, transaction.account?.currency)}
+                                  <div>{transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount, transaction.account?.currency)}</div>
+                                  {transaction.type === 'transfer' && transaction.amountTo && transaction.toAccount && transaction.toAccount.currency !== transaction.account?.currency && (
+                                    <div className="text-[10px] text-blue/60 tabular-nums">→ {formatCurrency(transaction.amountTo, transaction.toAccount.currency)}</div>
+                                  )}
                                 </td>
                                 <td className="py-2 px-4 text-right">
                                   <div className="flex justify-end gap-1">

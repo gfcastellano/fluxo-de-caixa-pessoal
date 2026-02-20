@@ -16,11 +16,18 @@ export const colors = {
     blue: '#3A86FF',
   },
   semantic: {
-    primary: 'var(--color-primary)', // Mapped to Blue
-    success: '#22C55E',
-    warning: '#FFBE0B',
-    danger: '#FF5C8A',
-    info: '#3A86FF',
+    bg: 'var(--color-bg)',
+    surface: 'var(--color-surface)',
+    text: 'var(--color-text)',
+    textMuted: 'var(--color-text-muted)',
+    border: 'var(--color-border)',
+    primary: 'var(--color-primary)',
+    primaryHover: 'var(--color-primary-hover)',
+    primaryLight: 'var(--color-primary-light)',
+    success: 'var(--color-income)',
+    warning: 'var(--color-warning)',
+    danger: 'var(--color-expense)',
+    info: 'var(--color-primary)',
   }
 } as const;
 
@@ -104,7 +111,7 @@ export const components = {
   card: {
     base: [
       'card-glass', // Uses the utility from index.css
-      'relative overflow-hidden',
+      'relative',
     ].join(' '),
 
     hoverable: 'hover:shadow-glass-hover transition-shadow duration-300',

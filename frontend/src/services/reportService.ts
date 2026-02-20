@@ -24,7 +24,7 @@ export async function getMonthlySummary(
   const income = transactions
     .filter((t) => t.type === 'income')
     .reduce((sum, t) => sum + t.amount, 0)
-    + (accountId ? incomingTransfers.reduce((sum, t) => sum + t.amount, 0) : 0);
+    + (accountId ? incomingTransfers.reduce((sum, t) => sum + (t.amountTo ?? t.amount), 0) : 0);
 
   // Expenses include: expenses + outgoing transfers (only if accountId is provided)
   const expenses = transactions
@@ -86,7 +86,7 @@ export async function getCategoryBreakdown(
 
   // Add incoming transfers to a special category
   if (incomingTransfers.length > 0) {
-    const transferTotal = incomingTransfers.reduce((sum, t) => sum + t.amount, 0);
+    const transferTotal = incomingTransfers.reduce((sum, t) => sum + (t.amountTo ?? t.amount), 0);
     const transferCategoryId = 'incoming-transfer';
     categoryTotals.set(transferCategoryId, transferTotal);
   }
