@@ -10,6 +10,7 @@ import { getAccounts } from '../services/accountService';
 import { getCreditCards } from '../services/creditCardService';
 import { getRecurringInstances } from '../services/transactionService';
 import { getTranslatedCategoryName } from '../utils/categoryTranslations';
+import { validateMoney, validateInteger, parseMoneyInput, parseIntegerInput } from '../utils/numericInputs';
 import type { Transaction, Category, Account, CreditCard } from '../types';
 import { cn } from '../utils/cn';
 
@@ -49,10 +50,11 @@ export function TransactionModal({
 
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurrencePattern, setRecurrencePattern] = useState<'monthly' | 'weekly' | 'yearly'>('monthly');
-  const [recurrenceDay, setRecurrenceDay] = useState<number | ''>('');
+  const [recurrenceDay, setRecurrenceDay] = useState('');
   const [recurrenceEndDate, setRecurrenceEndDate] = useState<string>('');
-  const [recurringCount, setRecurringCount] = useState<number | ''>('');
+  const [recurringCount, setRecurringCount] = useState('');
   const [recurringMode, setRecurringMode] = useState<'count' | 'date'>('date');
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
   const [selectedToAccountId, setSelectedToAccountId] = useState<string>('');
@@ -167,9 +169,9 @@ export function TransactionModal({
       });
       setIsRecurring(transaction.isRecurring || false);
       setRecurrencePattern(transaction.recurrencePattern || 'monthly');
-      setRecurrenceDay(transaction.recurrenceDay ?? '');
+      setRecurrenceDay(transaction.recurrenceDay?.toString() || '');
       setRecurrenceEndDate(transaction.recurrenceEndDate || '');
-      setRecurringCount(transaction.recurringCount ?? '');
+      setRecurringCount(transaction.recurringCount?.toString() || '');
       setRecurringMode(transaction.recurringCount ? 'count' : 'date');
     } else {
       setFormData({
@@ -260,6 +262,45 @@ export function TransactionModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Validate inputs before processing
+    const newErrors: Record<string, string> = {};
+
+    const amountError = validateMoney(formData.amount, (key, defaultValue) => {
+      const translated = t(key) || defaultValue || key;
+      return translated;
+    });
+    if (amountError) {
+      newErrors.amount = amountError;
+    }
+
+    // Validate recurrence day if in recurring mode
+    if (isRecurring && recurrenceDay) {
+      const maxDay = recurrencePattern === 'weekly' ? 7 : recurrencePattern === 'yearly' ? 366 : 31;
+      const dayError = validateInteger(recurrenceDay, (key, defaultValue) => {
+        const translated = t(key) || defaultValue || key;
+        return translated;
+      }, { required: false, min: 1, max: maxDay });
+      if (dayError) {
+        newErrors.recurrenceDay = dayError;
+      }
+    }
+
+    // Validate recurring count if needed
+    if (isRecurring && recurringMode === 'count' && recurringCount) {
+      const countError = validateInteger(recurringCount, (key, defaultValue) => {
+        const translated = t(key) || defaultValue || key;
+        return translated;
+      }, { required: false, min: 2, max: 60 });
+      if (countError) {
+        newErrors.recurringCount = countError;
+      }
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
     // Ensure type is valid
     let validType = formData.type;
     const lowerType = String(formData.type).toLowerCase();
@@ -272,7 +313,13 @@ export function TransactionModal({
       validType = 'expense';
     }
 
-    const totalAmount = parseFloat(formData.amount.toString().replace(',', '.'));
+    const parsedAmount = parseMoneyInput(formData.amount);
+    if (parsedAmount === null) {
+      setErrors({ amount: t('errors.invalidNumber', 'Invalid number format') });
+      return;
+    }
+
+    const totalAmount = parsedAmount;
 
     // Calculate installment amount if in installment mode
     // Divide if creating new, OR if editing all/forward (updating the series total)
@@ -316,14 +363,20 @@ export function TransactionModal({
       transactionData.isRecurring = true;
       transactionData.recurrencePattern = recurrencePattern;
       if (recurrenceDay !== '') {
-        transactionData.recurrenceDay = recurrenceDay;
+        const parsedDay = parseIntegerInput(recurrenceDay);
+        if (parsedDay !== null) {
+          transactionData.recurrenceDay = parsedDay;
+        }
       }
       if (recurrenceEndDate) {
         transactionData.recurrenceEndDate = recurrenceEndDate;
       }
       // Só adicionar recurringCount se tiver valor válido (>= 2)
-      if (recurringCount !== '' && recurringCount >= 2) {
-        transactionData.recurringCount = recurringCount;
+      if (recurringCount !== '') {
+        const parsedCount = parseIntegerInput(recurringCount);
+        if (parsedCount !== null && parsedCount >= 2) {
+          transactionData.recurringCount = parsedCount;
+        }
       }
     }
 
@@ -414,13 +467,15 @@ export function TransactionModal({
 
   // Handle recurringCount change
   const handleRecurringCountChange = (value: string) => {
-    const count = value === '' ? '' : Math.max(2, Math.min(60, parseInt(value) || 2));
-    setRecurringCount(count);
+    setRecurringCount(value);
 
-    // Auto-calculate end date if count is valid
-    if (count !== '' && count >= 2 && count <= 60) {
-      const newEndDate = calculateEndDate(formData.date, count, recurrencePattern);
-      setRecurrenceEndDate(newEndDate);
+    // Auto-calculate end date if count is valid (after validation at submit time)
+    if (value !== '') {
+      const parsed = parseIntegerInput(value);
+      if (parsed !== null && parsed >= 2 && parsed <= 60) {
+        const newEndDate = calculateEndDate(formData.date, parsed, recurrencePattern);
+        setRecurrenceEndDate(newEndDate);
+      }
     }
   };
 
@@ -431,7 +486,7 @@ export function TransactionModal({
     // Auto-calculate recurring count if date is valid and after start date
     if (value && value > formData.date) {
       const count = calculateRecurringCount(formData.date, value, recurrencePattern);
-      setRecurringCount(count);
+      setRecurringCount(count.toString());
     } else {
       setRecurringCount('');
     }
@@ -443,12 +498,15 @@ export function TransactionModal({
     setRecurrenceDay('');
 
     // Recalculate based on current mode
-    if (recurringMode === 'count' && recurringCount !== '' && recurringCount >= 2) {
-      const newEndDate = calculateEndDate(formData.date, recurringCount, newPattern);
-      setRecurrenceEndDate(newEndDate);
+    if (recurringMode === 'count' && recurringCount !== '') {
+      const parsedCount = parseIntegerInput(recurringCount);
+      if (parsedCount !== null && parsedCount >= 2) {
+        const newEndDate = calculateEndDate(formData.date, parsedCount, newPattern);
+        setRecurrenceEndDate(newEndDate);
+      }
     } else if (recurringMode === 'date' && recurrenceEndDate && recurrenceEndDate > formData.date) {
       const count = calculateRecurringCount(formData.date, recurrenceEndDate, newPattern);
-      setRecurringCount(count);
+      setRecurringCount(count.toString());
     }
   };
 
@@ -619,12 +677,12 @@ export function TransactionModal({
         />
         <Input
           label={t('transactions.form.amount')}
-          type="number"
-          step="0.01"
-          min="0"
+          type="text"
+          inputMode="decimal"
+          placeholder="0.00"
           value={formData.amount}
           onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-          required
+          error={errors.amount}
           className={highlightedFields.has('amount') ? 'animate-voice-highlight' : ''}
         />
         <div className="col-span-1 sm:col-span-2">
@@ -974,11 +1032,10 @@ export function TransactionModal({
                 <div>
                   <label className="block text-sm font-medium text-ink mb-1.5">{getDayLabel()}</label>
                   <input
-                    type="number"
-                    min={1}
-                    max={getMaxDay()}
+                    type="text"
+                    inputMode="numeric"
                     value={recurrenceDay}
-                    onChange={(e) => setRecurrenceDay(e.target.value ? parseInt(e.target.value) : '')}
+                    onChange={(e) => setRecurrenceDay(e.target.value)}
                     placeholder={t('transactions.form.recurrenceDayPlaceholder') || 'Auto'}
                     className="w-full rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue"
                   />
@@ -1021,9 +1078,8 @@ export function TransactionModal({
                     {t('transactions.form.numberOfInstallments') || 'Number of Installments'}
                   </label>
                   <input
-                    type="number"
-                    min={2}
-                    max={60}
+                    type="text"
+                    inputMode="numeric"
                     value={recurringCount}
                     onChange={(e) => handleRecurringCountChange(e.target.value)}
                     placeholder="2-60"

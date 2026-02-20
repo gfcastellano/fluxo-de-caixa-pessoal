@@ -6,6 +6,7 @@ import { ColorPicker } from './ColorPicker';
 import { useVoice } from '../context/VoiceContext';
 import { useVoiceForm } from '../hooks/useVoiceForm';
 import { sendVoiceAccountUpdate } from '../services/voiceService';
+import { validateMoney, parseMoneyInput } from '../utils/numericInputs';
 import type { Account } from '../types';
 import { cn } from '../utils/cn';
 
@@ -38,11 +39,13 @@ export function AccountModal({
   const [formData, setFormData] = useState({
     name: '',
     currency: 'BRL',
-    initialBalance: 0,
-    balance: 0,
+    initialBalance: '',
+    balance: '',
     isDefault: false,
     color: '#3B82F6',
   });
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Use the consolidated voice form hook
   const voice = useVoiceForm({ autoStartRecording });
@@ -54,8 +57,8 @@ export function AccountModal({
       setFormData({
         name: account.name || '',
         currency: account.currency || 'BRL',
-        initialBalance: account.initialBalance || 0,
-        balance: account.balance || 0,
+        initialBalance: account.initialBalance?.toString() || '',
+        balance: account.balance?.toString() || '',
         isDefault: account.isDefault || false,
         color: account.color || '#3B82F6',
       });
@@ -63,12 +66,13 @@ export function AccountModal({
       setFormData({
         name: '',
         currency: 'BRL',
-        initialBalance: 0,
-        balance: 0,
+        initialBalance: '',
+        balance: '',
         isDefault: false,
         color: '#3B82F6',
       });
     }
+    setErrors({});
     voice.resetVoice();
   }, [account, isOpen]);
 
@@ -93,12 +97,60 @@ export function AccountModal({
     }
   }, [highlightedFields]);
 
+  const validate = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.name.trim()) {
+      newErrors.name = t('errors.fieldRequired') || 'Field is required';
+    }
+
+    if (isEditing) {
+      const balanceError = validateMoney(formData.balance, (key, defaultValue) => {
+        const translated = t(key);
+        return translated || defaultValue || key;
+      }, { required: false });
+      if (balanceError && formData.balance) {
+        newErrors.balance = balanceError;
+      }
+    } else {
+      const initialBalanceError = validateMoney(formData.initialBalance, (key, defaultValue) => {
+        const translated = t(key);
+        return translated || defaultValue || key;
+      }, { required: false });
+      if (initialBalanceError && formData.initialBalance) {
+        newErrors.initialBalance = initialBalanceError;
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({
+
+    if (!validate()) {
+      return;
+    }
+
+    const payload: any = {
       ...formData,
       userId,
-    });
+    };
+
+    if (isEditing) {
+      if (formData.balance) {
+        const parsed = parseMoneyInput(formData.balance);
+        payload.balance = parsed !== null ? parsed : 0;
+      }
+    } else {
+      if (formData.initialBalance) {
+        const parsed = parseMoneyInput(formData.initialBalance);
+        payload.initialBalance = parsed !== null ? parsed : 0;
+      }
+    }
+
+    onSave(payload);
   };
 
   const handleVoiceConfirm = async () => {
@@ -113,7 +165,7 @@ export function AccountModal({
         const result = await sendVoiceAccountUpdate(
           audioBlob,
           i18n.language,
-          formData,
+          formData as unknown as Partial<Account>,
           isEditing || voice.hasVoiceData  // Second audio = update mode
         );
 
@@ -121,6 +173,8 @@ export function AccountModal({
           setFormData(prev => ({
             ...prev,
             ...result.data,
+            initialBalance: result.data?.initialBalance?.toString() || prev.initialBalance,
+            balance: result.data?.balance?.toString() || prev.balance,
           }));
           setHighlightedFields(new Set(Object.keys(result.data)));
           voice.setVoiceDataReceived();
@@ -190,11 +244,12 @@ export function AccountModal({
         {!isEditing && (
           <Input
             label={t('accounts.form.initialBalance')}
-            type="number"
-            step="0.01"
+            type="text"
+            inputMode="decimal"
+            placeholder="0.00"
             value={formData.initialBalance}
-            onChange={(e) => setFormData({ ...formData, initialBalance: parseFloat(e.target.value) || 0 })}
-            required
+            onChange={(e) => setFormData({ ...formData, initialBalance: e.target.value })}
+            error={errors.initialBalance}
             className={highlightedFields.has('initialBalance') ? 'animate-voice-highlight' : ''}
           />
         )}
@@ -202,10 +257,12 @@ export function AccountModal({
         {isEditing && (
           <Input
             label={t('accounts.form.balance') || 'Saldo Atual'}
-            type="number"
-            step="0.01"
+            type="text"
+            inputMode="decimal"
+            placeholder="0.00"
             value={formData.balance}
-            onChange={(e) => setFormData({ ...formData, balance: parseFloat(e.target.value) || 0 })}
+            onChange={(e) => setFormData({ ...formData, balance: e.target.value })}
+            error={errors.balance}
             className={highlightedFields.has('balance') ? 'animate-voice-highlight' : ''}
           />
         )}

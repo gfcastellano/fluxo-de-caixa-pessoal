@@ -7,20 +7,49 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../co
 import { Input } from '../components/Input';
 import { Chrome, Wallet } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { validateMoney, parseMoneyInput } from '../utils/numericInputs';
 
 export function Register() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [initialBalance, setInitialBalance] = useState<number>(0);
+  const [initialBalance, setInitialBalance] = useState('');
+  const [amountError, setAmountError] = useState('');
   const { loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation();
 
+  // Parse and validate initial balance
+  let parsedInitialBalance = 0;
+  try {
+    if (initialBalance) {
+      const parsed = parseMoneyInput(initialBalance);
+      if (parsed !== null) {
+        parsedInitialBalance = parsed;
+      }
+    }
+  } catch {
+    // Silently ignore parsing errors during render
+  }
+
   // Initialize user setup hook with initial balance
-  useUserSetup(initialBalance);
+  useUserSetup(parsedInitialBalance);
 
   const handleGoogleSignUp = async () => {
     setError('');
+    setAmountError('');
+
+    // Validate balance if provided
+    if (initialBalance) {
+      const error = validateMoney(initialBalance, (key, defaultValue) => {
+        const translated = t(key);
+        return translated || defaultValue || key;
+      }, { required: false, min: 0 });
+      if (error) {
+        setAmountError(error);
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
@@ -57,13 +86,13 @@ export function Register() {
           
           <div className="space-y-4 mb-6">
             <Input
-              type="number"
+              type="text"
+              inputMode="decimal"
               label={t('auth.register.initialBalance')}
               placeholder={t('auth.register.initialBalancePlaceholder')}
-              value={initialBalance || ''}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInitialBalance(parseFloat(e.target.value) || 0)}
-              min="0"
-              step="0.01"
+              value={initialBalance}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInitialBalance(e.target.value)}
+              error={amountError}
               leftIcon={<span className="text-neutral-400 font-medium">$</span>}
             />
           </div>

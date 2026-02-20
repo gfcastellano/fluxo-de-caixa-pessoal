@@ -851,5 +851,11 @@ export const enTranslations = {
     generic: 'Something went wrong. Please try again.',
     notFound: 'Page not found',
     unauthorized: 'You are not authorized to view this page',
+    fieldRequired: 'Field is required',
+    amountRequired: 'Amount is required',
+    amountPositive: 'Amount must be greater than zero',
+    amountExceeded: 'Amount exceeds the allowed limit',
+    invalidNumber: 'Invalid number format',
+    valueOutOfRange: 'Value must be between {{min}} and {{max}}',
   },
 };

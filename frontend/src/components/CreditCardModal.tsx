@@ -7,6 +7,7 @@ import { cn } from '../utils/cn';
 import { useVoiceForm } from '../hooks/useVoiceForm';
 import { useVoice } from '../context/VoiceContext';
 import { sendVoiceCreditCardUpdate } from '../services/voiceService';
+import { validateMoney, parseMoneyInput } from '../utils/numericInputs';
 import type { CreditCard, Account } from '../types';
 
 interface CreditCardModalProps {
@@ -33,7 +34,7 @@ export function CreditCardModal({
   const [formData, setFormData] = useState({
     name: '',
     linkedAccountId: '',
-    creditLimit: 0,
+    creditLimit: '',
     closingDay: '1',
     dueDay: '10',
     color: '#4F46E5',
@@ -48,7 +49,7 @@ export function CreditCardModal({
       setFormData({
         name: creditCard.name || '',
         linkedAccountId: creditCard.linkedAccountId || '',
-        creditLimit: creditCard.creditLimit || 0,
+        creditLimit: creditCard.creditLimit?.toString() || '',
         closingDay: creditCard.closingDay?.toString() || '1',
         dueDay: creditCard.dueDay?.toString() || '10',
         color: creditCard.color || '#4F46E5',
@@ -58,7 +59,7 @@ export function CreditCardModal({
       setFormData({
         name: '',
         linkedAccountId: accounts.find(a => a.isDefault)?.id || '',
-        creditLimit: 0,
+        creditLimit: '',
         closingDay: '1',
         dueDay: '10',
         color: '#4F46E5',
@@ -79,18 +80,34 @@ export function CreditCardModal({
       newErrors.linkedAccountId = t('creditCards.errors.accountRequired') || 'Conta vinculada é obrigatória';
     }
 
-    if (formData.creditLimit <= 0) {
-      newErrors.creditLimit = t('creditCards.errors.limitPositive') || 'Limite deve ser maior que zero';
+    const creditLimitError = validateMoney(formData.creditLimit, (key, defaultValue) => {
+      const translated = t(key);
+      return (translated && translated !== key) ? translated : (defaultValue || key);
+    });
+    if (creditLimitError) {
+      newErrors.creditLimit = creditLimitError;
     }
 
-    const docClosingDay = parseInt(formData.closingDay);
-    if (isNaN(docClosingDay) || docClosingDay < 1 || docClosingDay > 31) {
-      newErrors.closingDay = t('creditCards.errors.closingDayInvalid') || 'Dia de fechamento deve ser entre 1 e 31';
+    const closingDayError = formData.closingDay ? (() => {
+      const day = parseInt(formData.closingDay);
+      if (isNaN(day) || day < 1 || day > 31) {
+        return t('creditCards.errors.closingDayInvalid') || 'Dia de fechamento deve ser entre 1 e 31';
+      }
+      return '';
+    })() : '';
+    if (closingDayError) {
+      newErrors.closingDay = closingDayError;
     }
 
-    const docDueDay = parseInt(formData.dueDay);
-    if (isNaN(docDueDay) || docDueDay < 1 || docDueDay > 31) {
-      newErrors.dueDay = t('creditCards.errors.dueDayInvalid') || 'Dia de vencimento deve ser entre 1 e 31';
+    const dueDayError = formData.dueDay ? (() => {
+      const day = parseInt(formData.dueDay);
+      if (isNaN(day) || day < 1 || day > 31) {
+        return t('creditCards.errors.dueDayInvalid') || 'Dia de vencimento deve ser entre 1 e 31';
+      }
+      return '';
+    })() : '';
+    if (dueDayError) {
+      newErrors.dueDay = dueDayError;
     }
 
     setErrors(newErrors);
@@ -128,8 +145,10 @@ export function CreditCardModal({
 
     if (!validate()) return;
 
+    const parsedLimit = parseMoneyInput(formData.creditLimit);
     onSave({
       ...formData,
+      creditLimit: parsedLimit !== null ? parsedLimit : 0,
       closingDay: parseInt(formData.closingDay),
       dueDay: parseInt(formData.dueDay),
       userId,
@@ -145,9 +164,11 @@ export function CreditCardModal({
 
       try {
         // Use update mode if editing OR if we already have voice data (second voice input)
-        // Need to convert string days to numbers for the service
+        // Need to convert string values to numbers for the service
+        const parsedLimit = parseMoneyInput(formData.creditLimit);
         const serviceData = {
           ...formData,
+          creditLimit: parsedLimit !== null ? parsedLimit : 0,
           closingDay: parseInt(formData.closingDay) || 1,
           dueDay: parseInt(formData.dueDay) || 10
         };
@@ -163,6 +184,7 @@ export function CreditCardModal({
           setFormData(prev => ({
             ...prev,
             ...result.data,
+            creditLimit: result.data?.creditLimit?.toString() || prev.creditLimit,
             closingDay: result.data?.closingDay?.toString() || prev.closingDay,
             dueDay: result.data?.dueDay?.toString() || prev.dueDay,
           }));
@@ -244,13 +266,12 @@ export function CreditCardModal({
         <div>
           <Input
             label={t('creditCards.form.creditLimit') || 'Limite do Cartão'}
-            type="number"
-            step="0.01"
-            min="0"
+            type="text"
+            inputMode="decimal"
+            placeholder="0.00"
             value={formData.creditLimit}
-            onChange={(e) => setFormData({ ...formData, creditLimit: parseFloat(e.target.value) || 0 })}
+            onChange={(e) => setFormData({ ...formData, creditLimit: e.target.value })}
             error={errors.creditLimit}
-            required
             className={highlightedFields.has('creditLimit') ? 'animate-voice-highlight' : ''}
           />
         </div>

@@ -864,5 +864,11 @@ export const ptTranslations = {
     generic: 'Algo deu errado. Tente novamente.',
     notFound: 'Página não encontrada',
     unauthorized: 'Você não está autorizado a ver esta página',
+    fieldRequired: 'Campo obrigatório',
+    amountRequired: 'Valor é obrigatório',
+    amountPositive: 'Valor deve ser maior que zero',
+    amountExceeded: 'Valor excede o limite permitido',
+    invalidNumber: 'Formato de número inválido',
+    valueOutOfRange: 'Valor deve estar entre {{min}} e {{max}}',
   },
 };

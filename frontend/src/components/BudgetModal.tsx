@@ -6,6 +6,7 @@ import { useVoice } from '../context/VoiceContext';
 import { useVoiceForm } from '../hooks/useVoiceForm';
 import { sendVoiceBudgetUpdate } from '../services/voiceService';
 import { getTranslatedCategoryName } from '../utils/categoryTranslations';
+import { validateMoney, parseMoneyInput } from '../utils/numericInputs';
 import type { Budget, Category } from '../types';
 import { cn } from '../utils/cn';
 
@@ -37,6 +38,8 @@ export function BudgetModal({
     period: 'monthly' as 'monthly' | 'yearly',
     startDate: new Date().toISOString().split('T')[0],
   });
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const voice = useVoiceForm({ autoStartRecording });
   const { setIsModalActive } = useVoice();
@@ -91,11 +94,41 @@ export function BudgetModal({
     }
   }, [highlightedFields]);
 
+  const validate = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.categoryId) {
+      newErrors.categoryId = t('errors.fieldRequired') || 'Field is required';
+    }
+
+    const amountError = validateMoney(formData.amount, (key, defaultValue) => {
+      const translated = t(key);
+      return translated || defaultValue || key;
+    });
+    if (amountError) {
+      newErrors.amount = amountError;
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!validate()) {
+      return;
+    }
+
+    const parsedAmount = parseMoneyInput(formData.amount);
+    if (parsedAmount === null) {
+      setErrors({ amount: t('errors.invalidNumber', 'Invalid number format') });
+      return;
+    }
+
     onSave({
       ...formData,
-      amount: parseFloat(formData.amount),
+      amount: parsedAmount,
       userId,
     });
   };
@@ -114,7 +147,7 @@ export function BudgetModal({
           i18n.language,
           {
             ...formData,
-            amount: formData.amount ? parseFloat(formData.amount) : undefined,
+            amount: formData.amount ? (parseMoneyInput(formData.amount) || 0) : undefined,
             id: budget?.id,
           },
           isEditing || voice.hasVoiceData,  // Second audio = update mode
@@ -184,12 +217,12 @@ export function BudgetModal({
         </div>
         <Input
           label={t('budgets.form.amount')}
-          type="number"
-          step="0.01"
-          min="0"
+          type="text"
+          inputMode="decimal"
+          placeholder="0.00"
           value={formData.amount}
           onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-          required
+          error={errors.amount}
           className={highlightedFields.has('amount') ? 'animate-voice-highlight' : ''}
         />
         <div>
