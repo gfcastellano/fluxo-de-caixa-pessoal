@@ -1,6 +1,7 @@
 export interface ProjectMonthNetInput {
-  currentNet: number;
-  lastNDaysNet: number;
+  pastNet: number;                    // net from transactions with date <= today
+  futureScheduledNet: number;         // net from transactions with date > today (already committed)
+  lastNDaysDiscretionaryNet: number;  // total non-recurring net over the last N days
   remainingDays: number;
   windowDays: number;
 }
@@ -11,33 +12,42 @@ export interface ProjectionResult {
 }
 
 /**
- * Projects the month-end net based on the average daily net over a recent window.
+ * Projects the month-end net using 3 components:
+ *
+ * 1. pastNet — what already happened (date <= today)
+ * 2. futureScheduledNet — what's already committed for the rest of the month
+ * 3. discretionary trend — avg daily net from non-recurring past transactions × remaining days
  *
  * Formula:
- *   avgDailyNet = lastNDaysNet / windowDays
- *   projectedNet = currentNet + avgDailyNet * remainingDays
+ *   discretionaryDailyAvg = lastNDaysDiscretionaryNet / windowDays
+ *   projected = pastNet + futureScheduledNet + discretionaryDailyAvg * remainingDays
  *
- * If remainingDays is 0, returns currentNet (month already ended).
- * If windowDays is 0, returns currentNet (no data to project from).
+ * If remainingDays <= 0, returns pastNet (month ended, no future).
+ * If windowDays <= 0, returns pastNet + futureScheduledNet (no trend data).
  */
 export function projectMonthNet(input: ProjectMonthNetInput): ProjectionResult {
-  const { currentNet, lastNDaysNet, remainingDays, windowDays } = input;
+  const { pastNet, futureScheduledNet, lastNDaysDiscretionaryNet, remainingDays, windowDays } = input;
 
-  if (remainingDays <= 0 || windowDays <= 0) {
+  if (remainingDays <= 0) {
     return {
-      value: currentNet,
-      explanation: remainingDays <= 0
-        ? 'Mês encerrado — resultado final.'
-        : 'Sem dados suficientes para projeção.',
+      value: pastNet,
+      explanation: 'Mês encerrado — resultado final.',
     };
   }
 
-  const avgDailyNet = lastNDaysNet / windowDays;
-  const projected = currentNet + avgDailyNet * remainingDays;
+  if (windowDays <= 0) {
+    return {
+      value: Math.round((pastNet + futureScheduledNet) * 100) / 100,
+      explanation: 'Sem dados suficientes para projetar tendência variável.',
+    };
+  }
+
+  const discretionaryDailyAvg = lastNDaysDiscretionaryNet / windowDays;
+  const projected = pastNet + futureScheduledNet + discretionaryDailyAvg * remainingDays;
 
   return {
     value: Math.round(projected * 100) / 100,
-    explanation: `Baseado na média dos últimos ${windowDays} dias.`,
+    explanation: `Realizado + previsto + tendência de gastos variáveis (últimos ${windowDays} dias).`,
   };
 }
 

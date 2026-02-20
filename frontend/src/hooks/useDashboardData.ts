@@ -21,12 +21,23 @@ export interface CurrencySummary {
   balance: number;
 }
 
+export interface FutureTransactionItem {
+  description: string;
+  amount: number;
+  type: 'income' | 'expense' | 'transfer';
+  date: string;
+}
+
 export interface MonthProjectionInputs {
-  currentNet: number;
-  lastNDaysNet: number;
+  pastNet: number;
+  pastIncome: number;
+  pastExpense: number;
+  futureScheduledNet: number;
+  futureScheduledCount: number;
+  futureTransactions: FutureTransactionItem[];
+  discretionaryDailyAvg: number;
   windowDays: number;
   remainingDays: number;
-  avgDailyNet: number;
 }
 
 export interface YearProjectionInputs {
@@ -313,39 +324,79 @@ export function useDashboardData(): DashboardData {
 
       const currentNet = totalIncome - totalExpense;
 
-      // Calculate monthly projection
+      // Calculate monthly projection (3-component: past + scheduled + discretionary trend)
       const today = new Date();
+      const todayStr = today.toISOString().split('T')[0];
       const daysInMonth = lastDay;
       const currentDay = today.getDate();
       const remainingDays = daysInMonth - currentDay;
       const windowDays = Math.min(7, currentDay); // Use up to 7 days, or however many days have passed
 
-      // Compute net from the last N days of transactions
-      const windowStart = new Date(year, month - 1, currentDay - windowDays + 1);
       const activePool = viewMode === 'family' ? allTransactions : transactions;
-      let lastNDaysNet = 0;
-      activePool.forEach(tx => {
+
+      // Split transactions: past (date <= today) vs future (date > today)
+      const pastTxs = activePool.filter(tx => tx.date <= todayStr);
+      const futureTxs = activePool.filter(tx => tx.date > todayStr);
+
+      let pastNet = 0;
+      let pastIncome = 0;
+      let pastExpense = 0;
+      pastTxs.forEach(tx => {
+        if (tx.type === 'income') { pastNet += tx.amount; pastIncome += tx.amount; }
+        else if (tx.type === 'expense') { pastNet -= tx.amount; pastExpense += tx.amount; }
+      });
+
+      let futureScheduledNet = 0;
+      futureTxs.forEach(tx => {
+        if (tx.type === 'income') futureScheduledNet += tx.amount;
+        else if (tx.type === 'expense') futureScheduledNet -= tx.amount;
+      });
+
+      // Detect recurring/series transactions for discretionary filtering
+      const isRecurringSeries = (tx: Transaction) =>
+        tx.isRecurring || tx.isRecurringInstance || tx.createdFromRecurring || !!tx.parentTransactionId;
+
+      // Compute discretionary net from the last N days (exclude recurring)
+      const windowStart = new Date(year, month - 1, currentDay - windowDays + 1);
+      let lastNDaysDiscretionaryNet = 0;
+      pastTxs.forEach(tx => {
         const txDate = new Date(tx.date);
-        if (txDate >= windowStart && txDate <= today) {
-          if (tx.type === 'income') lastNDaysNet += tx.amount;
-          else if (tx.type === 'expense') lastNDaysNet -= tx.amount;
+        if (txDate >= windowStart && txDate <= today && !isRecurringSeries(tx)) {
+          if (tx.type === 'income') lastNDaysDiscretionaryNet += tx.amount;
+          else if (tx.type === 'expense') lastNDaysDiscretionaryNet -= tx.amount;
         }
       });
 
       const monthProjectionNet = projectMonthNet({
-        currentNet,
-        lastNDaysNet,
+        pastNet,
+        futureScheduledNet,
+        lastNDaysDiscretionaryNet,
         remainingDays,
         windowDays,
       });
 
-      const avgDailyNet = windowDays > 0 ? lastNDaysNet / windowDays : 0;
+      const discretionaryDailyAvg = windowDays > 0 ? lastNDaysDiscretionaryNet / windowDays : 0;
+      // Build enriched future transactions list for display
+      const futureTransactions: FutureTransactionItem[] = futureTxs.map(tx => {
+        const enriched = enrichedTransactions.find(et => et.id === tx.id);
+        return {
+          description: enriched?.description || tx.description,
+          amount: tx.amount,
+          type: tx.type,
+          date: tx.date,
+        };
+      });
+
       const monthProjectionInputs: MonthProjectionInputs = {
-        currentNet,
-        lastNDaysNet,
+        pastNet,
+        pastIncome,
+        pastExpense,
+        futureScheduledNet,
+        futureScheduledCount: futureTxs.length,
+        futureTransactions,
+        discretionaryDailyAvg,
         windowDays,
         remainingDays,
-        avgDailyNet,
       };
 
       // Calculate year-end projection (conservative)

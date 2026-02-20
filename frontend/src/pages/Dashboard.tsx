@@ -161,31 +161,68 @@ export function Dashboard() {
 
                     <div className={cn(
                       'overflow-hidden transition-all duration-300 ease-in-out',
-                      monthExpanded ? 'max-h-60 opacity-100 mt-3' : 'max-h-0 opacity-0 mt-0'
+                      monthExpanded ? 'max-h-[32rem] opacity-100 mt-3' : 'max-h-0 opacity-0 mt-0'
                     )}>
-                      <div className="border-t border-blue-100/50 pt-3 space-y-1.5">
+                      <div className="border-t border-blue-100/50 pt-3 space-y-3">
+                        {/* Section 1: O que já aconteceu */}
+                        <div>
+                          <div className="flex justify-between text-[11px] lg:text-xs">
+                            <span className="text-slate/70 font-medium">O que já aconteceu</span>
+                            <span className="font-medium text-ink tabular-nums">
+                              {formatCurrency(homeSummary.monthProjectionInputs.pastNet)}
+                            </span>
+                          </div>
+                          <div className="ml-3 mt-1 space-y-0.5">
+                            <div className="flex justify-between text-[10px] lg:text-[11px]">
+                              <span className="text-emerald/70">Receita realizada</span>
+                              <span className="text-emerald tabular-nums">+{formatCurrency(homeSummary.monthProjectionInputs.pastIncome)}</span>
+                            </div>
+                            <div className="flex justify-between text-[10px] lg:text-[11px]">
+                              <span className="text-rose/70">Despesa realizada</span>
+                              <span className="text-rose tabular-nums">-{formatCurrency(homeSummary.monthProjectionInputs.pastExpense)}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Section 2: Previsto */}
+                        <div>
+                          <div className="flex justify-between text-[11px] lg:text-xs">
+                            <span className="text-slate/70 font-medium">
+                              Previsto p/ restante do mês
+                            </span>
+                            <span className="font-medium text-ink tabular-nums">
+                              {formatCurrency(homeSummary.monthProjectionInputs.futureScheduledNet)}
+                            </span>
+                          </div>
+                          {homeSummary.monthProjectionInputs.futureTransactions.length > 0 && (
+                            <div className="ml-3 mt-1 space-y-0.5">
+                              {homeSummary.monthProjectionInputs.futureTransactions.map((ft, i) => (
+                                <div key={i} className="flex justify-between text-[10px] lg:text-[11px]">
+                                  <span className="text-slate/60 truncate mr-2">
+                                    {new Date(ft.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} — {ft.description}
+                                  </span>
+                                  <span className={cn('tabular-nums flex-shrink-0', ft.type === 'income' ? 'text-emerald' : 'text-rose')}>
+                                    {ft.type === 'income' ? '+' : '-'}{formatCurrency(ft.amount)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Section 3: Tendência variável */}
                         <div className="flex justify-between text-[11px] lg:text-xs">
-                          <span className="text-slate/70">Resultado atual do mês</span>
+                          <span className="text-slate/70 font-medium">
+                            Tendência variável ({homeSummary.monthProjectionInputs.windowDays} dias)
+                          </span>
                           <span className="font-medium text-ink tabular-nums">
-                            {formatCurrency(homeSummary.monthProjectionInputs.currentNet)}
+                            {formatCurrency(homeSummary.monthProjectionInputs.discretionaryDailyAvg)}/dia &times; {homeSummary.monthProjectionInputs.remainingDays} dias
                           </span>
                         </div>
-                        <div className="flex justify-between text-[11px] lg:text-xs">
-                          <span className="text-slate/70">
-                            Média diária (últimos {homeSummary.monthProjectionInputs.windowDays} dias)
-                          </span>
-                          <span className="font-medium text-ink tabular-nums">
-                            {formatCurrency(homeSummary.monthProjectionInputs.avgDailyNet)}/dia
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-[11px] lg:text-xs">
-                          <span className="text-slate/70">Dias restantes no mês</span>
-                          <span className="font-medium text-ink tabular-nums">
-                            {homeSummary.monthProjectionInputs.remainingDays}
-                          </span>
-                        </div>
-                        <div className="border-t border-blue-100/30 pt-2 mt-2 text-[10px] lg:text-[11px] text-slate/50">
-                          Cálculo: {formatCurrency(homeSummary.monthProjectionInputs.currentNet)} + ({formatCurrency(homeSummary.monthProjectionInputs.avgDailyNet)}/dia &times; {homeSummary.monthProjectionInputs.remainingDays} dias) = <span className="font-medium text-ink">{formatCurrency(homeSummary.monthProjectionNet.value)}</span>
+
+                        {/* Formula */}
+                        <div className="border-t border-blue-100/30 pt-2 text-[10px] lg:text-[11px] text-slate/50">
+                          {formatCurrency(homeSummary.monthProjectionInputs.pastNet)} + {formatCurrency(homeSummary.monthProjectionInputs.futureScheduledNet)} + ({formatCurrency(homeSummary.monthProjectionInputs.discretionaryDailyAvg)}/dia &times; {homeSummary.monthProjectionInputs.remainingDays} dias) = <span className="font-medium text-ink">{formatCurrency(homeSummary.monthProjectionNet.value)}</span>
                         </div>
                       </div>
                     </div>
