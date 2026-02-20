@@ -111,7 +111,7 @@ export const components = {
   card: {
     base: [
       'card-glass', // Uses the utility from index.css
-      'relative overflow-hidden',
+      'relative',
     ].join(' '),
 
     hoverable: 'hover:shadow-glass-hover transition-shadow duration-300',

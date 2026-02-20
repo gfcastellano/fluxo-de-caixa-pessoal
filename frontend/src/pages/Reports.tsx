@@ -120,7 +120,7 @@ export function Reports() {
                   </div>
                 </div>
                 <span className={`font-bold whitespace-nowrap tabular-nums ${tx.type === 'income' ? 'text-emerald' : tx.type === 'expense' ? 'text-rose' : 'text-blue'}`}>
-                  {formatCurrency(tx.amount, currency)}
+                  {formatCurrency(isIncomingTransfer ? (tx.amountTo ?? tx.amount) : tx.amount, currency)}
                 </span>
               </div>
             ))}
