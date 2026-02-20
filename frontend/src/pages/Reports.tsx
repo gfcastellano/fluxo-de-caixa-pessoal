@@ -717,7 +717,7 @@ export function Reports() {
       }
 
       // Calculate stored balance (sum of account balances)
-      const storedBalance = accountsToCalculate.reduce((sum, account) => sum + account.balance, 0);
+      const storedBalance = accountsToCalculate.reduce((sum, account) => sum + (Number(account.balance) || 0), 0);
 
       // Find the earliest balanceDate among the accounts we're calculating for
       // This is the date from which we need to start calculating monthly balances
@@ -852,7 +852,7 @@ export function Reports() {
       }
 
       // Calculate stored balance (sum of account balances)
-      const storedBalance = accountsToCalculate.reduce((sum, account) => sum + account.balance, 0);
+      const storedBalance = accountsToCalculate.reduce((sum, account) => sum + (Number(account.balance) || 0), 0);
 
       // Find the earliest balanceDate among the accounts we're calculating for
       const balanceDates = accountsToCalculate

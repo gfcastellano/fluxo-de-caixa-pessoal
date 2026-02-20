@@ -173,8 +173,13 @@ export function AccountModal({
           setFormData(prev => ({
             ...prev,
             ...result.data,
-            initialBalance: result.data?.initialBalance?.toString() || prev.initialBalance,
-            balance: result.data?.balance?.toString() || prev.balance,
+            // Only overwrite if voice returned a meaningful value (> 0); keep previous value otherwise
+            initialBalance: (result.data?.initialBalance != null && result.data.initialBalance > 0)
+              ? result.data.initialBalance.toString()
+              : prev.initialBalance,
+            balance: (result.data?.balance != null && result.data.balance > 0)
+              ? result.data.balance.toString()
+              : prev.balance,
           }));
           setHighlightedFields(new Set(Object.keys(result.data)));
           voice.setVoiceDataReceived();

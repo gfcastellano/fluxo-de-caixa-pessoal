@@ -865,8 +865,12 @@ Response must be valid JSON only, no markdown, no explanation.`;
         throw new Error('Invalid or missing name');
       }
 
-      if (parsed.balance === undefined || typeof parsed.balance !== 'number') {
-        // If balance isn't specified, assume 0
+      // Coerce string balance to number (GPT-4o-mini sometimes returns strings)
+      if (typeof parsed.balance === 'string') {
+        const coerced = parseFloat((parsed.balance as string).replace(',', '.'));
+        parsed.balance = isNaN(coerced) ? 0 : coerced;
+      } else if (parsed.balance === undefined || parsed.balance === null || typeof parsed.balance !== 'number' || isNaN(parsed.balance as number)) {
+        // If balance isn't specified or invalid, assume 0
         parsed.balance = 0;
       }
 
