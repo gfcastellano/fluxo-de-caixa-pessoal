@@ -10,7 +10,10 @@ import { getCreditCards } from '../services/creditCardService';
 import { getCreditCardBills } from '../services/creditCardBillService';
 import { enrichTransactions } from '../utils/transactionEnrichment';
 import { projectMonthNet, projectYearEndImpact } from '../domain/projections';
+import type { ProjectionResult } from '../domain/projections';
 import type { Transaction, Account, CreditCard, CreditCardBill } from '../types';
+
+export type { ProjectionResult };
 
 export interface CurrencySummary {
   income: number;
@@ -18,9 +21,20 @@ export interface CurrencySummary {
   balance: number;
 }
 
-export interface ProjectionResult {
-  value: number;
-  explanation: string;
+export interface MonthProjectionInputs {
+  currentNet: number;
+  lastNDaysNet: number;
+  windowDays: number;
+  remainingDays: number;
+  avgDailyNet: number;
+}
+
+export interface YearProjectionInputs {
+  projectedMonthNet: number;
+  monthsRemaining: number;
+  conservativeRate: number;
+  historicalAvg?: number;
+  hasHistory: boolean;
 }
 
 export interface HomeSummary {
@@ -30,7 +44,9 @@ export interface HomeSummary {
   byCurrency: Record<string, { income: number; expense: number; net: number }>;
   latestTransactions: Transaction[];
   monthProjectionNet?: ProjectionResult;
+  monthProjectionInputs?: MonthProjectionInputs;
   yearEndProjection?: ProjectionResult;
+  yearProjectionInputs?: YearProjectionInputs;
 }
 
 export interface DashboardData {
@@ -323,14 +339,30 @@ export function useDashboardData(): DashboardData {
         windowDays,
       });
 
+      const avgDailyNet = windowDays > 0 ? lastNDaysNet / windowDays : 0;
+      const monthProjectionInputs: MonthProjectionInputs = {
+        currentNet,
+        lastNDaysNet,
+        windowDays,
+        remainingDays,
+        avgDailyNet,
+      };
+
       // Calculate year-end projection (conservative)
       const currentMonth = month; // 1-based
       const monthsRemaining = 12 - currentMonth; // full months after current
+      // No historical data yet — will be enhanced when we have multi-month fetching
       const yearEndProjection = projectYearEndImpact({
         projectedMonthNet: monthProjectionNet.value,
         monthsRemaining,
-        // No historical data yet — will be enhanced when we have multi-month fetching
       });
+
+      const yearProjectionInputs: YearProjectionInputs = {
+        projectedMonthNet: monthProjectionNet.value,
+        monthsRemaining,
+        conservativeRate: monthProjectionNet.value,
+        hasHistory: false,
+      };
 
       setHomeSummary({
         monthIncome: totalIncome,
@@ -339,7 +371,9 @@ export function useDashboardData(): DashboardData {
         byCurrency,
         latestTransactions: enrichedTransactions.slice(0, 5),
         monthProjectionNet,
+        monthProjectionInputs,
         yearEndProjection,
+        yearProjectionInputs,
       });
 
       const balances: Record<string, number> = {};

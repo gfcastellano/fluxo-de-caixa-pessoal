@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useVoice } from '../context/VoiceContext';
@@ -17,11 +17,14 @@ import {
   CreditCard as CreditCardIcon,
   Landmark,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Users,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useFamily } from '../context/FamilyContext';
 import { SharedDataBadge } from '../components/SharedDataBadge';
+import { cn } from '../utils/cn';
 
 export function Dashboard() {
   useUserSetup();
@@ -35,6 +38,9 @@ export function Dashboard() {
     accountCurrencyMap,
     loading,
   } = useDashboardData();
+
+  const [monthExpanded, setMonthExpanded] = useState(false);
+  const [yearExpanded, setYearExpanded] = useState(false);
 
   // When Hero button is clicked on Dashboard, navigate to /transactions to add
   useEffect(() => {
@@ -142,6 +148,49 @@ export function Dashboard() {
                   {formatCurrency(homeSummary.monthProjectionNet.value)}
                 </p>
                 <p className="text-[10px] lg:text-[11px] text-slate/60 mt-1">{homeSummary.monthProjectionNet.explanation}</p>
+
+                {homeSummary.monthProjectionInputs && homeSummary.monthProjectionInputs.remainingDays > 0 && (
+                  <>
+                    <button
+                      onClick={() => setMonthExpanded(prev => !prev)}
+                      className="flex items-center gap-1 mt-2 text-[10px] lg:text-[11px] text-blue-500/70 hover:text-blue-600 transition-colors"
+                    >
+                      <span>Ver por quê</span>
+                      {monthExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                    </button>
+
+                    <div className={cn(
+                      'overflow-hidden transition-all duration-300 ease-in-out',
+                      monthExpanded ? 'max-h-60 opacity-100 mt-3' : 'max-h-0 opacity-0 mt-0'
+                    )}>
+                      <div className="border-t border-blue-100/50 pt-3 space-y-1.5">
+                        <div className="flex justify-between text-[11px] lg:text-xs">
+                          <span className="text-slate/70">Resultado atual do mês</span>
+                          <span className="font-medium text-ink tabular-nums">
+                            {formatCurrency(homeSummary.monthProjectionInputs.currentNet)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-[11px] lg:text-xs">
+                          <span className="text-slate/70">
+                            Média diária (últimos {homeSummary.monthProjectionInputs.windowDays} dias)
+                          </span>
+                          <span className="font-medium text-ink tabular-nums">
+                            {formatCurrency(homeSummary.monthProjectionInputs.avgDailyNet)}/dia
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-[11px] lg:text-xs">
+                          <span className="text-slate/70">Dias restantes no mês</span>
+                          <span className="font-medium text-ink tabular-nums">
+                            {homeSummary.monthProjectionInputs.remainingDays}
+                          </span>
+                        </div>
+                        <div className="border-t border-blue-100/30 pt-2 mt-2 text-[10px] lg:text-[11px] text-slate/50">
+                          Cálculo: {formatCurrency(homeSummary.monthProjectionInputs.currentNet)} + ({formatCurrency(homeSummary.monthProjectionInputs.avgDailyNet)}/dia &times; {homeSummary.monthProjectionInputs.remainingDays} dias) = <span className="font-medium text-ink">{formatCurrency(homeSummary.monthProjectionNet.value)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           )}
@@ -155,6 +204,55 @@ export function Dashboard() {
                   {formatCurrency(homeSummary.yearEndProjection.value)}
                 </p>
                 <p className="text-[10px] lg:text-[11px] text-slate/60 mt-1">{homeSummary.yearEndProjection.explanation}</p>
+
+                {homeSummary.yearProjectionInputs && (
+                  <>
+                    <button
+                      onClick={() => setYearExpanded(prev => !prev)}
+                      className="flex items-center gap-1 mt-2 text-[10px] lg:text-[11px] text-violet-500/70 hover:text-violet-600 transition-colors"
+                    >
+                      <span>Ver por quê</span>
+                      {yearExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                    </button>
+
+                    <div className={cn(
+                      'overflow-hidden transition-all duration-300 ease-in-out',
+                      yearExpanded ? 'max-h-60 opacity-100 mt-3' : 'max-h-0 opacity-0 mt-0'
+                    )}>
+                      <div className="border-t border-violet-100/50 pt-3 space-y-1.5">
+                        <div className="flex justify-between text-[11px] lg:text-xs">
+                          <span className="text-slate/70">Projeção do mês atual</span>
+                          <span className="font-medium text-ink tabular-nums">
+                            {formatCurrency(homeSummary.yearProjectionInputs.projectedMonthNet)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-[11px] lg:text-xs">
+                          <span className="text-slate/70">Meses restantes até dezembro</span>
+                          <span className="font-medium text-ink tabular-nums">
+                            {homeSummary.yearProjectionInputs.monthsRemaining}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-[11px] lg:text-xs">
+                          <span className="text-slate/70">Taxa conservadora usada</span>
+                          <span className="font-medium text-ink tabular-nums">
+                            {formatCurrency(homeSummary.yearProjectionInputs.conservativeRate)}/mês
+                          </span>
+                        </div>
+                        {homeSummary.yearProjectionInputs.hasHistory && homeSummary.yearProjectionInputs.historicalAvg !== undefined && (
+                          <div className="flex justify-between text-[11px] lg:text-xs">
+                            <span className="text-slate/70">Média histórica</span>
+                            <span className="font-medium text-ink tabular-nums">
+                              {formatCurrency(homeSummary.yearProjectionInputs.historicalAvg)}/mês
+                            </span>
+                          </div>
+                        )}
+                        <div className="border-t border-violet-100/30 pt-2 mt-2 text-[10px] lg:text-[11px] text-slate/50">
+                          Cálculo: {formatCurrency(homeSummary.yearProjectionInputs.conservativeRate)}/mês &times; {homeSummary.yearProjectionInputs.monthsRemaining} meses = <span className="font-medium text-ink">{formatCurrency(homeSummary.yearEndProjection.value)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           )}
