@@ -57,6 +57,11 @@ export interface Transaction {
   isShared?: boolean;
   ownerName?: string;
   ownerUserId?: string;
+  // Weekly review
+  confirmedAt?: string;
+  // FX transfer fields
+  amountTo?: number;
+  impliedRate?: number;
 }
 
 export interface Budget {

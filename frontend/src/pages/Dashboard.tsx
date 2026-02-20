@@ -4,8 +4,10 @@ import { useNavigate } from 'react-router-dom';
 import { useVoice } from '../context/VoiceContext';
 import { useUserSetup } from '../hooks/useUserSetup';
 import { useDashboardData } from '../hooks/useDashboardData';
+import { useWeeklyReview } from '../hooks/useWeeklyReview';
 import { Card, CardContent } from '../components/Card';
 import { Button } from '../components/Button';
+import { WeeklyReview } from '../components/WeeklyReview';
 import { formatCurrency, formatMonthYear, getCurrentMonth } from '../utils/format';
 import { getTranslatedCategoryName } from '../utils/categoryTranslations';
 import { CashCurrencyIcon } from '../components/CashCurrencyIcon';
@@ -38,6 +40,8 @@ export function Dashboard() {
     accountCurrencyMap,
     loading,
   } = useDashboardData();
+
+  const { items: weeklyItems, confirm: confirmWeekly, editAmount: editWeeklyAmount } = useWeeklyReview();
 
   const [monthExpanded, setMonthExpanded] = useState(false);
   const [yearExpanded, setYearExpanded] = useState(false);
@@ -135,6 +139,15 @@ export function Dashboard() {
           </div>
         </CardContent>
       </Card>
+
+      {/* ── Revisão semanal de recorrências ── */}
+      {weeklyItems.length > 0 && (
+        <WeeklyReview
+          items={weeklyItems}
+          onConfirm={confirmWeekly}
+          onEditAmount={editWeeklyAmount}
+        />
+      )}
 
       {/* ── Projeções ── */}
       {(homeSummary.monthProjectionNet || homeSummary.yearEndProjection) && (
