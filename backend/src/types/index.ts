@@ -43,6 +43,7 @@ export interface Transaction {
   billId?: string;                // ID da fatura vinculada
   isBillPayment?: boolean;        // true = esta transação é pagamento de fatura
   paidBillId?: string;            // ID da fatura paga (se isBillPayment=true)
+  purchaseDate?: string;          // Data real da compra; `date` guarda o vencimento da fatura
   installments?: number;          // Total number of installments (initial request)
   installmentNumber?: number;     // Current installment number (1, 2, 3...)
   totalInstallments?: number;     // Total number of installments in the series

@@ -22,6 +22,7 @@ const transactionSchema = z.object({
   billId: z.string().optional(),
   isBillPayment: z.boolean().optional(),
   paidBillId: z.string().optional(),
+  purchaseDate: z.string().optional(),
   // Cash payment flag
   isCash: z.boolean().optional(),
   // Recurring transaction fields
@@ -67,12 +68,13 @@ app.post('/', async (c) => {
 
     // Handle credit card transactions
     if (transactionData.creditCardId && transactionData.type === 'expense') {
-      // Find or create the appropriate bill for this transaction date
+      // Use purchaseDate for bill routing if available (date = due date after frontend fix)
+      const routingDate = transactionData.purchaseDate || transactionData.date;
       const billId = await ensureBillForDate(
         firebase,
         userId,
         transactionData.creditCardId,
-        transactionData.date
+        routingDate
       );
 
       transactionData.billId = billId;
@@ -325,10 +327,21 @@ async function ensureBillForDate(
     return existingBill.id;
   }
 
-  // Use the calculated year/month for due date calculation
-  // Carefully handle end of year rollover for due date
-  const dueDate = new Date(year, month - 1, dueDay);
-  const dueDateStr = dueDate.toISOString().split('T')[0];
+  // Compute due date: if dueDay < closingDay the payment falls in the next month
+  // (e.g. closingDay=20, dueDay=10 → Feb cycle is due March 10, not Feb 10)
+  const closingDay = creditCard?.closingDay ?? 1;
+  let dueDateMonth = month; // 1-based
+  let dueDateYear = year;
+  if (dueDay < closingDay) {
+    dueDateMonth++;
+    if (dueDateMonth > 12) {
+      dueDateMonth = 1;
+      dueDateYear++;
+    }
+  }
+  const lastDay = new Date(dueDateYear, dueDateMonth, 0).getDate();
+  const clampedDueDay = Math.min(dueDay, lastDay);
+  const dueDateStr = `${dueDateYear}-${String(dueDateMonth).padStart(2, '0')}-${String(clampedDueDay).padStart(2, '0')}`;
 
   const newBill = await firebase.createDocument('creditCardBills', {
     creditCardId,
@@ -336,6 +349,44 @@ async function ensureBillForDate(
     month, // calculated month (1-12)
     year,  // calculated year
     dueDate: dueDateStr,
+    totalAmount: 0,
+    isClosed: false,
+    isPaid: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }) as { id: string };
+
+  return newBill.id;
+}
+
+// Helper: find or create a bill by cycle month/year with a known due date.
+// Used for CC installment instances where we already know the cycle month.
+async function ensureBillForCycle(
+  firebase: FirebaseService,
+  userId: string,
+  creditCardId: string,
+  cycleMonth: number, // 1-based
+  cycleYear: number,
+  dueDate: string,
+): Promise<string> {
+  const allBills = await firebase.getDocuments('creditCardBills', userId) as Array<{
+    id: string;
+    creditCardId: string;
+    month: number;
+    year: number;
+  }>;
+
+  const existing = allBills.find(
+    b => b.creditCardId === creditCardId && b.month === cycleMonth && b.year === cycleYear
+  );
+  if (existing) return existing.id;
+
+  const newBill = await firebase.createDocument('creditCardBills', {
+    creditCardId,
+    userId,
+    month: cycleMonth,
+    year: cycleYear,
+    dueDate,
     totalAmount: 0,
     isClosed: false,
     isPaid: false,
@@ -365,11 +416,60 @@ async function generateRecurringInstancesWithCount(
 
   let currentDate = new Date(startDate);
 
+  // For CC installments: resolve cycle info from the parent's bill so we can advance
+  // cycle-by-cycle and compute correct due dates regardless of dueDay/closingDay order.
+  const parentWithCC = parentTransaction as Record<string, unknown>;
+  let firstCycleMonth: number | null = null;
+  let firstCycleYear: number | null = null;
+  let cardClosingDay: number | null = null;
+  let cardDueDay: number | null = null;
+
+  if (parentWithCC.creditCardId && parentWithCC.billId) {
+    const parentBill = await firebase.getDocument('creditCardBills', parentWithCC.billId as string) as { month: number; year: number } | null;
+    const card = await firebase.getDocument('creditCards', parentWithCC.creditCardId as string) as { closingDay: number; dueDay: number } | null;
+    if (parentBill && card) {
+      firstCycleMonth = parentBill.month; // 1-based
+      firstCycleYear = parentBill.year;
+      cardClosingDay = card.closingDay;
+      cardDueDay = card.dueDay;
+    }
+  }
+
   // Create exactly 'count' instances
   for (let i = 0; i < count && i < MAX_INSTANCES_PER_REQUEST; i++) {
-    // Move to the next occurrence
-    currentDate = getNextDate(currentDate, recurrencePattern, recurrenceDay);
-    const dateStr = currentDate.toISOString().split('T')[0];
+    let dateStr: string;
+    let instanceBillId: string | undefined;
+
+    if (firstCycleMonth !== null && firstCycleYear !== null && cardDueDay !== null && cardClosingDay !== null && parentWithCC.creditCardId) {
+      // CC installment: advance by cycle month instead of calendar month from purchase date
+      let cycleMonth = firstCycleMonth + (i + 1);
+      let cycleYear = firstCycleYear;
+      while (cycleMonth > 12) { cycleMonth -= 12; cycleYear++; }
+
+      // Compute due date: if dueDay < closingDay payment is in the month after cycle closes
+      let dueDateMonth = cycleMonth; // 1-based
+      let dueDateYear = cycleYear;
+      if (cardDueDay < cardClosingDay) {
+        dueDateMonth++;
+        if (dueDateMonth > 12) { dueDateMonth = 1; dueDateYear++; }
+      }
+      const lastDay = new Date(dueDateYear, dueDateMonth, 0).getDate();
+      const clampedDue = Math.min(cardDueDay, lastDay);
+      dateStr = `${dueDateYear}-${String(dueDateMonth).padStart(2, '0')}-${String(clampedDue).padStart(2, '0')}`;
+
+      instanceBillId = await ensureBillForCycle(
+        firebase,
+        parentTransaction.userId,
+        parentWithCC.creditCardId as string,
+        cycleMonth,
+        cycleYear,
+        dateStr,
+      );
+    } else {
+      // Non-CC or missing cycle info: advance by recurrence pattern as before
+      currentDate = getNextDate(currentDate, recurrencePattern, recurrenceDay);
+      dateStr = currentDate.toISOString().split('T')[0];
+    }
 
     // Check if an instance already exists for this date and parent (duplicate prevention)
     const existingInstances = await firebase.queryDocuments('transactions', [
@@ -407,13 +507,11 @@ async function generateRecurringInstancesWithCount(
     }
 
     // Add credit card fields if they exist on parent
-    const parentWithCC = parentTransaction as Record<string, unknown>;
     if (parentWithCC.creditCardId) {
       const creditCardId = parentWithCC.creditCardId as string;
       instanceData.creditCardId = creditCardId;
 
-      // Ensure bill exists for this date and link it
-      const billId = await ensureBillForDate(firebase, parentTransaction.userId, creditCardId, dateStr);
+      const billId = instanceBillId ?? await ensureBillForDate(firebase, parentTransaction.userId, creditCardId, dateStr);
       instanceData.billId = billId;
 
       // Update bill total

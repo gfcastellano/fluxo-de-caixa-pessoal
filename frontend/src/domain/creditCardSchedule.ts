@@ -73,10 +73,19 @@ export function generateInstallments(input: InstallmentInput): Installment[] {
       statementYear++;
     }
 
-    // Compute due date: dueDay clamped to last day of statementMonth
-    const lastDayOfMonth = new Date(statementYear, statementMonth + 1, 0).getDate();
+    // Compute due date: if dueDay < closingDay payment falls in the next month
+    let dueDateMonth = statementMonth; // 0-based
+    let dueDateYear = statementYear;
+    if (dueDay < closingDay) {
+      dueDateMonth++;
+      if (dueDateMonth > 11) {
+        dueDateMonth = 0;
+        dueDateYear++;
+      }
+    }
+    const lastDayOfMonth = new Date(dueDateYear, dueDateMonth + 1, 0).getDate();
     const clampedDueDay = Math.min(dueDay, lastDayOfMonth);
-    const dueDate = `${statementYear}-${String(statementMonth + 1).padStart(2, '0')}-${String(clampedDueDay).padStart(2, '0')}`;
+    const dueDate = `${dueDateYear}-${String(dueDateMonth + 1).padStart(2, '0')}-${String(clampedDueDay).padStart(2, '0')}`;
 
     // First installment absorbs the remainder cents
     const cents = basePerInstallmentCents + (index === 1 ? remainderCents : 0);

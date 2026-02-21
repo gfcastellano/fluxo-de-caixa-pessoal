@@ -50,6 +50,8 @@ export interface Transaction {
   billId?: string;
   isBillPayment?: boolean;
   paidBillId?: string;
+  /** Original purchase date (YYYY-MM-DD). `date` holds the bill due date. */
+  purchaseDate?: string;
   // Cash payment flag
   isCash?: boolean;
   installments?: number; // Total number of installments (initial request)

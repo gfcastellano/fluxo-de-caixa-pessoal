@@ -32,13 +32,23 @@ export function calculateBillDate(
     }
   }
 
-  // Build due date string directly to avoid timezone issues
-  const lastDayOfTarget = new Date(targetYear, targetMonth + 1, 0).getDate();
+  // Build due date string: if dueDay < closingDay the payment falls in the NEXT month
+  // (e.g. closing=20, due=10 → Feb cycle is due March 10, not Feb 10)
+  let dueDateMonth = targetMonth; // 0-based
+  let dueDateYear = targetYear;
+  if (dueDay < closingDay) {
+    dueDateMonth++;
+    if (dueDateMonth > 11) {
+      dueDateMonth = 0;
+      dueDateYear++;
+    }
+  }
+  const lastDayOfTarget = new Date(dueDateYear, dueDateMonth + 1, 0).getDate();
   const clampedDueDay = Math.min(dueDay, lastDayOfTarget);
-  const dueDate = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(clampedDueDay).padStart(2, '0')}`;
+  const dueDate = `${dueDateYear}-${String(dueDateMonth + 1).padStart(2, '0')}-${String(clampedDueDay).padStart(2, '0')}`;
 
   return {
-    month: targetMonth,
+    month: targetMonth,   // cycle/statement month (0-based), unchanged
     year: targetYear,
     dueDate,
   };

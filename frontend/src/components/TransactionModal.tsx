@@ -11,6 +11,7 @@ import { getCreditCards } from '../services/creditCardService';
 import { getRecurringInstances } from '../services/transactionService';
 import { getTranslatedCategoryName } from '../utils/categoryTranslations';
 import { validateMoney, validateInteger, parseMoneyInput, parseIntegerInput } from '../utils/numericInputs';
+import { calculateBillDate } from '../domain/billing';
 import type { Transaction, Category, Account, CreditCard } from '../types';
 import { cn } from '../utils/cn';
 
@@ -344,6 +345,16 @@ export function TransactionModal({
     if (paymentMethod === 'credit_card' && selectedCreditCardId) {
       transactionData.creditCardId = selectedCreditCardId;
       // Don't set accountId for credit card transactions
+
+      // Set date = bill due date; preserve original purchase date separately
+      if (!isEditing && validType === 'expense') {
+        const card = creditCards.find(c => c.id === selectedCreditCardId);
+        if (card) {
+          transactionData.purchaseDate = formData.date;
+          const { dueDate } = calculateBillDate(formData.date, card.closingDay, card.dueDay);
+          transactionData.date = dueDate;
+        }
+      }
     } else if (paymentMethod === 'cash') {
       // Cash transactions don't have accountId or creditCardId
       transactionData.isCash = true;
